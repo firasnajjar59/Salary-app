@@ -219,6 +219,38 @@
     }
     body.modal-open{overflow:hidden}
 
+    .bulk-open-row{margin-top:10px}
+    .bulk-open-row .secondary{width:100%;padding:11px 12px}
+    .bulk-help{margin:0 0 12px;line-height:1.55}
+    .bulk-toolbar{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;margin-bottom:12px}
+    .bulk-toolbar .secondary{min-height:44px}
+    .bulk-list{display:flex;flex-direction:column;gap:7px;margin-bottom:14px}
+    .bulk-row{
+      display:grid;
+      grid-template-columns:minmax(95px,1.05fr) minmax(88px,1fr) minmax(88px,1fr);
+      gap:8px;align-items:center;padding:9px;border:1px solid var(--line);
+      border-radius:12px;background:white;
+    }
+    .bulk-date{min-width:0;font-weight:850;line-height:1.25}
+    .bulk-date small{display:block;margin-top:3px;color:var(--muted);font-size:11px;font-weight:650}
+    .bulk-row label{margin:0}
+    .bulk-row input{padding:9px 7px}
+    .bulk-existing{display:inline-block;margin-top:3px;font-size:10px;color:#0369a1;font-weight:800}
+    .bulk-actions{
+      position:sticky;bottom:0;padding-top:10px;
+      background:linear-gradient(to top,var(--bg) 78%,rgba(245,247,251,0));
+    }
+    .bulk-legend{
+      display:grid;
+      grid-template-columns:minmax(95px,1.05fr) minmax(88px,1fr) minmax(88px,1fr);
+      gap:8px;padding:0 9px 6px;color:var(--muted);font-size:11px;font-weight:800;
+    }
+    @media(max-width:390px){
+      .bulk-row,.bulk-legend{grid-template-columns:minmax(90px,1.1fr) minmax(78px,1fr) minmax(78px,1fr);gap:6px}
+      .bulk-row{padding:8px 6px}
+      .bulk-row input{padding:8px 5px;font-size:15px}
+    }
+
   
     .payroll-flow{display:flex;flex-direction:column;gap:10px}
     .payroll-accordion{border:1px solid var(--line);border-radius:15px;overflow:hidden;background:var(--card)}
@@ -269,6 +301,9 @@
             <option value="none">ללא תוספת מיוחדת</option>
           </select>
         </div>
+      </div>
+      <div class="bulk-open-row">
+        <button class="secondary" id="openMonthlyEntry" type="button">＋ הוספה מהירה לחודש שלם</button>
       </div>
     </div>
     <div class="card">
@@ -491,6 +526,37 @@
     </div>
     <div class="modal-body">
       <div id="shiftDetailsContent"></div>
+    </div>
+  </div>
+</div>
+
+
+<div id="monthlyEntryModal" class="modal hidden" aria-hidden="true">
+  <div class="modal-backdrop" id="monthlyEntryBackdrop"></div>
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="monthlyEntryTitle">
+    <div class="modal-header">
+      <h2 id="monthlyEntryTitle" style="margin:0">הוספה מהירה לחודש</h2>
+      <button type="button" class="modal-close" id="closeMonthlyEntry" aria-label="סגור">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="note bulk-help">
+        מלא רק את הימים שעבדת בהם. בשלב הזה נשמרים תאריך, שעת התחלה ושעת סיום בלבד.
+        אחר כך אפשר לפתוח כל משמרת ולהוסיף DD/DDR, סיבוב, קו לילה, הפסקה ותוספות אחרות.
+      </p>
+      <div class="bulk-toolbar">
+        <div>
+          <label>חודש</label>
+          <input id="monthlyEntryMonth" type="month">
+        </div>
+        <button class="secondary" id="clearMonthlyTimes" type="button">נקה שעות</button>
+      </div>
+      <div class="bulk-legend" aria-hidden="true">
+        <span>תאריך</span><span>התחלה</span><span>סיום</span>
+      </div>
+      <div id="monthlyEntryList" class="bulk-list"></div>
+      <div class="bulk-actions">
+        <button class="primary" id="saveMonthlyEntry" type="button">שמור משמרות שמולאו</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1180,6 +1246,143 @@ function renderSummary(){
 }
 
 
+
+function monthDateStrings(month){
+  if(!/^\d{4}-\d{2}$/.test(month||'')) return [];
+  const [year,monthNum]=month.split('-').map(Number);
+  const days=new Date(year,monthNum,0).getDate();
+  const result=[];
+  for(let day=1;day<=days;day++){
+    result.push(`${year}-${String(monthNum).padStart(2,'0')}-${String(day).padStart(2,'0')}`);
+  }
+  return result;
+}
+
+function monthlyExistingCount(date){
+  return shifts.filter(sh=>sh.date===date).length;
+}
+
+function renderMonthlyEntry(){
+  const month=$('monthlyEntryMonth').value;
+  const dates=monthDateStrings(month);
+  const list=$('monthlyEntryList');
+  if(!dates.length){
+    list.innerHTML='<div class="muted">יש לבחור חודש.</div>';
+    return;
+  }
+
+  list.innerHTML=dates.map(date=>{
+    const [,m,d]=date.split('-');
+    const existing=monthlyExistingCount(date);
+    const existingText=existing
+      ? `<span class="bulk-existing">${existing===1?'קיימת משמרת':'קיימות '+existing+' משמרות'}</span>`
+      : '';
+    return `
+      <div class="bulk-row" data-bulk-date="${date}">
+        <div class="bulk-date">
+          ${d}/${m}
+          <small>${escapeHtml(dayNameHe(date))}</small>
+          ${existingText}
+        </div>
+        <label>
+          <span class="hidden">שעת התחלה ${date}</span>
+          <input class="bulk-start" type="time" aria-label="שעת התחלה ${date}">
+        </label>
+        <label>
+          <span class="hidden">שעת סיום ${date}</span>
+          <input class="bulk-end" type="time" aria-label="שעת סיום ${date}">
+        </label>
+      </div>`;
+  }).join('');
+}
+
+function openMonthlyEntry(){
+  const selectedMonth=$('shiftMonthFilter').value || currentMonth;
+  $('monthlyEntryMonth').value=selectedMonth;
+  renderMonthlyEntry();
+  $('monthlyEntryModal').classList.remove('hidden');
+  $('monthlyEntryModal').setAttribute('aria-hidden','false');
+  document.body.classList.add('modal-open');
+}
+
+function closeMonthlyEntry(){
+  $('monthlyEntryModal').classList.add('hidden');
+  $('monthlyEntryModal').setAttribute('aria-hidden','true');
+  document.body.classList.remove('modal-open');
+}
+
+function saveMonthlyEntry(){
+  const rows=[...document.querySelectorAll('#monthlyEntryList .bulk-row')];
+  const incomplete=[];
+  const candidates=[];
+
+  rows.forEach(row=>{
+    const date=row.dataset.bulkDate;
+    const start=row.querySelector('.bulk-start').value;
+    const end=row.querySelector('.bulk-end').value;
+
+    if(!start && !end) return;
+    if(!start || !end){
+      incomplete.push(formatDateHe(date));
+      return;
+    }
+
+    candidates.push({
+      id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
+      date,
+      start,
+      end,
+      breakMin:'0',
+      dayType:'auto',
+      bonus:'0',
+      extraLoopType:'none',
+      nightLineType:'none',
+      ddType:'',
+      ddNumber:''
+    });
+  });
+
+  if(incomplete.length){
+    alert(`יש ימים שבהם מולאה רק שעת התחלה או רק שעת סיום:\n${incomplete.join(', ')}\n\nיש להשלים את שתי השעות או לנקות את שתיהן.`);
+    return;
+  }
+
+  if(!candidates.length){
+    alert('לא מולאו שעות באף יום.');
+    return;
+  }
+
+  let added=0, skipped=0;
+  candidates.forEach(data=>{
+    const exists=shifts.some(sh=>
+      sh.date===data.date &&
+      sh.start===data.start &&
+      sh.end===data.end
+    );
+    if(exists){
+      skipped++;
+      return;
+    }
+    shifts.push(data);
+    added++;
+  });
+
+  shifts=dedupeShifts(shifts);
+  localStorage.setItem(KEY_SHIFTS,JSON.stringify(shifts));
+
+  const month=$('monthlyEntryMonth').value;
+  if(month) $('shiftMonthFilter').value=month;
+  $('shiftSpecialFilter').value='all';
+  renderShifts();
+  renderSummary();
+  closeMonthlyEntry();
+
+  const parts=[`נוספו ${added} משמרות.`];
+  if(skipped) parts.push(`${skipped} משמרות שכבר היו קיימות דולגו.`);
+  parts.push('עכשיו אפשר לפתוח כל משמרת ולהוסיף DD/DDR, סיבוב, קו לילה ושאר הפרטים.');
+  alert(parts.join('\n'));
+}
+
 function openShiftModal(editing=false){
   $('shiftModal').classList.remove('hidden');
   $('shiftModal').setAttribute('aria-hidden','false');
@@ -1192,6 +1395,17 @@ function closeShiftModal(){
   $('shiftModal').setAttribute('aria-hidden','true');
   document.body.classList.remove('modal-open');
 }
+
+
+$('openMonthlyEntry').onclick=openMonthlyEntry;
+$('closeMonthlyEntry').onclick=closeMonthlyEntry;
+$('monthlyEntryBackdrop').onclick=closeMonthlyEntry;
+$('monthlyEntryMonth').addEventListener('change',renderMonthlyEntry);
+$('clearMonthlyTimes').onclick=()=>{
+  document.querySelectorAll('#monthlyEntryList .bulk-start, #monthlyEntryList .bulk-end')
+    .forEach(input=>input.value='');
+};
+$('saveMonthlyEntry').onclick=saveMonthlyEntry;
 
 $('openShiftModal').onclick=()=>{
   editingShiftId=null;
@@ -1213,7 +1427,8 @@ $('closeShiftModal').onclick=closeShiftModal;
 $('shiftModalBackdrop').onclick=closeShiftModal;
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){
-    if(!$('shiftDetailsModal').classList.contains('hidden')) closeShiftDetails();
+    if(!$('monthlyEntryModal').classList.contains('hidden')) closeMonthlyEntry();
+    else if(!$('shiftDetailsModal').classList.contains('hidden')) closeShiftDetails();
     else if(!$('shiftModal').classList.contains('hidden')) closeShiftModal();
   }
 });
