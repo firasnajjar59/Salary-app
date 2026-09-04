@@ -273,6 +273,16 @@
   <h1>מחשבון שעות ושכר</h1>
   <p>עובד מקומית במכשיר ושומר את הנתונים בדפדפן</p>
 </header>
+<div id="updateBanner" class="card hidden" style="margin:10px auto;max-width:780px">
+  <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+    <div><strong>גרסה חדשה זמינה</strong><div class="note">אפשר לעדכן בלי למחוק את המשמרות וההגדרות.</div></div>
+    <div style="display:flex;gap:8px">
+      <button class="primary" id="applyUpdate" type="button">עדכן עכשיו</button>
+      <button class="secondary" id="dismissUpdate" type="button">אחר כך</button>
+    </div>
+  </div>
+</div>
+
 
 <main>
   <section id="shifts">
@@ -434,6 +444,16 @@
     </div>
 
     <div class="card">
+      <h2>טבלת DD</h2>
+      <p class="note">הטבלה נשמרת במכשיר. עדכון מהשרת דורס את טבלת ה-DD המקומית בלבד; משמרות שכבר נשמרו לא משתנות.</p>
+      <div class="grid">
+        <button class="secondary" id="updateDdFromServer" type="button">עדכן טבלת DD מהשרת</button>
+        <button class="secondary" id="editLocalDd" type="button">ערוך DD מקומי</button>
+      </div>
+      <div id="ddStatus" class="note" style="margin-top:10px"></div>
+    </div>
+
+    <div class="card">
       <h2>גיבוי ושחזור</h2>
       <p class="note">הגיבוי כולל את כל המשמרות, ההגדרות ונתוני השוואת התלושים. קובץ הגיבוי נשמר בפורמט JSON.</p>
       <div class="grid">
@@ -458,7 +478,11 @@
       
       <div class="grid">
         <div><label>תאריך</label><input id="date" type="date"></div>
-        <div><label>הפסקה בדקות</label><input id="breakMin" type="number" min="0" value="0"></div>
+        <div>
+          <label>הערות</label>
+          <textarea id="notes" rows="3" placeholder="הערות למשמרת"></textarea>
+          <input id="breakMin" type="hidden" value="0">
+        </div>
         <div><label>שעת התחלה</label><input id="start" type="time"></div>
         <div><label>שעת סיום</label><input id="end" type="time"></div>
       </div>
@@ -472,6 +496,12 @@
             <option value="friday">שישי</option>
             <option value="saturday">שבת</option>
             <option value="holiday">חג</option>
+          </select>
+        </div>
+        <div>
+          <label>בחירת DD שמור</label>
+          <select id="ddPreset">
+            <option value="">בחר DD</option>
           </select>
         </div>
         <div>
@@ -583,13 +613,52 @@
   </button>
 </nav>
 
+
+<div id="ddEditorModal" class="modal hidden" aria-hidden="true">
+  <div class="modal-backdrop" id="ddEditorBackdrop"></div>
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="ddEditorTitle">
+    <div class="modal-header">
+      <h2 id="ddEditorTitle" style="margin:0">עריכת DD מקומי</h2>
+      <button type="button" class="modal-close" id="closeDdEditor" aria-label="סגור">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="note">השינויים כאן נשמרים רק במכשיר. עדכון מהשרת ידרוס אותם.</p>
+      <div class="card" style="margin-top:0">
+        <div class="grid">
+          <div>
+            <label>טבלה</label>
+            <select id="ddEditTable">
+              <option value="week">כל השבוע</option>
+              <option value="thursday">יום חמישי</option>
+            </select>
+          </div>
+          <div>
+            <label>סוג</label>
+            <select id="ddEditType">
+              <option value="DD">DD</option>
+              <option value="DDR">DDR</option>
+            </select>
+          </div>
+          <div><label>מספר</label><input id="ddEditNumber" type="text" inputmode="numeric" placeholder="למשל 40"></div>
+          <div><label>התחלה</label><input id="ddEditStart" type="time"></div>
+          <div><label>סיום</label><input id="ddEditEnd" type="time"></div>
+        </div>
+        <button class="primary" id="saveDdLocal" type="button" style="margin-top:10px">שמור DD מקומי</button>
+      </div>
+      <div id="ddEditorList"></div>
+    </div>
+  </div>
+</div>
+
 <script>
 const $ = id => document.getElementById(id);
 const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KEY_PAYSLIPS='salaryApp.payslips.v1';
+const KEY_DD_TABLES='salaryApp.ddTables.v1';
+const DD_SERVER_URL='./dd.json';
 
 function shiftSignature(sh){
   return [
-    sh.date||'', sh.start||'', sh.end||'', String(sh.breakMin||0),
+    sh.date||'', sh.start||'', sh.end||'', String(sh.breakMin||0), String(sh.notes||''),
     sh.dayType||'auto', String(sh.bonus||0),
     sh.extraLoopType||'none', sh.nightLineType||'none',
     sh.ddType||'', String(sh.ddNumber||'')
@@ -862,7 +931,7 @@ function openShiftDetails(id){
       <div class="detail-row"><span>סה"כ שעות</span><strong>${fmtMin(c.grossMinutes)}</strong></div>
 
       ${ddText?`<div class="detail-row"><span>DD / DDR</span><strong>${escapeHtml(ddText)}</strong></div>`:''}
-      ${Number(sh.breakMin||0)>0?`<div class="detail-row"><span>הפסקה</span><strong>${Number(sh.breakMin||0)} דק׳</strong></div>`:''}
+      ${sh.notes?`<div class="detail-row"><span>הערות</span><strong>${escapeHtml(sh.notes)}</strong></div>`:''}
 
       ${!isSaturday && c.regMin>0?`<div class="detail-row"><span>שעות רגילות</span><strong>${fmtMin(c.regMin)}</strong></div>`:''}
       ${isSaturday && saturdayMin>0?`<div class="detail-row"><span>שעות שבת 225%</span><strong>${fmtMin(saturdayMin)}</strong></div>`:''}
@@ -909,6 +978,7 @@ window.editShift=id=>{
   $('start').value=sh.start||'';
   $('end').value=sh.end||'';
   $('breakMin').value=sh.breakMin||0;
+  $('notes').value=sh.notes||'';
   $('dayType').value=sh.dayType||'auto';
   $('bonus').value=sh.bonus||0;
   $('extraLoopType').value=sh.extraLoopType||'none';
@@ -1247,6 +1317,130 @@ function renderSummary(){
 
 
 
+
+function normalizeDdTables(data){
+  const norm=list=>(Array.isArray(list)?list:[]).map(x=>({
+    type:String(x.type||'DD').toUpperCase()==='DDR'?'DDR':'DD',
+    number:String(x.number??'').trim(),
+    start:String(x.start||'').trim(),
+    end:String(x.end||'').trim()
+  })).filter(x=>x.number && /^\d{2}:\d{2}$/.test(x.start) && /^\d{2}:\d{2}$/.test(x.end));
+  return {week:norm(data?.week), thursday:norm(data?.thursday), updatedAt:data?.updatedAt||null};
+}
+function getDdTables(){
+  try{return normalizeDdTables(JSON.parse(localStorage.getItem(KEY_DD_TABLES)||'{}'));}
+  catch(e){return {week:[],thursday:[],updatedAt:null};}
+}
+function saveDdTables(t){
+  localStorage.setItem(KEY_DD_TABLES,JSON.stringify(normalizeDdTables(t)));
+  refreshDdStatus(); refreshDdPresetOptions();
+}
+function ddKey(type,number){ return `${String(type||'').toUpperCase()}${String(number||'').trim()}`; }
+function isThursday(dateStr){
+  const p=String(dateStr||'').split('-').map(Number);
+  if(p.length!==3 || !p[0] || !p[1] || !p[2]) return false;
+  return new Date(Date.UTC(p[0],p[1]-1,p[2])).getUTCDay()===4;
+}
+function resolveDdTemplate(dateStr,type,number){
+  const t=getDdTables(), key=ddKey(type,number);
+  if(isThursday(dateStr)){
+    const th=t.thursday.find(x=>ddKey(x.type,x.number)===key);
+    if(th) return {...th,sourceTable:'thursday'};
+  }
+  const wk=t.week.find(x=>ddKey(x.type,x.number)===key);
+  return wk?{...wk,sourceTable:'week'}:null;
+}
+function allDdForDate(dateStr){
+  const t=getDdTables(), map=new Map();
+  t.week.forEach(x=>map.set(ddKey(x.type,x.number),{...x,sourceTable:'week'}));
+  if(isThursday(dateStr)) t.thursday.forEach(x=>map.set(ddKey(x.type,x.number),{...x,sourceTable:'thursday'}));
+  return [...map.values()].sort((a,b)=>ddKey(a.type,a.number).localeCompare(ddKey(b.type,b.number),'he',{numeric:true}));
+}
+function refreshDdPresetOptions(){
+  const el=$('ddPreset'); if(!el) return;
+  const current=el.value, items=allDdForDate($('date')?.value||'');
+  el.innerHTML='<option value="">בחר DD</option>'+items.map(x=>{
+    const key=ddKey(x.type,x.number);
+    const src=x.sourceTable==='thursday'?'חמישי':'שבוע';
+    return `<option value="${escapeHtml(key)}">${escapeHtml(key)} · ${escapeHtml(x.start)}–${escapeHtml(x.end)} · ${src}</option>`;
+  }).join('');
+  if([...el.options].some(o=>o.value===current)) el.value=current;
+}
+function applyDdPreset(key){
+  if(!key) return;
+  const m=/^(DDR|DD)(.+)$/i.exec(key); if(!m) return;
+  const type=m[1].toUpperCase(), number=m[2];
+  const tpl=resolveDdTemplate($('date').value,type,number);
+  if(!tpl){ alert('ה-DD לא נמצא בטבלה המקומית.'); return; }
+  $('ddType').value=type;
+  $('ddNumber').value=number;
+  $('start').value=tpl.start;
+  $('end').value=tpl.end;
+}
+async function updateDdFromServer(){
+  const btn=$('updateDdFromServer'), old=btn.textContent;
+  btn.disabled=true; btn.textContent='מוריד...';
+  try{
+    const r=await fetch(`${DD_SERVER_URL}?v=${Date.now()}`,{cache:'no-store'});
+    if(!r.ok) throw new Error(String(r.status));
+    const raw=await r.json();
+    const t=normalizeDdTables({week:raw.week,thursday:raw.thursday,updatedAt:new Date().toISOString()});
+    if(!t.week.length && !t.thursday.length) throw new Error('empty');
+    localStorage.setItem(KEY_DD_TABLES,JSON.stringify(t));
+    refreshDdStatus(); refreshDdPresetOptions();
+    alert(`טבלת DD עודכנה מהשרת.\nכל השבוע: ${t.week.length}\nיום חמישי: ${t.thursday.length}\n\nמשמרות קיימות לא השתנו.`);
+  }catch(e){
+    alert('לא ניתן לעדכן את טבלת ה-DD מהשרת כרגע. הטבלה המקומית הקיימת נשארה ללא שינוי.');
+  }finally{
+    btn.disabled=false; btn.textContent=old;
+  }
+}
+function refreshDdStatus(){
+  const el=$('ddStatus'); if(!el) return;
+  const t=getDdTables();
+  let when='לא עודכנה עדיין';
+  if(t.updatedAt){ try{when=new Date(t.updatedAt).toLocaleString('he-IL');}catch(e){} }
+  el.textContent=`כל השבוע: ${t.week.length} · חמישי: ${t.thursday.length} · עדכון אחרון: ${when}`;
+}
+function openDdEditor(){
+  renderDdEditor();
+  $('ddEditorModal').classList.remove('hidden');
+  $('ddEditorModal').setAttribute('aria-hidden','false');
+  document.body.classList.add('modal-open');
+}
+function closeDdEditor(){
+  $('ddEditorModal').classList.add('hidden');
+  $('ddEditorModal').setAttribute('aria-hidden','true');
+  document.body.classList.remove('modal-open');
+}
+function renderDdEditor(){
+  const t=getDdTables();
+  const block=(title,key,list)=>`<div class="card"><h3 style="margin-top:0">${title}</h3>${
+    list.length?list.map(x=>`<div class="payroll-row"><span><strong>${escapeHtml(ddKey(x.type,x.number))}</strong> <span class="muted">${escapeHtml(x.start)}–${escapeHtml(x.end)}</span></span><button type="button" class="secondary dd-delete" data-table="${key}" data-key="${escapeHtml(ddKey(x.type,x.number))}" style="width:auto">מחק</button></div>`).join(''):'<div class="muted">אין נתונים.</div>'
+  }</div>`;
+  $('ddEditorList').innerHTML=block('כל השבוע','week',t.week)+block('יום חמישי','thursday',t.thursday);
+  document.querySelectorAll('.dd-delete').forEach(btn=>{
+    btn.onclick=()=>{
+      const d=getDdTables();
+      d[btn.dataset.table]=d[btn.dataset.table].filter(x=>ddKey(x.type,x.number)!==btn.dataset.key);
+      d.updatedAt=new Date().toISOString();
+      saveDdTables(d); renderDdEditor();
+    };
+  });
+}
+function saveLocalDdEntry(){
+  const table=$('ddEditTable').value, type=$('ddEditType').value;
+  const number=$('ddEditNumber').value.trim(), start=$('ddEditStart').value, end=$('ddEditEnd').value;
+  if(!number || !start || !end){ alert('יש למלא מספר DD, שעת התחלה ושעת סיום.'); return; }
+  const t=getDdTables(), key=ddKey(type,number), item={type,number,start,end};
+  const i=t[table].findIndex(x=>ddKey(x.type,x.number)===key);
+  if(i>=0) t[table][i]=item; else t[table].push(item);
+  t.updatedAt=new Date().toISOString();
+  saveDdTables(t);
+  $('ddEditNumber').value=''; $('ddEditStart').value=''; $('ddEditEnd').value='';
+  renderDdEditor();
+}
+
 function monthDateStrings(month){
   if(!/^\d{4}-\d{2}$/.test(month||'')) return [];
   const [year,monthNum]=month.split('-').map(Number);
@@ -1333,6 +1527,7 @@ function saveMonthlyEntry(){
       start,
       end,
       breakMin:'0',
+      notes:'',
       dayType:'auto',
       bonus:'0',
       extraLoopType:'none',
@@ -1384,6 +1579,7 @@ function saveMonthlyEntry(){
 }
 
 function openShiftModal(editing=false){
+  setTimeout(refreshDdPresetOptions,0);
   $('shiftModal').classList.remove('hidden');
   $('shiftModal').setAttribute('aria-hidden','false');
   document.body.classList.add('modal-open');
@@ -1396,6 +1592,17 @@ function closeShiftModal(){
   document.body.classList.remove('modal-open');
 }
 
+
+
+$('updateDdFromServer').onclick=updateDdFromServer;
+$('editLocalDd').onclick=openDdEditor;
+$('closeDdEditor').onclick=closeDdEditor;
+$('ddEditorBackdrop').onclick=closeDdEditor;
+$('saveDdLocal').onclick=saveLocalDdEntry;
+$('ddPreset').addEventListener('change',e=>applyDdPreset(e.target.value));
+$('date').addEventListener('change',refreshDdPresetOptions);
+refreshDdStatus();
+refreshDdPresetOptions();
 
 $('openMonthlyEntry').onclick=openMonthlyEntry;
 $('closeMonthlyEntry').onclick=closeMonthlyEntry;
@@ -1415,6 +1622,7 @@ $('openShiftModal').onclick=()=>{
   $('start').value='';
   $('end').value='';
   $('breakMin').value='0';
+  $('notes').value='';
   $('dayType').value='auto';
   $('bonus').value='0';
   $('extraLoopType').value='none';
@@ -1427,7 +1635,8 @@ $('closeShiftModal').onclick=closeShiftModal;
 $('shiftModalBackdrop').onclick=closeShiftModal;
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){
-    if(!$('monthlyEntryModal').classList.contains('hidden')) closeMonthlyEntry();
+    if(!$('ddEditorModal').classList.contains('hidden')) closeDdEditor();
+    else if(!$('monthlyEntryModal').classList.contains('hidden')) closeMonthlyEntry();
     else if(!$('shiftDetailsModal').classList.contains('hidden')) closeShiftDetails();
     else if(!$('shiftModal').classList.contains('hidden')) closeShiftModal();
   }
@@ -1444,6 +1653,7 @@ $('addShift').onclick=()=>{
     start:$('start').value,
     end:$('end').value,
     breakMin:$('breakMin').value,
+    notes:$('notes').value.trim(),
     dayType:$('dayType').value,
     bonus:$('bonus').value,
     extraLoopType:$('extraLoopType').value,
@@ -1489,10 +1699,11 @@ $('saveSettings').onclick=()=>{ saveSettings(); renderShifts(); renderSummary();
 $('monthFilter').onchange=renderSummary;
 
 function buildBackupPayload(){
-  let shiftsData=[], settingsData={}, payslipsData={};
+  let shiftsData=[], settingsData={}, payslipsData={}, ddTablesData={};
   try{ shiftsData=JSON.parse(localStorage.getItem(KEY_SHIFTS)||'[]'); }catch(e){ shiftsData=[]; }
   try{ settingsData=JSON.parse(localStorage.getItem(KEY_SETTINGS)||'{}'); }catch(e){ settingsData={}; }
   try{ payslipsData=JSON.parse(localStorage.getItem(KEY_PAYSLIPS)||'{}'); }catch(e){ payslipsData={}; }
+  try{ ddTablesData=JSON.parse(localStorage.getItem(KEY_DD_TABLES)||'{}'); }catch(e){ ddTablesData={}; }
 
   return {
     app: 'salary-work-hours',
@@ -1501,7 +1712,8 @@ function buildBackupPayload(){
     data: {
       shifts: shiftsData,
       settings: settingsData,
-      payslips: payslipsData
+      payslips: payslipsData,
+      ddTables: ddTablesData
     }
   };
 }
@@ -1534,6 +1746,7 @@ function validateBackupPayload(payload){
   if(!Array.isArray(payload.data.shifts)) return false;
   if(!payload.data.settings || typeof payload.data.settings!=='object' || Array.isArray(payload.data.settings)) return false;
   if(!payload.data.payslips || typeof payload.data.payslips!=='object' || Array.isArray(payload.data.payslips)) return false;
+  if(payload.data.ddTables!==undefined && (!payload.data.ddTables || typeof payload.data.ddTables!=='object' || Array.isArray(payload.data.ddTables))) return false;
   return true;
 }
 
@@ -1555,6 +1768,7 @@ async function restoreBackupFromFile(file){
     localStorage.setItem(KEY_SHIFTS,JSON.stringify(cleanShifts));
     localStorage.setItem(KEY_SETTINGS,JSON.stringify(payload.data.settings));
     localStorage.setItem(KEY_PAYSLIPS,JSON.stringify(payload.data.payslips));
+    if(payload.data.ddTables!==undefined) localStorage.setItem(KEY_DD_TABLES,JSON.stringify(normalizeDdTables(payload.data.ddTables)));
 
     alert('השחזור הושלם בהצלחה. האפליקציה תיטען מחדש.');
     location.reload();
@@ -1630,7 +1844,7 @@ function exportMonthlyPdf(){
         <td>${escapeHtml(dayNameHe(sh.date))}</td>
         <td>
           ${escapeHtml(sh.start)}-${escapeHtml(sh.end)}
-          ${(sh.ddType && sh.ddNumber!=='')?`<div class="small">${escapeHtml(sh.ddType+sh.ddNumber)}</div>`:''}
+          ${(sh.ddType && sh.ddNumber!=='')?`<div class="small">${escapeHtml(sh.ddType+sh.ddNumber)}</div>`:''}${sh.notes?`<div class="small">${escapeHtml(sh.notes)}</div>`:''}
         </td>
         <td>${fmtMin(c.grossMinutes)}</td>
         <td>${fmtMin(c.regMin)}</td>
@@ -1800,7 +2014,38 @@ $('savePayslip').addEventListener('click',savePayslipData);
 
 renderShifts(); renderSummary(); renderPayslipComparison();
 
-if('serviceWorker' in navigator){ navigator.serviceWorker.register('./sw.js').catch(()=>{}); }
+
+let pendingServiceWorker=null;
+let reloadingForUpdate=false;
+function showUpdateBanner(worker){
+  pendingServiceWorker=worker||pendingServiceWorker;
+  $('updateBanner').classList.remove('hidden');
+}
+$('applyUpdate').onclick=()=>{
+  if(pendingServiceWorker) pendingServiceWorker.postMessage({type:'SKIP_WAITING'});
+  else location.reload();
+};
+$('dismissUpdate').onclick=()=>$('updateBanner').classList.add('hidden');
+
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    if(reloadingForUpdate) return;
+    reloadingForUpdate=true;
+    location.reload();
+  });
+  navigator.serviceWorker.register('./sw.js').then(reg=>{
+    if(reg.waiting) showUpdateBanner(reg.waiting);
+    reg.addEventListener('updatefound',()=>{
+      const worker=reg.installing;
+      if(!worker) return;
+      worker.addEventListener('statechange',()=>{
+        if(worker.state==='installed' && navigator.serviceWorker.controller) showUpdateBanner(worker);
+      });
+    });
+    reg.update().catch(()=>{});
+  }).catch(()=>{});
+}
+
 </script>
 
 </body>
