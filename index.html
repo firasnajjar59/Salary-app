@@ -1,0 +1,1592 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <meta name="theme-color" content="#111827"/>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="שעות ושכר">
+  <title>מחשבון שעות ושכר</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <style>
+    :root{
+      --bg:#f5f7fb;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;
+      --accent:#111827;--ok:#047857;--danger:#b91c1c;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text)}
+    header{position:sticky;top:0;background:#111827;color:white;padding:16px;z-index:5}
+    header h1{font-size:20px;margin:0 0 4px} header p{margin:0;font-size:12px;opacity:.8}
+    main{max-width:780px;margin:auto;padding:14px 14px calc(96px + env(safe-area-inset-bottom))}
+    .tabs{
+      position:fixed;
+      right:0;
+      left:0;
+      bottom:0;
+      z-index:25;
+      display:grid;
+      grid-template-columns:1fr 1fr 1fr 1fr 1fr;
+      gap:4px;
+      padding:8px 10px calc(8px + env(safe-area-inset-bottom));
+      background:rgba(255,255,255,.96);
+      border-top:1px solid var(--line);
+      box-shadow:0 -8px 24px rgba(17,24,39,.08);
+      backdrop-filter:blur(14px);
+      -webkit-backdrop-filter:blur(14px);
+    }
+    .tab{
+      min-height:54px;
+      border:0;
+      border-radius:14px;
+      padding:6px 4px;
+      background:transparent;
+      color:var(--muted);
+      font-weight:700;
+      font-size:11px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:3px;
+      cursor:pointer;
+    }
+    .tab-icon{font-size:20px;line-height:1}
+    .tab.active{
+      background:#f3f4f6;
+      color:var(--text);
+    }
+    .nav-add{
+      border:0;
+      background:transparent;
+      padding:0 4px;
+      min-height:54px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+    }
+    .nav-add-inner{
+      width:52px;
+      height:52px;
+      border-radius:16px;
+      background:#111827;
+      color:white;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:30px;
+      line-height:1;
+      box-shadow:0 8px 20px rgba(17,24,39,.22);
+      transform:translateY(-5px);
+    }
+    .card{background:var(--card);border-radius:16px;padding:14px;margin-bottom:12px;box-shadow:0 2px 12px rgba(0,0,0,.05)}
+    h2{font-size:17px;margin:0 0 12px}
+    h3{font-size:15px;margin:10px 0}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
+    input,select{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;background:white;font-size:16px}
+    button.primary{width:100%;border:0;border-radius:12px;padding:13px;background:#111827;color:#fff;font-weight:800;font-size:15px}
+    button.secondary{border:1px solid var(--line);background:white;border-radius:10px;padding:9px 11px;font-weight:700}
+    button.danger{border:0;background:#fee2e2;color:var(--danger);border-radius:10px;padding:9px 11px;font-weight:700}
+    .shift-date-link{
+      border:0;background:transparent;padding:0;margin:0;color:var(--text);
+      font-size:21px;font-weight:900;cursor:pointer;text-decoration:none;
+    }
+    .shift-date-link:active{opacity:.7}
+    .shift-filter-card{padding-bottom:12px}
+    .shift-filter-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:12px;
+    }
+    .filter-count{
+      font-size:12px;
+      font-weight:800;
+      color:var(--muted);
+      background:#f3f4f6;
+      border-radius:999px;
+      padding:6px 9px;
+      white-space:nowrap;
+    }
+    .compare-table-wrap{overflow-x:auto}
+    .compare-table{width:100%;border-collapse:collapse;min-width:590px}
+    .compare-table th,.compare-table td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:right;vertical-align:middle}
+    .compare-table th{font-size:12px;color:var(--muted);font-weight:800}
+    .compare-table td:first-child{font-weight:700}
+    .compare-table input{min-width:105px;padding:9px}
+    .diff-ok{color:var(--ok);font-weight:800}
+    .diff-bad{color:var(--danger);font-weight:800}
+    .diff-more{color:#0369a1;font-weight:800}
+    .compare-summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .compare-summary-box{border:1px solid var(--line);border-radius:12px;padding:12px;background:#f9fafb}
+    .compare-summary-box span{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+    .compare-summary-box strong{font-size:18px}
+    .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .detail-row{
+      border:1px solid var(--line);
+      border-radius:10px;
+      padding:11px;
+      background:white;
+    }
+    .detail-row span{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
+    .detail-row strong{font-size:16px}
+    .detail-total{
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:13px;
+      margin-top:12px;
+      background:#f9fafb;
+    }
+    .detail-total span{font-size:12px;color:var(--muted)}
+    .detail-total strong{display:block;font-size:22px;margin-top:4px}
+    @media(max-width:420px){
+      .detail-grid{grid-template-columns:1fr}
+    }
+
+    .summary{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .stat{background:#f9fafb;border-radius:12px;padding:12px}
+    .stat strong{display:block;font-size:20px}.stat span{font-size:12px;color:var(--muted)}
+    .shift{border-top:1px solid var(--line);padding:12px 0}
+    .shift:first-child{border-top:0}
+    .shift-head{display:flex;justify-content:space-between;gap:8px;align-items:center}
+    .pill{display:inline-block;background:#eef2ff;padding:4px 8px;border-radius:999px;font-size:11px;margin:2px}
+    .muted{color:var(--muted);font-size:12px}
+    .hidden{display:none}
+    .note{font-size:12px;color:var(--muted);line-height:1.5}
+    .money{font-variant-numeric:tabular-nums}
+    @media(max-width:540px){.grid3{grid-template-columns:1fr 1fr}.summary{grid-template-columns:1fr 1fr}}
+    .modal{
+      position:fixed;
+      inset:0;
+      z-index:30;
+      display:flex;
+      align-items:flex-end;
+      justify-content:center;
+    }
+    .modal.hidden{display:none}
+    .modal-backdrop{
+      position:absolute;
+      inset:0;
+      background:rgba(0,0,0,.45);
+    }
+    .modal-sheet{
+      position:relative;
+      width:min(100%,780px);
+      max-height:90vh;
+      background:var(--bg);
+      border-radius:22px 22px 0 0;
+      box-shadow:0 -10px 30px rgba(0,0,0,.18);
+      overflow:hidden;
+      z-index:1;
+    }
+    .modal-header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:14px 16px;
+      background:var(--card);
+      border-bottom:1px solid var(--line);
+      position:sticky;
+      top:0;
+      z-index:2;
+    }
+    .modal-close{
+      width:38px;
+      height:38px;
+      border-radius:50%;
+      border:1px solid var(--line);
+      background:white;
+      font-size:25px;
+      line-height:1;
+      cursor:pointer;
+    }
+    .modal-body{
+      padding:14px;
+      overflow:auto;
+      max-height:calc(90vh - 67px);
+    }
+    .modal-body .card{
+      box-shadow:none;
+      margin-bottom:0;
+      padding:0;
+      background:transparent;
+    }
+    body.modal-open{overflow:hidden}
+
+  
+    .payroll-flow{display:flex;flex-direction:column;gap:10px}
+    .payroll-accordion{border:1px solid var(--line);border-radius:15px;overflow:hidden;background:var(--card)}
+    .payroll-toggle{width:100%;border:0;background:transparent;color:inherit;padding:14px 15px;display:flex;align-items:center;justify-content:space-between;gap:12px;font:inherit;cursor:pointer;text-align:right}
+    .payroll-toggle-main{display:flex;align-items:center;gap:9px;min-width:0}
+    .payroll-arrow{width:20px;text-align:center;transition:.15s;flex:0 0 20px}
+    .payroll-amount{font-weight:800;white-space:nowrap}
+    .payroll-details{padding:0 15px 12px;border-top:1px solid var(--line)}
+    .payroll-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+    .payroll-row:last-child{border-bottom:0}
+    .payroll-row span:last-child{font-weight:700;white-space:nowrap}
+    .payroll-net{margin-top:5px;border-radius:18px;padding:18px 16px;background:#111827;color:white;display:flex;align-items:center;justify-content:space-between;gap:14px;box-shadow:0 8px 24px rgba(0,0,0,.12)}
+    .payroll-net small{display:block;opacity:.72;margin-bottom:3px}
+    .payroll-net strong{font-size:1.45rem}
+
+  </style>
+</head>
+<body>
+<header>
+  <h1>מחשבון שעות ושכר</h1>
+  <p>עובד מקומית במכשיר ושומר את הנתונים בדפדפן</p>
+</header>
+
+<main>
+  <section id="shifts">
+    <div class="card shift-filter-card">
+      <div class="shift-filter-head">
+        <h2 style="margin:0">המשמרות שלי</h2>
+        <span id="shiftFilterCount" class="filter-count">0 משמרות</span>
+      </div>
+      <div class="grid shift-filter-grid">
+        <div>
+          <label>חודש</label>
+          <input id="shiftMonthFilter" type="month">
+        </div>
+        <div>
+          <label>סינון לפי תוספת</label>
+          <select id="shiftSpecialFilter">
+            <option value="all">כל המשמרות</option>
+            <option value="friday">שישי</option>
+            <option value="saturday">שבת</option>
+            <option value="half">חצי סיבוב</option>
+            <option value="full">סיבוב מלא</option>
+            <option value="nightAny">קווי לילה</option>
+            <option value="to2">קו לילה עד 02:00</option>
+            <option value="to3">קו לילה עד 03:00</option>
+            <option value="over3">קו לילה מעל 03:00</option>
+            <option value="none">ללא תוספת מיוחדת</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div id="shiftList" class="muted">אין משמרות עדיין.</div>
+    </div>
+  </section>
+
+  <section id="summary" class="hidden">
+    <div class="card">
+      <h2>סיכום חודשי</h2>
+      <div class="grid">
+        <div><label>חודש</label><input id="monthFilter" type="month"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="summary">
+        <div class="stat"><strong id="sumHours">0:00</strong><span>סה"כ שעות</span></div>
+        <div class="stat"><strong id="sumShifts">0</strong><span>משמרות</span></div>
+        <div class="stat"><strong id="sumNight">0:00</strong><span>שעות לילה</span></div>
+        <div class="stat"><strong id="sumWeekend">0:00</strong><span>שישי/שבת/חג</span></div>
+        <div class="stat"><strong id="gross" class="money">₪0</strong><span>ברוטו מחושב</span></div>
+        <div class="stat"><strong id="net" class="money">₪0</strong><span>נטו משוער</span></div>
+      </div>
+      <p class="note">הנטו כאן הוא הערכה בלבד. מס הכנסה, ביטוח לאומי, פנסיה והטבות משתנים לפי נתונים אישיים ושנת המס. הברוטו מחושב לפי ההגדרות שלך.</p>
+    </div>
+    <div class="card payroll-card">
+      <div class="shift-head" style="margin-bottom:12px">
+        <h2 style="margin:0">חישוב שכר</h2>
+        <button class="secondary" id="exportPdfBtn" type="button">ייצוא PDF</button>
+      </div>
+      <div id="breakdown"></div>
+    </div>
+  </section>
+
+  <section id="payslip" class="hidden">
+    <div class="card">
+      <div class="shift-filter-head">
+        <h2 style="margin:0">השוואה לתלוש</h2>
+        <span id="payslipStatus" class="filter-count">טרם הוזן תלוש</span>
+      </div>
+      <div class="grid">
+        <div><label>חודש</label><input id="payslipMonth" type="month"></div>
+      </div>
+      <p class="note">העמודה "לפי האפליקציה" מחושבת אוטומטית מהמשמרות של החודש. הזן בעמודה השנייה את הנתונים שמופיעים בתלוש.</p>
+    </div>
+
+    <div class="card">
+      <div class="compare-table-wrap">
+        <table class="compare-table">
+          <thead>
+            <tr><th>רכיב</th><th>לפי האפליקציה</th><th>לפי התלוש</th><th>הפרש</th></tr>
+          </thead>
+          <tbody id="payslipCompareBody"></tbody>
+        </table>
+      </div>
+      <div style="height:12px"></div>
+      <button class="primary" id="savePayslip">שמור נתוני תלוש</button>
+    </div>
+
+    <div class="card">
+      <h2>סיכום ההשוואה</h2>
+      <div id="payslipCompareSummary" class="muted">הזן נתוני תלוש כדי לראות השוואה.</div>
+    </div>
+  </section>
+
+  <section id="settings" class="hidden">
+    <div class="card">
+      <h2>תעריפים</h2>
+      <div class="grid">
+        <div><label>שכר בסיס לשעה ₪</label><input id="baseRate" type="number" step="0.01" value="50"></div>
+        <div><label>נסיעות ליום ₪</label><input id="travelPerDay" type="number" step="0.01" value="16"></div>
+        <div><label>תקרת נסיעות חודשית ₪</label><input id="travelMonthlyCap" type="number" step="0.01" min="0" value="315"></div>
+        <div><label>אש״ל ליום ₪</label><input id="perDiemPerDay" type="number" step="0.01" value="0"></div>
+        <div><label>תוספת לילה ביום רגיל %</label><input id="nightPct" type="number" step="1" value="0"></div>
+        <div><label>תעריף חג %</label><input id="holidayPct" type="number" step="1" value="150"></div>
+      </div>
+      <p class="note"><strong>נסיעות:</strong> מחושבות לפי מספר ימי העבודה בחודש, עד לתקרה החודשית שהוגדרה. <strong>שישי:</strong> שעתיים ראשונות 125%, וכל שעה נוספת באותו יום 150%. <strong>שבת:</strong> 225% סופי כולל כל התוספות.</p>
+    </div>
+
+    <div class="card">
+      <h2>לילה ושעות נוספות</h2>
+      <div class="grid">
+        <div><label>לילה מתחיל</label><input id="nightStart" type="time" value="22:00"></div>
+        <div><label>לילה מסתיים</label><input id="nightEnd" type="time" value="06:00"></div>
+        <div><label>שעות רגילות ליום</label><input id="regularDailyHours" type="number" step="0.25" value="8"></div>
+        <div><label>מדרגת 125% - מספר שעות</label><input id="ot125Hours" type="number" step="0.25" value="2"></div>
+      </div>
+      <p class="note">אחרי מכסת השעות הרגילות: מספר השעות שהוגדר במדרגה הראשונה ישולם ב־125%, וכל היתר ב־150%.</p>
+    </div>
+
+    <div class="card">
+      <h2>תוספות מיוחדות</h2>
+      <div class="grid">
+        <div><label>חצי סיבוב ₪</label><input id="halfLoopAmount" type="number" step="0.01" value="0"></div>
+        <div><label>סיבוב מלא ₪</label><input id="fullLoopAmount" type="number" step="0.01" value="0"></div>
+        <div><label>קווי לילה עד 02:00 ₪</label><input id="nightLine2Amount" type="number" step="0.01" value="0"></div>
+        <div><label>קווי לילה עד 03:00 ₪</label><input id="nightLine3Amount" type="number" step="0.01" value="0"></div>
+        <div><label>קווי לילה מעל 03:00 ₪</label><input id="nightLineOver3Amount" type="number" step="0.01" value="0"></div>
+      </div>
+      <p class="note">התוספות אינן נקבעות לפי שעת הסיום. המשתמש בוחר אותן ידנית בכל משמרת שבה הן מגיעות.</p>
+    </div>
+
+    <div class="card">
+      <h2>מס הכנסה</h2>
+      <p class="note">הכנס את התקרה החודשית לכל מדרגה. לדוגמה: בשורת 10% רשום עד איזה שכר חודשי חל שיעור 10%. מדרגת 50% תחול אוטומטית מעל התקרה של 47%.</p>
+      <div class="grid">
+        <div><label>10% — עד ₪</label><input id="tax10UpTo" type="number" min="0" step="1" placeholder="הכנס תקרה"></div>
+        <div><label>14% — עד ₪</label><input id="tax14UpTo" type="number" min="0" step="1" placeholder="הכנס תקרה"></div>
+        <div><label>20% — עד ₪</label><input id="tax20UpTo" type="number" min="0" step="1" placeholder="הכנס תקרה"></div>
+        <div><label>31% — עד ₪</label><input id="tax31UpTo" type="number" min="0" step="1" placeholder="הכנס תקרה"></div>
+        <div><label>35% — עד ₪</label><input id="tax35UpTo" type="number" min="0" step="1" placeholder="הכנס תקרה"></div>
+        <div><label>47% — עד ₪</label><input id="tax47UpTo" type="number" min="0" step="1" placeholder="הכנס תקרה"></div>
+        <div><label>50%</label><input type="text" value="מעל תקרת 47%" disabled></div>
+      </div>
+      <p class="note">כל עוד לא מולאו כל התקרות בסדר עולה, האפליקציה תשמור על אומדן המס הישן ולא תשנה את חישוב הנטו.</p>
+    </div>
+
+    <div class="card">
+      <h2>ניכויים להערכת נטו</h2>
+      <div class="grid">
+        <div><label>נקודות זיכוי</label><input id="creditPoints" type="number" step="0.25" value="2.25"></div>
+        <div><label>פנסיה עובד %</label><input id="pensionPct" type="number" step="0.1" value="6"></div>
+        <div><label>ניכוי ועד %</label><input id="otherDeductPct" type="number" step="0.1" value="0"></div>
+      </div>
+      <p class="note">נקודות הזיכוי עדיין מוצגות לצורך מידע ואינן מופחתות אוטומטית מהמס בשלב זה. ביטוח לאומי נשאר אומדן.</p>
+      <div style="height:10px"></div>
+      <button class="primary" id="saveSettings">שמור הגדרות</button>
+    </div>
+
+    <div class="card">
+      <h2>גיבוי ושחזור</h2>
+      <p class="note">הגיבוי כולל את כל המשמרות, ההגדרות ונתוני השוואת התלושים. קובץ הגיבוי נשמר בפורמט JSON.</p>
+      <div class="grid">
+        <button class="secondary" id="backupBtn">צור גיבוי JSON</button>
+        <button class="secondary" id="restoreBtn">שחזר מקובץ JSON</button>
+        <input id="restoreFile" type="file" accept=".json,application/json" class="hidden">
+        <button class="danger" id="clearBtn">מחיקת כל הנתונים</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+
+<div id="shiftModal" class="modal hidden" aria-hidden="true">
+  <div class="modal-backdrop" id="shiftModalBackdrop"></div>
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="shiftModalTitle">
+    <div class="modal-header">
+      <h2 id="shiftModalTitle" style="margin:0">הוספת משמרת</h2>
+      <button type="button" class="modal-close" id="closeShiftModal" aria-label="סגור">×</button>
+    </div>
+    <div class="modal-body">
+      
+      <div class="grid">
+        <div><label>תאריך</label><input id="date" type="date"></div>
+        <div><label>הפסקה בדקות</label><input id="breakMin" type="number" min="0" value="0"></div>
+        <div><label>שעת התחלה</label><input id="start" type="time"></div>
+        <div><label>שעת סיום</label><input id="end" type="time"></div>
+      </div>
+      <div style="height:10px"></div>
+      <div class="grid">
+        <div>
+          <label>סוג יום</label>
+          <select id="dayType">
+            <option value="auto">אוטומטי לפי תאריך</option>
+            <option value="regular">יום רגיל</option>
+            <option value="friday">שישי</option>
+            <option value="saturday">שבת</option>
+            <option value="holiday">חג</option>
+          </select>
+        </div>
+        <div>
+          <label>סידור</label>
+          <select id="ddType">
+            <option value="">ללא</option>
+            <option value="DD">DD</option>
+            <option value="DDR">DDR</option>
+          </select>
+        </div>
+        <div>
+          <label>מספר</label>
+          <input id="ddNumber" type="number" min="0" step="1" inputmode="numeric" placeholder="40">
+        </div>
+        <div><label>תוספת ידנית ₪</label><input id="bonus" type="number" step="0.01" value="0"></div>
+      </div>
+
+      <div style="height:10px"></div>
+      <h3>תוספות מיוחדות למשמרת</h3>
+      <div class="grid">
+        <div>
+          <label>סיבוב נוסף</label>
+          <select id="extraLoopType">
+            <option value="none">ללא</option>
+            <option value="half">חצי סיבוב</option>
+            <option value="full">סיבוב</option>
+          </select>
+        </div>
+        <div>
+          <label>קווי לילה</label>
+          <select id="nightLineType">
+            <option value="none">ללא</option>
+            <option value="to2">עד 02:00</option>
+            <option value="to3">עד 03:00</option>
+            <option value="over3">מעל 03:00</option>
+          </select>
+        </div>
+      </div>
+      <div style="height:12px"></div>
+      <button class="primary" id="addShift">הוסף משמרת</button>
+    
+    </div>
+  </div>
+</div>
+
+<div id="shiftDetailsModal" class="modal hidden" aria-hidden="true">
+  <div class="modal-backdrop" id="shiftDetailsBackdrop"></div>
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="shiftDetailsTitle">
+    <div class="modal-header">
+      <h2 id="shiftDetailsTitle" style="margin:0">פירוט משמרת</h2>
+      <button type="button" class="modal-close" id="closeShiftDetails" aria-label="סגור">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="shiftDetailsContent"></div>
+    </div>
+  </div>
+</div>
+
+<nav class="tabs" aria-label="ניווט ראשי">
+  <button class="tab active" data-tab="shifts" type="button">
+    <span class="tab-icon">▤</span>
+    <span>משמרות</span>
+  </button>
+  <button class="tab" data-tab="summary" type="button">
+    <span class="tab-icon">⌁</span>
+    <span>סיכום</span>
+  </button>
+  <button id="openShiftModal" class="nav-add" type="button" aria-label="הוסף משמרת">
+    <span class="nav-add-inner">＋</span>
+  </button>
+  <button class="tab" data-tab="payslip" type="button">
+    <span class="tab-icon">₪</span>
+    <span>תלוש</span>
+  </button>
+  <button class="tab" data-tab="settings" type="button">
+    <span class="tab-icon">⚙</span>
+    <span>הגדרות</span>
+  </button>
+</nav>
+
+<script>
+const $ = id => document.getElementById(id);
+const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KEY_PAYSLIPS='salaryApp.payslips.v1';
+
+function shiftSignature(sh){
+  return [
+    sh.date||'', sh.start||'', sh.end||'', String(sh.breakMin||0),
+    sh.dayType||'auto', String(sh.bonus||0),
+    sh.extraLoopType||'none', sh.nightLineType||'none',
+    sh.ddType||'', String(sh.ddNumber||'')
+  ].join('|');
+}
+
+function dedupeShifts(list){
+  const seen=new Set();
+  return (Array.isArray(list)?list:[]).filter(sh=>{
+    const sig=shiftSignature(sh);
+    if(seen.has(sig)) return false;
+    seen.add(sig);
+    return true;
+  });
+}
+
+let rawShifts=[];
+try{
+  rawShifts=JSON.parse(localStorage.getItem(KEY_SHIFTS)||'[]');
+}catch(e){
+  rawShifts=[];
+}
+let shifts=dedupeShifts(rawShifts);
+
+// If old buggy versions created duplicates, clean them once on load.
+if(shifts.length !== (Array.isArray(rawShifts)?rawShifts.length:0)){
+  localStorage.setItem(KEY_SHIFTS,JSON.stringify(shifts));
+}
+
+let editingShiftId = null;
+
+const settingIds = ['baseRate','travelPerDay','travelMonthlyCap','perDiemPerDay','nightPct','holidayPct','nightStart','nightEnd',
+'regularDailyHours','ot125Hours','halfLoopAmount','fullLoopAmount','nightLine2Amount','nightLine3Amount','nightLineOver3Amount',
+'tax10UpTo','tax14UpTo','tax20UpTo','tax31UpTo','tax35UpTo','tax47UpTo',
+'creditPoints','pensionPct','otherDeductPct'];
+
+function getSettings(){
+  let s={};
+  settingIds.forEach(id=>{
+    const el=$(id);
+    s[id]=el.type==='checkbox'?el.checked:el.value;
+  });
+  return s;
+}
+function saveSettings(){
+  localStorage.setItem(KEY_SETTINGS, JSON.stringify(getSettings()));
+}
+function loadSettings(){
+  const s=JSON.parse(localStorage.getItem(KEY_SETTINGS)||'{}');
+  settingIds.forEach(id=>{
+    if(s[id]!==undefined){
+      const el=$(id);
+      if(el.type==='checkbox') el.checked=!!s[id]; else el.value=s[id];
+    }
+  });
+}
+function toMin(t){ const [h,m]=t.split(':').map(Number); return h*60+m; }
+function fmtMin(min){
+  min=Math.max(0,Math.round(min)); const h=Math.floor(min/60), m=min%60;
+  return `${h}:${String(m).padStart(2,'0')}`;
+}
+function currency(n){ return new Intl.NumberFormat('he-IL',{style:'currency',currency:'ILS',maximumFractionDigits:0}).format(n||0); }
+function overlap(a1,a2,b1,b2){ return Math.max(0,Math.min(a2,b2)-Math.max(a1,b1)); }
+
+function determineDayType(dateStr, forced){
+  if(forced && forced!=='auto') return forced;
+  const d=new Date(dateStr+'T12:00:00');
+  const wd=d.getDay();
+  if(wd===5) return 'friday';
+  if(wd===6) return 'saturday';
+  return 'regular';
+}
+function dayMultiplier(type,s){
+  if(type==='holiday') return Number(s.holidayPct)/100;
+  return 1;
+}
+function calcShift(sh){
+  const s=getSettings();
+
+  // Backward compatibility for shifts saved in older versions
+  if(!sh.extraLoopType){
+    if(sh.extraLoop) sh.extraLoopType='full';
+    else sh.extraLoopType='none';
+  }
+  if(!sh.nightLineType){
+    if(sh.nightLine2) sh.nightLineType='to2';
+    else if(sh.nightLine3) sh.nightLineType='to3';
+    else sh.nightLineType='none';
+  }
+  let start=toMin(sh.start), end=toMin(sh.end);
+  if(end<=start) end+=1440;
+  const breakMin=Number(sh.breakMin||0);
+  const grossMinutes=Math.max(0,end-start-breakMin);
+  const base=Number(s.baseRate);
+  const type=determineDayType(sh.date, sh.dayType);
+
+  const regCap=Number(s.regularDailyHours)*60;
+  const ot1Cap=Number(s.ot125Hours)*60;
+  let regMin=0, ot1Min=0, ot2Min=0;
+  let regPay=0, ot1Pay=0, ot2Pay=0, nightExtra=0;
+
+  let ns=toMin(s.nightStart), ne=toMin(s.nightEnd);
+  let nightMin=0;
+  if(ns<ne){
+    nightMin=overlap(start,end,ns,ne)+overlap(start,end,ns+1440,ne+1440);
+  }else{
+    nightMin=overlap(start,end,ns,1440)+overlap(start,end,0,ne)+overlap(start,end,1440,ne+1440);
+  }
+  nightMin=Math.min(nightMin,grossMinutes);
+
+  if(type==='saturday'){
+    // Saturday is a final all-inclusive rate: 225%.
+    // Do not classify any Saturday minutes as night hours.
+    nightMin=0;
+    regMin=grossMinutes;
+    regPay=grossMinutes/60*base*2.25;
+    ot1Min=0; ot2Min=0; nightExtra=0;
+  }else if(type==='friday'){
+    // Friday: first 2 hours 125%, all remaining hours 150%.
+    ot1Min=Math.min(grossMinutes,120);
+    ot2Min=Math.max(0,grossMinutes-120);
+    ot1Pay=ot1Min/60*base*1.25;
+    ot2Pay=ot2Min/60*base*1.50;
+    regMin=0;
+    nightExtra=0;
+  }else{
+    regMin=Math.min(grossMinutes,regCap);
+    ot1Min=Math.min(Math.max(0,grossMinutes-regCap),ot1Cap);
+    ot2Min=Math.max(0,grossMinutes-regCap-ot1Cap);
+    const dm=dayMultiplier(type,s);
+    regPay=regMin/60*base*dm;
+    ot1Pay=ot1Min/60*base*Math.max(dm,1.25);
+    ot2Pay=ot2Min/60*base*Math.max(dm,1.50);
+    nightExtra=nightMin/60*base*(Number(s.nightPct)/100);
+  }
+
+  const travel=Number(s.travelPerDay||0);
+  const perDiem=Number(s.perDiemPerDay||0);
+  const bonus=Number(sh.bonus||0);
+
+  let extraLoopPay = 0;
+  if(sh.extraLoopType==='half') extraLoopPay = Number(s.halfLoopAmount||0);
+  if(sh.extraLoopType==='full') extraLoopPay = Number(s.fullLoopAmount||0);
+
+  let nightLinePay = 0;
+  if(sh.nightLineType==='to2') nightLinePay = Number(s.nightLine2Amount||0);
+  if(sh.nightLineType==='to3') nightLinePay = Number(s.nightLine3Amount||0);
+  if(sh.nightLineType==='over3') nightLinePay = Number(s.nightLineOver3Amount||0);
+
+  const specialPay = extraLoopPay + nightLinePay;
+
+  const pay=regPay+ot1Pay+ot2Pay+nightExtra+travel+perDiem+bonus+specialPay;
+
+  return {
+    grossMinutes,regMin,ot1Min,ot2Min,nightMin,type,
+    regPay,ot1Pay,ot2Pay,nightExtra,travel,perDiem,bonus,
+    extraLoopPay,nightLinePay,specialPay,pay
+  };
+}
+
+function monthlyTravelForShifts(list){
+  const s=getSettings();
+  const perDay=Math.max(0,Number(s.travelPerDay||0));
+  const cap=Math.max(0,Number(s.travelMonthlyCap||0));
+  const workDays=new Set((Array.isArray(list)?list:[]).map(sh=>sh.date).filter(Boolean)).size;
+  const uncapped=workDays*perDay;
+  const paid=cap>0 ? Math.min(uncapped,cap) : uncapped;
+  return {workDays,perDay,cap,uncapped,paid,capReached:cap>0 && uncapped>cap};
+}
+
+function shiftMatchesSpecialFilter(sh, filter){
+  if(!filter || filter==='all') return true;
+
+  const extra = sh.extraLoopType || (sh.extraLoop ? 'full' : 'none');
+  let night = sh.nightLineType;
+  if(!night){
+    if(sh.nightLine2) night='to2';
+    else if(sh.nightLine3) night='to3';
+    else night='none';
+  }
+
+  const dayType = determineDayType(sh.date, sh.dayType);
+
+  if(filter==='friday') return dayType==='friday';
+  if(filter==='saturday') return dayType==='saturday';
+  if(filter==='half') return extra==='half';
+  if(filter==='full') return extra==='full';
+  if(filter==='nightAny') return night!=='none';
+  if(filter==='to2') return night==='to2';
+  if(filter==='to3') return night==='to3';
+  if(filter==='over3') return night==='over3';
+  if(filter==='none') return extra==='none' && night==='none';
+  return true;
+}
+
+function getFilteredShifts(){
+  const month=$('shiftMonthFilter')?.value || '';
+  const special=$('shiftSpecialFilter')?.value || 'all';
+  return shifts.filter(sh=>{
+    const monthOk=!month || sh.date.startsWith(month);
+    return monthOk && shiftMatchesSpecialFilter(sh,special);
+  });
+}
+
+function renderShifts(){
+  const filtered=getFilteredShifts().slice().sort((a,b)=>b.date.localeCompare(a.date));
+
+  if($('shiftFilterCount')){
+    $('shiftFilterCount').textContent=`${filtered.length} ${filtered.length===1?'משמרת':'משמרות'}`;
+  }
+
+  if(!filtered.length){
+    $('shiftList').innerHTML='<div class="muted">אין משמרות שמתאימות לחודש ולסינון שנבחרו.</div>';
+    return;
+  }
+
+  $('shiftList').innerHTML=filtered.map(sh=>{
+    const c=calcShift(sh);
+    const label={regular:'רגיל',friday:'שישי',saturday:'שבת',holiday:'חג'}[c.type];
+    return `<div class="shift">
+      <div class="shift-head">
+        <div>
+          <button type="button" class="shift-date-link" onclick="openShiftDetails('${sh.id}')">${sh.date.slice(8,10)}/${sh.date.slice(5,7)}</button>
+          <div style="margin-top:3px">${sh.start}–${sh.end}</div>
+          ${(sh.ddType && sh.ddNumber!=='')?`<div style="margin-top:3px;font-weight:700">${sh.ddType}${sh.ddNumber}</div>`:''}
+          <div style="margin-top:6px">
+          <span class="pill">${label}</span>
+          ${c.type==='saturday'?`<span class="pill">225%</span>`:''}
+          <span class="pill">${fmtMin(c.grossMinutes)} שעות</span>
+          ${c.nightMin?`<span class="pill">${fmtMin(c.nightMin)} לילה</span>`:''}
+          ${sh.extraLoopType==='half'?`<span class="pill">חצי סיבוב</span>`:''}
+          ${sh.extraLoopType==='full'?`<span class="pill">סיבוב</span>`:''}
+          ${sh.nightLineType==='to2'?`<span class="pill">קווי לילה עד 02:00</span>`:''}
+          ${sh.nightLineType==='to3'?`<span class="pill">קווי לילה עד 03:00</span>`:''}
+          ${sh.nightLineType==='over3'?`<span class="pill">קווי לילה מעל 03:00</span>`:''}
+          </div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="secondary" onclick="editShift('${sh.id}')">ערוך</button>
+          <button class="danger" onclick="deleteShift('${sh.id}')">מחק</button>
+        </div>
+      </div>
+      <div class="muted" style="margin-top:7px">שכר למשמרת: <strong>${currency(c.pay)}</strong></div>
+    </div>`;
+  }).join('');
+}
+
+function detailMoney(n){ return currency(Number(n||0)); }
+
+function openShiftDetails(id){
+  const sh=shifts.find(x=>x.id===id);
+  if(!sh) return;
+  const c=calcShift(sh);
+  const dayLabel={regular:'רגיל',friday:'שישי',saturday:'שבת',holiday:'חג'}[c.type]||'';
+  const isSaturday = c.type==='saturday';
+  const regularPay = isSaturday ? 0 : (c.regPay||0);
+  const saturdayMin = isSaturday ? c.grossMinutes : 0;
+  const saturdayPay = isSaturday ? (c.regPay||0) : 0;
+  const ot125Pay = c.ot1Pay||0;
+  const ot150Pay = c.ot2Pay||0;
+  const extraText = specialDescription(sh) || '';
+  const ddText = (sh.ddType && sh.ddNumber!=='') ? `${sh.ddType}${sh.ddNumber}` : '';
+
+  $('shiftDetailsTitle').textContent=`פירוט משמרת ${formatDateHe(sh.date)}`;
+  $('shiftDetailsContent').innerHTML=`
+    <div class="detail-grid">
+      <div class="detail-row"><span>תאריך</span><strong>${escapeHtml(formatDateHe(sh.date))}</strong></div>
+      <div class="detail-row"><span>סוג יום</span><strong>${escapeHtml(dayLabel)}</strong></div>
+      <div class="detail-row"><span>שעות משמרת</span><strong>${escapeHtml(sh.start)}–${escapeHtml(sh.end)}</strong></div>
+      <div class="detail-row"><span>סה"כ שעות</span><strong>${fmtMin(c.grossMinutes)}</strong></div>
+
+      ${ddText?`<div class="detail-row"><span>DD / DDR</span><strong>${escapeHtml(ddText)}</strong></div>`:''}
+      ${Number(sh.breakMin||0)>0?`<div class="detail-row"><span>הפסקה</span><strong>${Number(sh.breakMin||0)} דק׳</strong></div>`:''}
+
+      ${!isSaturday && c.regMin>0?`<div class="detail-row"><span>שעות רגילות</span><strong>${fmtMin(c.regMin)}</strong></div>`:''}
+      ${isSaturday && saturdayMin>0?`<div class="detail-row"><span>שעות שבת 225%</span><strong>${fmtMin(saturdayMin)}</strong></div>`:''}
+      ${c.ot1Min>0?`<div class="detail-row"><span>שעות 125%</span><strong>${fmtMin(c.ot1Min)}</strong></div>`:''}
+      ${c.ot2Min>0?`<div class="detail-row"><span>שעות 150%</span><strong>${fmtMin(c.ot2Min)}</strong></div>`:''}
+      ${c.nightMin>0?`<div class="detail-row"><span>שעות לילה</span><strong>${fmtMin(c.nightMin)}</strong></div>`:''}
+
+      ${regularPay>0?`<div class="detail-row"><span>שכר שעות רגילות</span><strong>${detailMoney(regularPay)}</strong></div>`:''}
+      ${saturdayPay>0?`<div class="detail-row"><span>שכר שבת 225%</span><strong>${detailMoney(saturdayPay)}</strong></div>`:''}
+      ${ot125Pay>0?`<div class="detail-row"><span>שכר שעות 125%</span><strong>${detailMoney(ot125Pay)}</strong></div>`:''}
+      ${ot150Pay>0?`<div class="detail-row"><span>שכר שעות 150%</span><strong>${detailMoney(ot150Pay)}</strong></div>`:''}
+      ${c.nightExtra>0?`<div class="detail-row"><span>תוספת לילה</span><strong>${detailMoney(c.nightExtra)}</strong></div>`:''}
+
+      ${c.travel>0?`<div class="detail-row"><span>נסיעות</span><strong>${detailMoney(c.travel)}</strong></div>`:''}
+      ${c.perDiem>0?`<div class="detail-row"><span>אש"ל</span><strong>${detailMoney(c.perDiem)}</strong></div>`:''}
+      ${c.specialPay>0?`<div class="detail-row"><span>תוספות מיוחדות</span><strong>${detailMoney(c.specialPay)}</strong></div>`:''}
+      ${c.specialPay>0 && extraText?`<div class="detail-row"><span>פירוט תוספות</span><strong>${escapeHtml(extraText)}</strong></div>`:''}
+      ${c.bonus>0?`<div class="detail-row"><span>תוספת ידנית</span><strong>${detailMoney(c.bonus)}</strong></div>`:''}
+    </div>
+    <div class="detail-total">
+      <span>סה"כ שכר למשמרת</span>
+      <strong>${detailMoney(c.pay||0)}</strong>
+    </div>
+  `;
+
+  $('shiftDetailsModal').classList.remove('hidden');
+  $('shiftDetailsModal').setAttribute('aria-hidden','false');
+  document.body.classList.add('modal-open');
+}
+
+function closeShiftDetails(){
+  $('shiftDetailsModal').classList.add('hidden');
+  $('shiftDetailsModal').setAttribute('aria-hidden','true');
+  document.body.classList.remove('modal-open');
+}
+
+window.openShiftDetails=openShiftDetails;
+
+window.editShift=id=>{
+  const sh=shifts.find(x=>x.id===id);
+  if(!sh) return;
+  editingShiftId=id;
+  $('date').value=sh.date||'';
+  $('start').value=sh.start||'';
+  $('end').value=sh.end||'';
+  $('breakMin').value=sh.breakMin||0;
+  $('dayType').value=sh.dayType||'auto';
+  $('bonus').value=sh.bonus||0;
+  $('extraLoopType').value=sh.extraLoopType||'none';
+  $('nightLineType').value=sh.nightLineType||'none';
+  $('ddType').value=sh.ddType||'';
+  $('ddNumber').value=sh.ddNumber||'';
+  $('addShift').textContent='שמור שינויים';
+  openShiftModal(true);
+};
+
+window.deleteShift=id=>{
+  shifts=shifts.filter(x=>x.id!==id);
+  localStorage.setItem(KEY_SHIFTS,JSON.stringify(shifts));
+  renderShifts(); renderSummary();
+};
+
+
+let payslips={};
+try{
+  payslips=JSON.parse(localStorage.getItem(KEY_PAYSLIPS)||'{}') || {};
+}catch(e){
+  payslips={};
+}
+
+function monthlyPayrollTotals(month){
+  const filtered=month?shifts.filter(s=>s.date.startsWith(month)):shifts;
+  const travelInfo=monthlyTravelForShifts(filtered);
+  const t={
+    regMin:0,ot125Min:0,ot150Min:0,saturdayMin:0,nightMin:0,
+    travel:travelInfo.paid,perDiem:0,specialPay:0,bonus:0,gross:0
+  };
+  filtered.forEach(sh=>{
+    const c=calcShift(sh);
+    if(c.type==='saturday') t.saturdayMin+=c.grossMinutes;
+    else t.regMin+=c.regMin||0;
+    t.ot125Min+=c.ot1Min||0;
+    t.ot150Min+=c.ot2Min||0;
+    t.nightMin+=c.nightMin||0;
+    t.perDiem+=c.perDiem||0;
+    t.specialPay+=c.specialPay||0;
+    t.bonus+=c.bonus||0;
+    t.gross+=(c.pay||0)-(c.travel||0);
+  });
+  t.gross+=travelInfo.paid;
+  return t;
+}
+
+const payslipFields=[
+  {key:'regHours',label:'שעות רגילות',type:'hours',app:t=>t.regMin/60},
+  {key:'ot125Hours',label:'שעות 125%',type:'hours',app:t=>t.ot125Min/60},
+  {key:'ot150Hours',label:'שעות 150%',type:'hours',app:t=>t.ot150Min/60},
+  {key:'saturdayHours',label:'שבת 225%',type:'hours',app:t=>t.saturdayMin/60},
+  {key:'nightHours',label:'שעות לילה',type:'hours',app:t=>t.nightMin/60},
+  {key:'travel',label:'נסיעות',type:'money',app:t=>t.travel},
+  {key:'perDiem',label:'אש"ל',type:'money',app:t=>t.perDiem},
+  {key:'specialPay',label:'תוספות מיוחדות',type:'money',app:t=>t.specialPay},
+  {key:'bonus',label:'תוספות ידניות',type:'money',app:t=>t.bonus},
+  {key:'gross',label:'ברוטו',type:'money',app:t=>t.gross}
+];
+
+function formatCompareValue(v,type){
+  if(type==='money') return currency(v);
+  return `${Number(v||0).toFixed(2)} ש׳`;
+}
+function formatDiff(v,type){
+  if(type==='money') return `${v>0?'+':''}${currency(v)}`;
+  return `${v>0?'+':''}${Number(v||0).toFixed(2)} ש׳`;
+}
+
+function renderPayslipComparison(){
+  const month=$('payslipMonth').value;
+  const app=monthlyPayrollTotals(month);
+  const saved=payslips[month]||{};
+  let compared=0, mismatches=0, totalMoneyDiff=0;
+
+  $('payslipCompareBody').innerHTML=payslipFields.map(f=>{
+    const appValue=Number(f.app(app)||0);
+    const raw=saved[f.key];
+    const hasValue=raw!==undefined && raw!==null && raw!=='';
+    const slipValue=hasValue?Number(raw):null;
+    const diff=hasValue ? slipValue-appValue : null;
+    if(hasValue){
+      compared++;
+      if(Math.abs(diff)>.009) mismatches++;
+      if(f.type==='money') totalMoneyDiff+=diff;
+    }
+    const cls=diff===null?'':(Math.abs(diff)<.01?'diff-ok':(diff<0?'diff-bad':'diff-more'));
+    return `<tr>
+      <td>${f.label}</td>
+      <td>${formatCompareValue(appValue,f.type)}</td>
+      <td><input class="payslip-input" data-key="${f.key}" type="number" step="${f.type==='money'?'0.01':'0.01'}" value="${hasValue?escapeHtml(raw):''}" placeholder="לפי התלוש"></td>
+      <td class="${cls}">${diff===null?'—':(Math.abs(diff)<.01?'תואם ✓':formatDiff(diff,f.type))}</td>
+    </tr>`;
+  }).join('');
+
+  if(compared===0){
+    $('payslipStatus').textContent='טרם הוזן תלוש';
+    $('payslipCompareSummary').innerHTML='<div class="muted">הזן את נתוני התלוש ולחץ "שמור נתוני תלוש".</div>';
+  }else{
+    $('payslipStatus').textContent=mismatches===0?'הכול תואם':`${mismatches} הפרשים`;
+    $('payslipCompareSummary').innerHTML=`
+      <div class="compare-summary-grid">
+        <div class="compare-summary-box"><span>רכיבים שנבדקו</span><strong>${compared}</strong></div>
+        <div class="compare-summary-box"><span>רכיבים עם הפרש</span><strong>${mismatches}</strong></div>
+        <div class="compare-summary-box"><span>הפרש כספי ברכיבים שהוזנו</span><strong class="${Math.abs(totalMoneyDiff)<.01?'diff-ok':(totalMoneyDiff<0?'diff-bad':'diff-more')}">${formatDiff(totalMoneyDiff,'money')}</strong></div>
+        <div class="compare-summary-box"><span>משמעות ההפרש</span><strong>${totalMoneyDiff<-.01?'פחות בתלוש':(totalMoneyDiff>.01?'יותר בתלוש':'תואם')}</strong></div>
+      </div>`;
+  }
+}
+
+function savePayslipData(){
+  const month=$('payslipMonth').value;
+  if(!month) return;
+  const data={};
+  document.querySelectorAll('.payslip-input').forEach(input=>{
+    if(input.value!=='') data[input.dataset.key]=input.value;
+  });
+  payslips[month]=data;
+  localStorage.setItem(KEY_PAYSLIPS,JSON.stringify(payslips));
+  renderPayslipComparison();
+}
+
+function getCustomTaxBrackets(s){
+  const limits=[
+    Number(s.tax10UpTo),
+    Number(s.tax14UpTo),
+    Number(s.tax20UpTo),
+    Number(s.tax31UpTo),
+    Number(s.tax35UpTo),
+    Number(s.tax47UpTo)
+  ];
+  const valid=limits.every((v,i)=>Number.isFinite(v) && v>0 && (i===0 || v>limits[i-1]));
+  if(!valid) return null;
+  return {limits,rates:[.10,.14,.20,.31,.35,.47,.50]};
+}
+
+function calculateConfiguredTax(gross,s){
+  const brackets=getCustomTaxBrackets(s);
+  if(!brackets) return null;
+
+  let tax=0;
+  let from=0;
+  brackets.limits.forEach((to,i)=>{
+    if(gross>from){
+      tax += Math.max(0,Math.min(gross,to)-from) * brackets.rates[i];
+    }
+    from=to;
+  });
+  if(gross>from) tax += (gross-from)*brackets.rates[6];
+  return tax;
+}
+
+function estimateNetDetails(gross){
+  const s=getSettings();
+  const pension=gross*(Number(s.pensionPct)/100);
+  const unionDeduction=gross*(Number(s.otherDeductPct)/100);
+
+  const configuredTax=calculateConfiguredTax(gross,s);
+  let tax=0;
+  let customTaxUsed=false;
+
+  if(configuredTax!==null){
+    tax=configuredTax;
+    customTaxUsed=true;
+  }else{
+    // Preserve the previous rough estimate until all custom tax brackets are entered.
+    if(gross>7000) tax+=(Math.min(gross,10000)-7000)*.08;
+    if(gross>10000) tax+=(Math.min(gross,16000)-10000)*.14;
+    if(gross>16000) tax+=(gross-16000)*.22;
+  }
+
+  const insurance = gross * (gross<=8000 ? .035 : .07);
+  const net=Math.max(0,gross-pension-unionDeduction-tax-insurance);
+  return {gross,tax,insurance,pension,unionDeduction,net,customTaxUsed};
+}
+function estimateNet(gross){
+  return estimateNetDetails(gross).net;
+}
+function renderSummary(){
+  const month=$('monthFilter').value;
+  const filtered=month?shifts.filter(s=>s.date.startsWith(month)):shifts;
+  const travelInfo=monthlyTravelForShifts(filtered);
+  let totals={
+    grossMinutes:0,nightMin:0,weekendMin:0,pay:0,
+    regPay:0,saturdayMin:0,saturdayPay:0,ot1Pay:0,ot2Pay:0,nightExtra:0,travel:0,perDiem:0,bonus:0,specialPay:0,
+    halfLoopCount:0,halfLoopPay:0,fullLoopCount:0,fullLoopPay:0,
+    nightTo2Count:0,nightTo2Pay:0,nightTo3Count:0,nightTo3Pay:0,
+    nightOver3Count:0,nightOver3Pay:0
+  };
+  filtered.forEach(sh=>{
+    const c=calcShift(sh);
+    totals.grossMinutes+=c.grossMinutes; totals.nightMin+=c.nightMin; totals.pay+=c.pay;
+    if(c.type!=='regular') totals.weekendMin+=c.grossMinutes;
+
+    // Saturday is already paid correctly by calcShift() at 225%.
+    // Separate it here only for clearer display; do not alter the payroll math.
+    if(c.type==='saturday'){
+      totals.saturdayMin += c.grossMinutes;
+      totals.saturdayPay += c.regPay;
+    }else{
+      totals.regPay += c.regPay;
+    }
+    ['ot1Pay','ot2Pay','nightExtra','perDiem','bonus','specialPay'].forEach(k=>totals[k]+=c[k]);
+    // Travel is monthly: daily rate × unique work days, capped once per month.
+    totals.pay-=c.travel||0;
+
+    if(sh.extraLoopType==='half'){
+      totals.halfLoopCount++;
+      totals.halfLoopPay += c.extraLoopPay;
+    }
+    if(sh.extraLoopType==='full'){
+      totals.fullLoopCount++;
+      totals.fullLoopPay += c.extraLoopPay;
+    }
+    if(sh.nightLineType==='to2'){
+      totals.nightTo2Count++;
+      totals.nightTo2Pay += c.nightLinePay;
+    }
+    if(sh.nightLineType==='to3'){
+      totals.nightTo3Count++;
+      totals.nightTo3Pay += c.nightLinePay;
+    }
+    if(sh.nightLineType==='over3'){
+      totals.nightOver3Count++;
+      totals.nightOver3Pay += c.nightLinePay;
+    }
+  });
+  totals.travel=travelInfo.paid;
+  totals.pay+=travelInfo.paid;
+
+  $('sumHours').textContent=fmtMin(totals.grossMinutes);
+  $('sumShifts').textContent=filtered.length;
+  $('sumNight').textContent=fmtMin(totals.nightMin);
+  $('sumWeekend').textContent=fmtMin(totals.weekendMin);
+  $('gross').textContent=currency(totals.pay);
+
+  const netDetails=estimateNetDetails(totals.pay);
+  $('net').textContent=currency(netDetails.net);
+
+  const specialItems = [
+    ['חצי סיבוב', totals.halfLoopCount, totals.halfLoopPay],
+    ['סיבוב', totals.fullLoopCount, totals.fullLoopPay],
+    ['קווי לילה עד 02:00', totals.nightTo2Count, totals.nightTo2Pay],
+    ['קווי לילה עד 03:00', totals.nightTo3Count, totals.nightTo3Pay],
+    ['קווי לילה מעל 03:00', totals.nightOver3Count, totals.nightOver3Pay]
+  ].filter(x=>x[1]>0);
+
+  const specialDetails = specialItems.length
+    ? specialItems.map(([name,count,amount])=>`
+        <div class="payroll-row">
+          <span>${name} <span class="muted">× ${count}</span></span>
+          <span>${currency(amount)}</span>
+        </div>`).join('')
+    : `<div class="muted" style="padding:10px 0">אין תוספות מיוחדות בחודש זה.</div>`;
+
+  const grossRows = `
+    <div class="payroll-row"><span>שעות רגילות / תעריף יום</span><span>${currency(totals.regPay)}</span></div>
+    ${totals.saturdayMin?`<div class="payroll-row"><span>שבת 225% <span class="muted">(${fmtMin(totals.saturdayMin)} שעות)</span></span><span>${currency(totals.saturdayPay)}</span></div>`:''}
+    <div class="payroll-row"><span>שעות נוספות 125%</span><span>${currency(totals.ot1Pay)}</span></div>
+    <div class="payroll-row"><span>שעות נוספות 150%</span><span>${currency(totals.ot2Pay)}</span></div>
+    <div class="payroll-row"><span>תוספת לילה</span><span>${currency(totals.nightExtra)}</span></div>
+    <div class="payroll-row">
+      <span>נסיעות <span class="muted">(${travelInfo.workDays} ימים × ${currency(travelInfo.perDay)}${travelInfo.cap>0?`, תקרה ${currency(travelInfo.cap)}`:''})</span></span>
+      <span>${currency(totals.travel)}</span>
+    </div>
+    <div class="payroll-row"><span>אש״ל</span><span>${currency(totals.perDiem)}</span></div>
+    <div class="payroll-row"><span>תוספות מיוחדות</span><span>${currency(totals.specialPay)}</span></div>
+    ${specialDetails}
+    <div class="payroll-row"><span>תוספת ידנית</span><span>${currency(totals.bonus)}</span></div>
+  `;
+
+  const settings=getSettings();
+  const creditPoints=Number(settings.creditPoints||0);
+
+  $('breakdown').innerHTML = `
+    <div class="payroll-flow">
+      <div class="payroll-accordion">
+        <button type="button" class="payroll-toggle" data-payroll-toggle="grossDetails">
+          <span class="payroll-toggle-main"><span class="payroll-arrow">◀</span><strong>מרכיבי שכר ברוטו</strong></span>
+          <span class="payroll-amount">${currency(totals.pay)}</span>
+        </button>
+        <div id="grossDetails" class="payroll-details hidden">${grossRows}</div>
+      </div>
+
+      <div class="payroll-accordion">
+        <button type="button" class="payroll-toggle" data-payroll-toggle="taxDetails">
+          <span class="payroll-toggle-main"><span class="payroll-arrow">◀</span><strong>ניכוי מס הכנסה</strong></span>
+          <span class="payroll-amount">− ${currency(netDetails.tax)}</span>
+        </button>
+        <div id="taxDetails" class="payroll-details hidden">
+          <div class="payroll-row"><span>מס הכנסה משוער</span><span>${currency(netDetails.tax)}</span></div>
+          <div class="payroll-row"><span>נקודות זיכוי</span><span>${creditPoints}</span></div>
+          <div class="note" style="padding-top:8px">המס עדיין מחושב באומדן בלבד.</div>
+        </div>
+      </div>
+
+      <div class="payroll-accordion">
+        <button type="button" class="payroll-toggle" data-payroll-toggle="insuranceDetails">
+          <span class="payroll-toggle-main"><span class="payroll-arrow">◀</span><strong>ביטוחים וניכויים סוציאליים</strong></span>
+          <span class="payroll-amount">− ${currency(netDetails.insurance + netDetails.pension)}</span>
+        </button>
+        <div id="insuranceDetails" class="payroll-details hidden">
+          <div class="payroll-row"><span>ביטוח לאומי ובריאות — אומדן</span><span>${currency(netDetails.insurance)}</span></div>
+          <div class="payroll-row"><span>פנסיה עובד</span><span>${currency(netDetails.pension)}</span></div>
+        </div>
+      </div>
+
+      <div class="payroll-accordion">
+        <button type="button" class="payroll-toggle" data-payroll-toggle="unionDetails">
+          <span class="payroll-toggle-main"><span class="payroll-arrow">◀</span><strong>ניכוי ועד</strong></span>
+          <span class="payroll-amount">− ${currency(netDetails.unionDeduction)}</span>
+        </button>
+        <div id="unionDetails" class="payroll-details hidden">
+          <div class="payroll-row"><span>אחוז ניכוי</span><span>${Number(settings.otherDeductPct||0)}%</span></div>
+          <div class="payroll-row"><span>סה״כ ניכוי ועד</span><span>${currency(netDetails.unionDeduction)}</span></div>
+        </div>
+      </div>
+
+      <div class="payroll-net">
+        <div><small>נטו משוער</small><strong>${currency(netDetails.net)}</strong></div>
+        <div style="text-align:left;opacity:.8">לאחר ניכויים</div>
+      </div>
+    </div>
+  `;
+
+  document.querySelectorAll('[data-payroll-toggle]').forEach(btn=>{
+    btn.onclick=()=>{
+      const target=$(btn.dataset.payrollToggle);
+      const arrow=btn.querySelector('.payroll-arrow');
+      const opening=target.classList.contains('hidden');
+      target.classList.toggle('hidden');
+      arrow.textContent=opening?'▼':'◀';
+    };
+  });
+}
+
+
+function openShiftModal(editing=false){
+  $('shiftModal').classList.remove('hidden');
+  $('shiftModal').setAttribute('aria-hidden','false');
+  document.body.classList.add('modal-open');
+  $('shiftModalTitle').textContent=editing?'עריכת משמרת':'הוספת משמרת';
+}
+
+function closeShiftModal(){
+  $('shiftModal').classList.add('hidden');
+  $('shiftModal').setAttribute('aria-hidden','true');
+  document.body.classList.remove('modal-open');
+}
+
+$('openShiftModal').onclick=()=>{
+  editingShiftId=null;
+  $('addShift').textContent='הוסף משמרת';
+  $('shiftModalTitle').textContent='הוספת משמרת';
+  $('date').value=new Date().toISOString().slice(0,10);
+  $('start').value='';
+  $('end').value='';
+  $('breakMin').value='0';
+  $('dayType').value='auto';
+  $('bonus').value='0';
+  $('extraLoopType').value='none';
+  $('nightLineType').value='none';
+  $('ddType').value='';
+  $('ddNumber').value='';
+  openShiftModal(false);
+};
+$('closeShiftModal').onclick=closeShiftModal;
+$('shiftModalBackdrop').onclick=closeShiftModal;
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    if(!$('shiftDetailsModal').classList.contains('hidden')) closeShiftDetails();
+    else if(!$('shiftModal').classList.contains('hidden')) closeShiftModal();
+  }
+});
+$('closeShiftDetails').onclick=closeShiftDetails;
+$('shiftDetailsBackdrop').onclick=closeShiftDetails;
+
+$('addShift').onclick=()=>{
+  if(!$('date').value || !$('start').value || !$('end').value){ alert('יש למלא תאריך, התחלה וסיום.'); return; }
+
+  const data = {
+    id: editingShiftId || (crypto.randomUUID?crypto.randomUUID():String(Date.now())),
+    date:$('date').value,
+    start:$('start').value,
+    end:$('end').value,
+    breakMin:$('breakMin').value,
+    dayType:$('dayType').value,
+    bonus:$('bonus').value,
+    extraLoopType:$('extraLoopType').value,
+    nightLineType:$('nightLineType').value,
+    ddType:$('ddType').value,
+    ddNumber:$('ddNumber').value
+  };
+
+  if(editingShiftId){
+    const duplicate=shifts.some(x=>x.id!==editingShiftId && shiftSignature(x)===shiftSignature(data));
+    if(duplicate){
+      alert('כבר קיימת משמרת זהה בתאריך ובשעות האלה.');
+      return;
+    }
+    const i=shifts.findIndex(x=>x.id===editingShiftId);
+    if(i>=0) shifts[i]=data;
+    editingShiftId=null;
+    $('addShift').textContent='הוסף משמרת';
+  }else{
+    const duplicate=shifts.some(x=>shiftSignature(x)===shiftSignature(data));
+    if(duplicate){
+      alert('המשמרת הזו כבר קיימת ולא נשמרה שוב.');
+      return;
+    }
+    shifts.push(data);
+  }
+
+  shifts=dedupeShifts(shifts);
+  localStorage.setItem(KEY_SHIFTS,JSON.stringify(shifts));
+  renderShifts(); renderSummary();
+
+  $('start').value='';
+  $('end').value='';
+  $('bonus').value='0';
+  $('extraLoopType').value='none';
+  $('nightLineType').value='none';
+  $('ddType').value='';
+  $('ddNumber').value='';
+  closeShiftModal();
+};
+
+$('saveSettings').onclick=()=>{ saveSettings(); renderShifts(); renderSummary(); alert('ההגדרות נשמרו.'); };
+$('monthFilter').onchange=renderSummary;
+
+function buildBackupPayload(){
+  let shiftsData=[], settingsData={}, payslipsData={};
+  try{ shiftsData=JSON.parse(localStorage.getItem(KEY_SHIFTS)||'[]'); }catch(e){ shiftsData=[]; }
+  try{ settingsData=JSON.parse(localStorage.getItem(KEY_SETTINGS)||'{}'); }catch(e){ settingsData={}; }
+  try{ payslipsData=JSON.parse(localStorage.getItem(KEY_PAYSLIPS)||'{}'); }catch(e){ payslipsData={}; }
+
+  return {
+    app: 'salary-work-hours',
+    backupVersion: 1,
+    exportedAt: new Date().toISOString(),
+    data: {
+      shifts: shiftsData,
+      settings: settingsData,
+      payslips: payslipsData
+    }
+  };
+}
+
+function downloadBackupJson(){
+  const payload=buildBackupPayload();
+  const json=JSON.stringify(payload,null,2);
+  const blob=new Blob([json],{type:'application/json;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const now=new Date();
+  const stamp=[
+    now.getFullYear(),
+    String(now.getMonth()+1).padStart(2,'0'),
+    String(now.getDate()).padStart(2,'0')
+  ].join('-');
+  a.href=url;
+  a.download=`salary-app-backup-${stamp}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+function validateBackupPayload(payload){
+  if(!payload || typeof payload!=='object') return false;
+  if(payload.app!=='salary-work-hours') return false;
+  if(Number(payload.backupVersion)!==1) return false;
+  if(!payload.data || typeof payload.data!=='object') return false;
+  if(!Array.isArray(payload.data.shifts)) return false;
+  if(!payload.data.settings || typeof payload.data.settings!=='object' || Array.isArray(payload.data.settings)) return false;
+  if(!payload.data.payslips || typeof payload.data.payslips!=='object' || Array.isArray(payload.data.payslips)) return false;
+  return true;
+}
+
+async function restoreBackupFromFile(file){
+  try{
+    const text=await file.text();
+    const payload=JSON.parse(text);
+
+    if(!validateBackupPayload(payload)){
+      alert('קובץ הגיבוי אינו תקין או שאינו שייך לאפליקציה הזו.');
+      return;
+    }
+
+    if(!confirm('השחזור יחליף את הנתונים הקיימים באפליקציה בנתונים שבקובץ הגיבוי. להמשיך?')){
+      return;
+    }
+
+    const cleanShifts=dedupeShifts(payload.data.shifts);
+    localStorage.setItem(KEY_SHIFTS,JSON.stringify(cleanShifts));
+    localStorage.setItem(KEY_SETTINGS,JSON.stringify(payload.data.settings));
+    localStorage.setItem(KEY_PAYSLIPS,JSON.stringify(payload.data.payslips));
+
+    alert('השחזור הושלם בהצלחה. האפליקציה תיטען מחדש.');
+    location.reload();
+  }catch(e){
+    alert('לא ניתן לקרוא את קובץ הגיבוי. ודא שזה קובץ JSON תקין.');
+  }
+}
+
+$('backupBtn').onclick=downloadBackupJson;
+$('restoreBtn').onclick=()=>$('restoreFile').click();
+$('restoreFile').addEventListener('change',()=>{
+  const file=$('restoreFile').files && $('restoreFile').files[0];
+  if(file) restoreBackupFromFile(file);
+  $('restoreFile').value='';
+});
+
+$('clearBtn').onclick=()=>{
+  if(confirm('למחוק את כל המשמרות וההגדרות?')){
+    localStorage.removeItem(KEY_SHIFTS); localStorage.removeItem(KEY_SETTINGS); location.reload();
+  }
+};
+
+function dayNameHe(dateStr){
+  try{
+    return new Intl.DateTimeFormat('he-IL',{weekday:'long'}).format(new Date(dateStr+'T12:00:00'));
+  }catch(e){
+    return '';
+  }
+}
+
+function formatDateHe(dateStr){
+  const [y,m,d]=(dateStr||'').split('-');
+  return y&&m&&d ? `${d}/${m}/${y}` : dateStr;
+}
+
+function escapeHtml(v){
+  return String(v??'')
+    .replaceAll('&','&amp;')
+    .replaceAll('<','&lt;')
+    .replaceAll('>','&gt;')
+    .replaceAll('"','&quot;')
+    .replaceAll("'","&#039;");
+}
+
+function specialDescription(sh){
+  const parts=[];
+  if(sh.extraLoopType==='half') parts.push('חצי סיבוב');
+  if(sh.extraLoopType==='full') parts.push('סיבוב');
+  if(sh.nightLineType==='to2') parts.push('קווי לילה עד 02:00');
+  if(sh.nightLineType==='to3') parts.push('קווי לילה עד 03:00');
+  if(sh.nightLineType==='over3') parts.push('קווי לילה מעל 03:00');
+  return parts.join(', ');
+}
+
+function exportMonthlyPdf(){
+  const month=$('monthFilter').value;
+  const filtered=(month?shifts.filter(s=>s.date.startsWith(month)):shifts)
+    .slice().sort((a,b)=>a.date.localeCompare(b.date)||a.start.localeCompare(b.start));
+  const travelInfo=monthlyTravelForShifts(filtered);
+
+  if(!filtered.length){
+    alert('אין משמרות בחודש שנבחר.');
+    return;
+  }
+
+  const rows=filtered.map(sh=>{
+    const c=calcShift(sh);
+    const specialText=specialDescription(sh);
+    const extraPayments=c.travel+c.perDiem+c.specialPay+c.bonus+c.nightExtra;
+    return `
+      <tr>
+        <td>${escapeHtml(formatDateHe(sh.date))}</td>
+        <td>${escapeHtml(dayNameHe(sh.date))}</td>
+        <td>
+          ${escapeHtml(sh.start)}-${escapeHtml(sh.end)}
+          ${(sh.ddType && sh.ddNumber!=='')?`<div class="small">${escapeHtml(sh.ddType+sh.ddNumber)}</div>`:''}
+        </td>
+        <td>${fmtMin(c.grossMinutes)}</td>
+        <td>${fmtMin(c.regMin)}</td>
+        <td>${fmtMin(c.ot1Min)}</td>
+        <td>${fmtMin(c.ot2Min)}</td>
+        <td>${fmtMin(c.nightMin)}</td>
+        <td>${currency(c.regPay)}</td>
+        <td>${currency(c.ot1Pay+c.ot2Pay)}</td>
+        <td>
+          ${currency(extraPayments)}
+          ${specialText?`<div class="small">${escapeHtml(specialText)}</div>`:''}
+        </td>
+        <td class="total">${currency(c.pay)}</td>
+      </tr>`;
+  }).join('');
+
+  const totals={
+    grossMinutes:0,regMin:0,ot1Min:0,ot2Min:0,nightMin:0,
+    regPay:0,otPay:0,nightExtra:0,travel:0,perDiem:0,specialPay:0,bonus:0,pay:0
+  };
+
+  filtered.forEach(sh=>{
+    const c=calcShift(sh);
+    totals.grossMinutes+=c.grossMinutes;
+    totals.regMin+=c.regMin;
+    totals.ot1Min+=c.ot1Min;
+    totals.ot2Min+=c.ot2Min;
+    totals.nightMin+=c.nightMin;
+    totals.regPay+=c.regPay;
+    totals.otPay+=c.ot1Pay+c.ot2Pay;
+    totals.nightExtra+=c.nightExtra;
+    totals.perDiem+=c.perDiem;
+    totals.specialPay+=c.specialPay;
+    totals.bonus+=c.bonus;
+    totals.pay+=c.pay-c.travel;
+  });
+  totals.travel=travelInfo.paid;
+  totals.pay+=travelInfo.paid;
+
+  const net=estimateNetDetails(totals.pay);
+  const monthTitle=month
+    ? new Intl.DateTimeFormat('he-IL',{month:'long',year:'numeric'}).format(new Date(month+'-01T12:00:00'))
+    : 'כל התקופה';
+
+  const reportHtml=`<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>דוח שעות ושכר - ${escapeHtml(monthTitle)}</title>
+<style>
+  @page{size:A4 landscape;margin:9mm}
+  *{box-sizing:border-box}
+  body{font-family:Arial,"Segoe UI",sans-serif;color:#111;margin:0;direction:rtl;font-size:10px}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:#555;margin-bottom:14px;font-size:11px}
+  .summary{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-bottom:12px}
+  .box{border:1px solid #d8dbe2;border-radius:8px;padding:8px}
+  .box b{display:block;font-size:14px;margin-top:3px}
+  table{width:100%;border-collapse:collapse;table-layout:auto}
+  th,td{border:1px solid #d8dbe2;padding:5px 4px;text-align:center;vertical-align:middle}
+  th{background:#f1f3f6;font-weight:700}
+  tbody tr:nth-child(even){background:#fafafa}
+  .small{font-size:8px;color:#555;margin-top:2px;line-height:1.25}
+  .total{font-weight:700}
+  .pay-summary{margin-top:12px;display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+  .pay-summary .box{min-height:54px}
+  .net{background:#111827;color:white;border-color:#111827}
+  .note{margin-top:9px;font-size:8.5px;color:#666}
+  @media print{
+    body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    button{display:none!important}
+  }
+</style>
+</head>
+<body>
+  <h1>דוח שעות ושכר</h1>
+  <div class="sub">${escapeHtml(monthTitle)} · ${filtered.length} משמרות</div>
+
+  <div class="summary">
+    <div class="box">סה"כ שעות<b>${fmtMin(totals.grossMinutes)}</b></div>
+    <div class="box">שעות רגילות<b>${fmtMin(totals.regMin)}</b></div>
+    <div class="box">125%<b>${fmtMin(totals.ot1Min)}</b></div>
+    <div class="box">150%<b>${fmtMin(totals.ot2Min)}</b></div>
+    <div class="box">שעות לילה<b>${fmtMin(totals.nightMin)}</b></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>תאריך</th>
+        <th>יום</th>
+        <th>משמרת</th>
+        <th>סה"כ שעות</th>
+        <th>רגילות</th>
+        <th>125%</th>
+        <th>150%</th>
+        <th>לילה</th>
+        <th>שכר רגיל</th>
+        <th>שעות נוספות</th>
+        <th>תשלומים נוספים</th>
+        <th>סה"כ למשמרת</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>
+
+  <div class="pay-summary">
+    <div class="box">נסיעות<b>${currency(totals.travel)}</b><span class="small">${travelInfo.workDays} ימים × ${currency(travelInfo.perDay)}${travelInfo.cap>0?` · תקרה ${currency(travelInfo.cap)}`:''}</span></div>
+    <div class="box">אש"ל<b>${currency(totals.perDiem)}</b></div>
+    <div class="box">תוספות מיוחדות<b>${currency(totals.specialPay)}</b></div>
+    <div class="box">תוספת לילה<b>${currency(totals.nightExtra)}</b></div>
+    <div class="box">תוספות ידניות<b>${currency(totals.bonus)}</b></div>
+    <div class="box">ברוטו מחושב<b>${currency(totals.pay)}</b></div>
+    <div class="box">ניכויים משוערים<b>${currency(net.tax+net.insurance+net.pension+net.unionDeduction)}</b></div>
+    <div class="box net">נטו משוער<b>${currency(net.net)}</b></div>
+  </div>
+
+  <div class="note">
+    הדוח מבוסס על הנתונים וההגדרות שהוזנו באפליקציה. חישובי מס הכנסה, ביטוח לאומי והנטו הם אומדן בלבד.
+  </div>
+
+<script>
+  window.onload=()=>{ setTimeout(()=>window.print(),250); };
+<\/script>
+</body>
+</html>`;
+
+  const reportWindow=window.open('','_blank');
+  if(!reportWindow){
+    alert('הדפדפן חסם את חלון הדוח. יש לאפשר חלונות קופצים ולנסות שוב.');
+    return;
+  }
+  reportWindow.document.open();
+  reportWindow.document.write(reportHtml);
+  reportWindow.document.close();
+}
+
+$('exportPdfBtn').onclick=exportMonthlyPdf;
+
+
+document.querySelectorAll('.tab').forEach(btn=>btn.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  ['shifts','summary','payslip','settings'].forEach(id=>$(id).classList.add('hidden'));
+  $(btn.dataset.tab).classList.remove('hidden');
+  if(btn.dataset.tab==='summary') renderSummary();
+  if(btn.dataset.tab==='payslip') renderPayslipComparison();
+});
+
+loadSettings();
+const today=new Date();
+const currentMonth=today.toISOString().slice(0,7);
+$('date').value=today.toISOString().slice(0,10);
+$('monthFilter').value=currentMonth;
+
+const availableShiftMonths=[...new Set(shifts.map(s=>s.date.slice(0,7)))].sort().reverse();
+$('shiftMonthFilter').value=availableShiftMonths.includes(currentMonth)
+  ? currentMonth
+  : (availableShiftMonths[0] || currentMonth);
+
+$('shiftMonthFilter').addEventListener('change',renderShifts);
+$('shiftSpecialFilter').addEventListener('change',renderShifts);
+$('payslipMonth').value=currentMonth;
+$('payslipMonth').addEventListener('change',renderPayslipComparison);
+$('savePayslip').addEventListener('click',savePayslipData);
+
+renderShifts(); renderSummary(); renderPayslipComparison();
+
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('./sw.js').catch(()=>{}); }
+</script>
+
+</body>
+</html>
