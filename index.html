@@ -88,6 +88,25 @@
     .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
     label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
     input,select{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;background:white;font-size:16px}
+    textarea{
+      width:100%;
+      box-sizing:border-box;
+      padding:11px;
+      border:1px solid var(--line);
+      border-radius:10px;
+      background:white;
+      color:var(--text);
+      font:inherit;
+      font-size:16px;
+      font-weight:400;
+      line-height:1.45;
+      resize:vertical;
+      min-height:82px;
+    }
+    textarea:focus{
+      outline:2px solid rgba(17,24,39,.12);
+      outline-offset:1px;
+    }
     button.primary{width:100%;border:0;border-radius:12px;padding:13px;background:#111827;color:#fff;font-weight:800;font-size:15px}
     button.secondary{border:1px solid var(--line);background:white;border-radius:10px;padding:9px 11px;font-weight:700}
     button.danger{border:0;background:#fee2e2;color:var(--danger);border-radius:10px;padding:9px 11px;font-weight:700}
@@ -344,6 +363,10 @@
         <h2 style="margin:0">המשמרות שלי</h2>
         <span id="shiftFilterCount" class="filter-count">0 משמרות</span>
       </div>
+      <div style="margin-bottom:10px">
+        <label>חיפוש לפי DD / DDR</label>
+        <input id="shiftDdSearch" type="search" placeholder="למשל DD50 או DDR3" autocomplete="off">
+      </div>
       <div class="grid shift-filter-grid">
         <div>
           <label>חודש</label>
@@ -508,7 +531,7 @@
         <button class="secondary" id="updateDdFromServer" type="button">עדכן טבלת DD מהשרת</button>
         <button class="secondary" id="editLocalDd" type="button">ערוך DD מקומי</button>
       </div>
-      <div id="ddStatus" class="note" style="margin-top:10px"></div><div class="note" style="margin-top:6px">גרסת אפליקציה: <strong>29</strong></div>
+      <div id="ddStatus" class="note" style="margin-top:10px"></div><div class="note" style="margin-top:6px">גרסת אפליקציה: <strong>30</strong></div>
     </div>
 
     <div class="card">
@@ -697,12 +720,32 @@
   </div>
 </div>
 
+
+<div id="ddUpdateModal" class="modal hidden" aria-hidden="true">
+  <div class="modal-backdrop" id="ddUpdateBackdrop"></div>
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="ddUpdateTitle">
+    <div class="modal-header">
+      <h2 id="ddUpdateTitle" style="margin:0">עדכון רשימת DD זמין</h2>
+      <button type="button" class="modal-close" id="closeDdUpdate" aria-label="סגור">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="note" id="ddUpdateMessage">קיימת רשימת DD חדשה בשרת. האם לעדכן את הרשימה המקומית?</p>
+      <p class="note">העדכון ידרוס את טבלת ה-DD המקומית בלבד. משמרות שכבר נשמרו לא ישתנו.</p>
+      <div class="grid">
+        <button class="primary" id="confirmDdUpdate" type="button">עדכן עכשיו</button>
+        <button class="secondary" id="laterDdUpdate" type="button">אחר כך</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 const $ = id => document.getElementById(id);
 const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KEY_PAYSLIPS='salaryApp.payslips.v1';
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
+const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=29;
+const APP_VERSION=30;
 const VERSION_URL='./version.json';
 
 function shiftSignature(sh){
@@ -903,12 +946,26 @@ function shiftMatchesSpecialFilter(sh, filter){
   return true;
 }
 
+function normalizeDdSearch(value){
+  return String(value||'').toUpperCase().replace(/\s+/g,'').trim();
+}
+
 function getFilteredShifts(){
   const month=$('shiftMonthFilter')?.value || '';
   const special=$('shiftSpecialFilter')?.value || 'all';
+  const ddSearch=normalizeDdSearch($('shiftDdSearch')?.value || '');
+
   return shifts.filter(sh=>{
     const monthOk=!month || sh.date.startsWith(month);
-    return monthOk && shiftMatchesSpecialFilter(sh,special);
+    if(!monthOk || !shiftMatchesSpecialFilter(sh,special)) return false;
+
+    if(ddSearch){
+      const shiftDd=normalizeDdSearch(
+        (sh.ddType && sh.ddNumber!=='') ? `${sh.ddType}${sh.ddNumber}` : ''
+      );
+      if(!shiftDd.includes(ddSearch)) return false;
+    }
+    return true;
   });
 }
 
@@ -1451,12 +1508,13 @@ function normalizeDdTables(data){
     week:norm(data?.week,'DD'),
     thursday:norm(data?.thursday,'DD'),
     ddr:norm(data?.ddr,'DDR'),
-    updatedAt:data?.updatedAt||null
+    updatedAt:data?.updatedAt||null,
+    sourceVersion:Number(data?.sourceVersion||0)||0
   };
 }
 function getDdTables(){
   try{return normalizeDdTables(JSON.parse(localStorage.getItem(KEY_DD_TABLES)||'{}'));}
-  catch(e){return {week:[],thursday:[],ddr:[],updatedAt:null};}
+  catch(e){return {week:[],thursday:[],ddr:[],updatedAt:null,sourceVersion:0};}
 }
 function saveDdTables(t){
   localStorage.setItem(KEY_DD_TABLES,JSON.stringify(normalizeDdTables(t)));
@@ -1464,7 +1522,8 @@ function saveDdTables(t){
 }
 function displayDdNumber(type,number){
   if(number===undefined || number===null || String(number)==='') return '';
-  return String(type||'').toUpperCase()==='DDR' ? `DDR${number}` : String(number);
+  const t=String(type||'DD').toUpperCase()==='DDR'?'DDR':'DD';
+  return `${t}${number}`;
 }
 function ddKey(type,number){ return `${String(type||'').toUpperCase()}${String(number||'').trim()}`; }
 function isThursday(dateStr){
@@ -1518,28 +1577,83 @@ async function updateDdFromServer(){
     const r=await fetch(`${DD_SERVER_URL}?v=${Date.now()}`,{cache:'no-store'});
     if(!r.ok) throw new Error(String(r.status));
     const raw=await r.json();
+    const sourceVersion=Number(raw.version||0)||0;
     const t=normalizeDdTables({
       week:raw.week,
       thursday:raw.thursday,
       ddr:raw.ddr,
-      updatedAt:new Date().toISOString()
+      updatedAt:new Date().toISOString(),
+      sourceVersion
     });
     if(!t.week.length && !t.thursday.length && !t.ddr.length) throw new Error('empty');
     localStorage.setItem(KEY_DD_TABLES,JSON.stringify(t));
-    refreshDdStatus(); refreshDdPresetOptions();
+    if(sourceVersion>0) localStorage.setItem(KEY_DD_SERVER_VERSION,String(sourceVersion));
+    refreshDdStatus();
+    refreshDdPresetOptions();
+    closeDdUpdatePrompt();
     alert(`טבלת הסידורים עודכנה מהשרת.\nכל השבוע: ${t.week.length}\nיום חמישי: ${t.thursday.length}\nDDR: ${t.ddr.length}\n\nמשמרות קיימות לא השתנו.`);
+    return true;
   }catch(e){
     alert('לא ניתן לעדכן את טבלת הסידורים מהשרת כרגע. הטבלה המקומית הקיימת נשארה ללא שינוי.');
+    return false;
   }finally{
-    btn.disabled=false; btn.textContent=old;
+    btn.disabled=false;
+    btn.textContent=old;
   }
 }
+
+let pendingDdServerVersion=0;
+
+function openDdUpdatePrompt(version){
+  pendingDdServerVersion=Number(version||0)||0;
+  $('ddUpdateMessage').textContent=pendingDdServerVersion
+    ? `קיימת רשימת DD חדשה בשרת (גרסה ${pendingDdServerVersion}). האם לעדכן את הרשימה המקומית?`
+    : 'קיימת רשימת DD חדשה בשרת. האם לעדכן את הרשימה המקומית?';
+  $('ddUpdateModal').classList.remove('hidden');
+  $('ddUpdateModal').setAttribute('aria-hidden','false');
+  document.body.classList.add('modal-open');
+}
+
+function closeDdUpdatePrompt(){
+  $('ddUpdateModal').classList.add('hidden');
+  $('ddUpdateModal').setAttribute('aria-hidden','true');
+  document.body.classList.remove('modal-open');
+}
+
+async function checkDdServerUpdate(){
+  try{
+    const r=await fetch(`${DD_SERVER_URL}?meta=${Date.now()}`,{cache:'no-store'});
+    if(!r.ok) return;
+    const raw=await r.json();
+    const remoteVersion=Number(raw.version||0)||0;
+    if(!remoteVersion) return;
+
+    const localTables=getDdTables();
+    let localVersion=Number(
+      localStorage.getItem(KEY_DD_SERVER_VERSION) || localTables.sourceVersion || 0
+    ) || 0;
+
+    // Migration: existing users already have the same v2 table locally,
+    // so establish the current server version silently once to avoid a false alert.
+    if(!localVersion && (localTables.week.length || localTables.thursday.length || localTables.ddr.length)){
+      localStorage.setItem(KEY_DD_SERVER_VERSION,String(remoteVersion));
+      localStorage.setItem(KEY_DD_TABLES,JSON.stringify({...localTables,sourceVersion:remoteVersion}));
+      return;
+    }
+
+    if(remoteVersion>localVersion){
+      openDdUpdatePrompt(remoteVersion);
+    }
+  }catch(e){}
+}
+
 function refreshDdStatus(){
   const el=$('ddStatus'); if(!el) return;
   const t=getDdTables();
   let when='לא עודכנה עדיין';
   if(t.updatedAt){ try{when=new Date(t.updatedAt).toLocaleString('he-IL');}catch(e){} }
-  el.textContent=`כל השבוע: ${t.week.length} · חמישי: ${t.thursday.length} · DDR: ${t.ddr.length} · עדכון אחרון: ${when}`;
+  const listVersion=Number(localStorage.getItem(KEY_DD_SERVER_VERSION)||t.sourceVersion||0)||0;
+  el.textContent=`כל השבוע: ${t.week.length} · חמישי: ${t.thursday.length} · DDR: ${t.ddr.length}${listVersion?` · גרסת רשימה: ${listVersion}`:''} · עדכון אחרון: ${when}`;
 }
 function openDdEditor(){
   renderDdEditor();
@@ -1762,6 +1876,10 @@ function closeShiftModal(){
 
 
 
+$('confirmDdUpdate').onclick=updateDdFromServer;
+$('laterDdUpdate').onclick=closeDdUpdatePrompt;
+$('closeDdUpdate').onclick=closeDdUpdatePrompt;
+$('ddUpdateBackdrop').onclick=closeDdUpdatePrompt;
 $('updateDdFromServer').onclick=updateDdFromServer;
 $('editLocalDd').onclick=openDdEditor;
 $('closeDdEditor').onclick=closeDdEditor;
@@ -1805,7 +1923,8 @@ $('closeShiftModal').onclick=closeShiftModal;
 $('shiftModalBackdrop').onclick=closeShiftModal;
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){
-    if(!$('ddEditorModal').classList.contains('hidden')) closeDdEditor();
+    if(!$('ddUpdateModal').classList.contains('hidden')) closeDdUpdatePrompt();
+    else if(!$('ddEditorModal').classList.contains('hidden')) closeDdEditor();
     else if(!$('monthlyEntryModal').classList.contains('hidden')) closeMonthlyEntry();
     else if(!$('shiftDetailsModal').classList.contains('hidden')) closeShiftDetails();
     else if(!$('shiftModal').classList.contains('hidden')) closeShiftModal();
@@ -2180,6 +2299,7 @@ $('shiftMonthFilter').value=availableShiftMonths.includes(currentMonth)
   ? currentMonth
   : (availableShiftMonths[0] || currentMonth);
 
+$('shiftDdSearch').addEventListener('input',renderShifts);
 $('shiftMonthFilter').addEventListener('change',renderShifts);
 $('shiftSpecialFilter').addEventListener('change',renderShifts);
 $('payslipMonth').value=currentMonth;
@@ -2262,6 +2382,8 @@ if('serviceWorker' in navigator){
 
 checkRemoteVersion();
 setInterval(checkRemoteVersion,15*60*1000);
+checkDdServerUpdate();
+setInterval(checkDdServerUpdate,6*60*60*1000);
 
 </script>
 
