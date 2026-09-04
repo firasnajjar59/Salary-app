@@ -275,7 +275,7 @@
 </header>
 <div id="updateBanner" class="card hidden" style="margin:10px auto;max-width:780px">
   <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap">
-    <div><strong>גרסה חדשה זמינה</strong><div class="note">אפשר לעדכן בלי למחוק את המשמרות וההגדרות.</div></div>
+    <div><strong id="updateBannerTitle">גרסה חדשה זמינה</strong><div class="note">אפשר לעדכן בלי למחוק את המשמרות וההגדרות.</div></div>
     <div style="display:flex;gap:8px">
       <button class="primary" id="applyUpdate" type="button">עדכן עכשיו</button>
       <button class="secondary" id="dismissUpdate" type="button">אחר כך</button>
@@ -450,7 +450,7 @@
         <button class="secondary" id="updateDdFromServer" type="button">עדכן טבלת DD מהשרת</button>
         <button class="secondary" id="editLocalDd" type="button">ערוך DD מקומי</button>
       </div>
-      <div id="ddStatus" class="note" style="margin-top:10px"></div>
+      <div id="ddStatus" class="note" style="margin-top:10px"></div><div class="note" style="margin-top:6px">גרסת אפליקציה: <strong>26</strong></div>
     </div>
 
     <div class="card">
@@ -630,6 +630,7 @@
             <select id="ddEditTable">
               <option value="week">כל השבוע</option>
               <option value="thursday">יום חמישי</option>
+              <option value="ddr">DDR</option>
             </select>
           </div>
           <div>
@@ -640,8 +641,8 @@
             </select>
           </div>
           <div><label>מספר</label><input id="ddEditNumber" type="text" inputmode="numeric" placeholder="למשל 40"></div>
-          <div><label>התחלה</label><input id="ddEditStart" type="time"></div>
-          <div><label>סיום</label><input id="ddEditEnd" type="time"></div>
+          <div><label>התחלה</label><input id="ddEditStart" type="text" inputmode="numeric" placeholder="04:30"></div>
+          <div><label>סיום</label><input id="ddEditEnd" type="text" inputmode="numeric" placeholder="25:54"></div>
         </div>
         <button class="primary" id="saveDdLocal" type="button" style="margin-top:10px">שמור DD מקומי</button>
       </div>
@@ -655,6 +656,8 @@ const $ = id => document.getElementById(id);
 const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KEY_PAYSLIPS='salaryApp.payslips.v1';
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const DD_SERVER_URL='./dd.json';
+const APP_VERSION=26;
+const VERSION_URL='./version.json';
 
 function shiftSignature(sh){
   return [
@@ -1318,18 +1321,39 @@ function renderSummary(){
 
 
 
+function isOperationalTime(value){
+  const m=/^(\d{1,2}):([0-5]\d)$/.exec(String(value||'').trim());
+  if(!m) return false;
+  const h=Number(m[1]);
+  return h>=0 && h<=47;
+}
+function normalizeOperationalTime(value){
+  const m=/^(\d{1,2}):([0-5]\d)$/.exec(String(value||'').trim());
+  if(!m) return '';
+  return `${String(Number(m[1])).padStart(2,'0')}:${m[2]}`;
+}
+function operationalToClock(value){
+  const m=/^(\d{1,2}):([0-5]\d)$/.exec(String(value||'').trim());
+  if(!m) return '';
+  return `${String(Number(m[1])%24).padStart(2,'0')}:${m[2]}`;
+}
 function normalizeDdTables(data){
-  const norm=list=>(Array.isArray(list)?list:[]).map(x=>({
-    type:String(x.type||'DD').toUpperCase()==='DDR'?'DDR':'DD',
+  const norm=(list,forcedType=null)=>(Array.isArray(list)?list:[]).map(x=>({
+    type:forcedType || (String(x.type||'DD').toUpperCase()==='DDR'?'DDR':'DD'),
     number:String(x.number??'').trim(),
-    start:String(x.start||'').trim(),
-    end:String(x.end||'').trim()
-  })).filter(x=>x.number && /^\d{2}:\d{2}$/.test(x.start) && /^\d{2}:\d{2}$/.test(x.end));
-  return {week:norm(data?.week), thursday:norm(data?.thursday), updatedAt:data?.updatedAt||null};
+    start:normalizeOperationalTime(x.start),
+    end:normalizeOperationalTime(x.end)
+  })).filter(x=>x.number && isOperationalTime(x.start) && isOperationalTime(x.end));
+  return {
+    week:norm(data?.week,'DD'),
+    thursday:norm(data?.thursday,'DD'),
+    ddr:norm(data?.ddr,'DDR'),
+    updatedAt:data?.updatedAt||null
+  };
 }
 function getDdTables(){
   try{return normalizeDdTables(JSON.parse(localStorage.getItem(KEY_DD_TABLES)||'{}'));}
-  catch(e){return {week:[],thursday:[],updatedAt:null};}
+  catch(e){return {week:[],thursday:[],ddr:[],updatedAt:null};}
 }
 function saveDdTables(t){
   localStorage.setItem(KEY_DD_TABLES,JSON.stringify(normalizeDdTables(t)));
@@ -1342,7 +1366,11 @@ function isThursday(dateStr){
   return new Date(Date.UTC(p[0],p[1]-1,p[2])).getUTCDay()===4;
 }
 function resolveDdTemplate(dateStr,type,number){
-  const t=getDdTables(), key=ddKey(type,number);
+  const t=getDdTables(), key=ddKey(type,number), normalizedType=String(type||'').toUpperCase();
+  if(normalizedType==='DDR'){
+    const r=t.ddr.find(x=>ddKey(x.type,x.number)===key);
+    return r?{...r,sourceTable:'ddr'}:null;
+  }
   if(isThursday(dateStr)){
     const th=t.thursday.find(x=>ddKey(x.type,x.number)===key);
     if(th) return {...th,sourceTable:'thursday'};
@@ -1354,6 +1382,7 @@ function allDdForDate(dateStr){
   const t=getDdTables(), map=new Map();
   t.week.forEach(x=>map.set(ddKey(x.type,x.number),{...x,sourceTable:'week'}));
   if(isThursday(dateStr)) t.thursday.forEach(x=>map.set(ddKey(x.type,x.number),{...x,sourceTable:'thursday'}));
+  t.ddr.forEach(x=>map.set(ddKey(x.type,x.number),{...x,sourceTable:'ddr'}));
   return [...map.values()].sort((a,b)=>ddKey(a.type,a.number).localeCompare(ddKey(b.type,b.number),'he',{numeric:true}));
 }
 function refreshDdPresetOptions(){
@@ -1361,7 +1390,7 @@ function refreshDdPresetOptions(){
   const current=el.value, items=allDdForDate($('date')?.value||'');
   el.innerHTML='<option value="">בחר DD</option>'+items.map(x=>{
     const key=ddKey(x.type,x.number);
-    const src=x.sourceTable==='thursday'?'חמישי':'שבוע';
+    const src=x.sourceTable==='thursday'?'חמישי':(x.sourceTable==='ddr'?'DDR':'שבוע');
     return `<option value="${escapeHtml(key)}">${escapeHtml(key)} · ${escapeHtml(x.start)}–${escapeHtml(x.end)} · ${src}</option>`;
   }).join('');
   if([...el.options].some(o=>o.value===current)) el.value=current;
@@ -1371,11 +1400,11 @@ function applyDdPreset(key){
   const m=/^(DDR|DD)(.+)$/i.exec(key); if(!m) return;
   const type=m[1].toUpperCase(), number=m[2];
   const tpl=resolveDdTemplate($('date').value,type,number);
-  if(!tpl){ alert('ה-DD לא נמצא בטבלה המקומית.'); return; }
+  if(!tpl){ alert('הסידור לא נמצא בטבלה המקומית.'); return; }
   $('ddType').value=type;
   $('ddNumber').value=number;
-  $('start').value=tpl.start;
-  $('end').value=tpl.end;
+  $('start').value=operationalToClock(tpl.start);
+  $('end').value=operationalToClock(tpl.end);
 }
 async function updateDdFromServer(){
   const btn=$('updateDdFromServer'), old=btn.textContent;
@@ -1384,13 +1413,18 @@ async function updateDdFromServer(){
     const r=await fetch(`${DD_SERVER_URL}?v=${Date.now()}`,{cache:'no-store'});
     if(!r.ok) throw new Error(String(r.status));
     const raw=await r.json();
-    const t=normalizeDdTables({week:raw.week,thursday:raw.thursday,updatedAt:new Date().toISOString()});
-    if(!t.week.length && !t.thursday.length) throw new Error('empty');
+    const t=normalizeDdTables({
+      week:raw.week,
+      thursday:raw.thursday,
+      ddr:raw.ddr,
+      updatedAt:new Date().toISOString()
+    });
+    if(!t.week.length && !t.thursday.length && !t.ddr.length) throw new Error('empty');
     localStorage.setItem(KEY_DD_TABLES,JSON.stringify(t));
     refreshDdStatus(); refreshDdPresetOptions();
-    alert(`טבלת DD עודכנה מהשרת.\nכל השבוע: ${t.week.length}\nיום חמישי: ${t.thursday.length}\n\nמשמרות קיימות לא השתנו.`);
+    alert(`טבלת הסידורים עודכנה מהשרת.\nכל השבוע: ${t.week.length}\nיום חמישי: ${t.thursday.length}\nDDR: ${t.ddr.length}\n\nמשמרות קיימות לא השתנו.`);
   }catch(e){
-    alert('לא ניתן לעדכן את טבלת ה-DD מהשרת כרגע. הטבלה המקומית הקיימת נשארה ללא שינוי.');
+    alert('לא ניתן לעדכן את טבלת הסידורים מהשרת כרגע. הטבלה המקומית הקיימת נשארה ללא שינוי.');
   }finally{
     btn.disabled=false; btn.textContent=old;
   }
@@ -1400,7 +1434,7 @@ function refreshDdStatus(){
   const t=getDdTables();
   let when='לא עודכנה עדיין';
   if(t.updatedAt){ try{when=new Date(t.updatedAt).toLocaleString('he-IL');}catch(e){} }
-  el.textContent=`כל השבוע: ${t.week.length} · חמישי: ${t.thursday.length} · עדכון אחרון: ${when}`;
+  el.textContent=`כל השבוע: ${t.week.length} · חמישי: ${t.thursday.length} · DDR: ${t.ddr.length} · עדכון אחרון: ${when}`;
 }
 function openDdEditor(){
   renderDdEditor();
@@ -1418,7 +1452,10 @@ function renderDdEditor(){
   const block=(title,key,list)=>`<div class="card"><h3 style="margin-top:0">${title}</h3>${
     list.length?list.map(x=>`<div class="payroll-row"><span><strong>${escapeHtml(ddKey(x.type,x.number))}</strong> <span class="muted">${escapeHtml(x.start)}–${escapeHtml(x.end)}</span></span><button type="button" class="secondary dd-delete" data-table="${key}" data-key="${escapeHtml(ddKey(x.type,x.number))}" style="width:auto">מחק</button></div>`).join(''):'<div class="muted">אין נתונים.</div>'
   }</div>`;
-  $('ddEditorList').innerHTML=block('כל השבוע','week',t.week)+block('יום חמישי','thursday',t.thursday);
+  $('ddEditorList').innerHTML=
+    block('כל השבוע','week',t.week)+
+    block('יום חמישי','thursday',t.thursday)+
+    block('DDR','ddr',t.ddr);
   document.querySelectorAll('.dd-delete').forEach(btn=>{
     btn.onclick=()=>{
       const d=getDdTables();
@@ -1429,9 +1466,15 @@ function renderDdEditor(){
   });
 }
 function saveLocalDdEntry(){
-  const table=$('ddEditTable').value, type=$('ddEditType').value;
-  const number=$('ddEditNumber').value.trim(), start=$('ddEditStart').value, end=$('ddEditEnd').value;
-  if(!number || !start || !end){ alert('יש למלא מספר DD, שעת התחלה ושעת סיום.'); return; }
+  const table=$('ddEditTable').value;
+  const type=table==='ddr'?'DDR':'DD';
+  const number=$('ddEditNumber').value.trim();
+  const start=normalizeOperationalTime($('ddEditStart').value);
+  const end=normalizeOperationalTime($('ddEditEnd').value);
+  if(!number || !isOperationalTime(start) || !isOperationalTime(end)){
+    alert('יש למלא מספר ושעות בפורמט HH:MM. אפשר גם שעות אחרי חצות כמו 25:54.');
+    return;
+  }
   const t=getDdTables(), key=ddKey(type,number), item={type,number,start,end};
   const i=t[table].findIndex(x=>ddKey(x.type,x.number)===key);
   if(i>=0) t[table][i]=item; else t[table].push(item);
@@ -1599,6 +1642,8 @@ $('editLocalDd').onclick=openDdEditor;
 $('closeDdEditor').onclick=closeDdEditor;
 $('ddEditorBackdrop').onclick=closeDdEditor;
 $('saveDdLocal').onclick=saveLocalDdEntry;
+$('ddEditTable').addEventListener('change',()=>{$('ddEditType').value=$('ddEditTable').value==='ddr'?'DDR':'DD'; $('ddEditType').disabled=true;});
+$('ddEditType').disabled=true;
 $('ddPreset').addEventListener('change',e=>applyDdPreset(e.target.value));
 $('date').addEventListener('change',refreshDdPresetOptions);
 refreshDdStatus();
@@ -2016,35 +2061,78 @@ renderShifts(); renderSummary(); renderPayslipComparison();
 
 
 let pendingServiceWorker=null;
+let remoteVersion=null;
 let reloadingForUpdate=false;
-function showUpdateBanner(worker){
-  pendingServiceWorker=worker||pendingServiceWorker;
+
+function showUpdateBanner(worker,version=null){
+  if(worker) pendingServiceWorker=worker;
+  if(version) remoteVersion=version;
+  const title=$('updateBannerTitle');
+  if(title) title.textContent=version ? `גרסה ${version} זמינה` : 'גרסה חדשה זמינה';
   $('updateBanner').classList.remove('hidden');
 }
-$('applyUpdate').onclick=()=>{
-  if(pendingServiceWorker) pendingServiceWorker.postMessage({type:'SKIP_WAITING'});
-  else location.reload();
+function hideUpdateBanner(){ $('updateBanner').classList.add('hidden'); }
+
+async function checkRemoteVersion(){
+  try{
+    const r=await fetch(`${VERSION_URL}?t=${Date.now()}`,{cache:'no-store'});
+    if(!r.ok) return;
+    const data=await r.json();
+    const v=Number(data.version||0);
+    if(Number.isFinite(v) && v>APP_VERSION) showUpdateBanner(null,v);
+  }catch(e){}
+}
+
+$('applyUpdate').onclick=async()=>{
+  const btn=$('applyUpdate');
+  btn.disabled=true;
+  btn.textContent='מעדכן...';
+  try{
+    const reg=await navigator.serviceWorker?.getRegistration();
+    if(reg){
+      await reg.update().catch(()=>{});
+      const waiting=reg.waiting || pendingServiceWorker;
+      if(waiting){
+        waiting.postMessage({type:'SKIP_WAITING'});
+        return;
+      }
+    }
+    // Cache-busting reload fallback when no waiting worker is available.
+    const u=new URL(location.href);
+    u.searchParams.set('appUpdate',String(Date.now()));
+    location.replace(u.toString());
+  }catch(e){
+    location.reload();
+  }
 };
-$('dismissUpdate').onclick=()=>$('updateBanner').classList.add('hidden');
+$('dismissUpdate').onclick=hideUpdateBanner;
 
 if('serviceWorker' in navigator){
   navigator.serviceWorker.addEventListener('controllerchange',()=>{
     if(reloadingForUpdate) return;
     reloadingForUpdate=true;
-    location.reload();
+    const u=new URL(location.href);
+    u.searchParams.set('updated',String(Date.now()));
+    location.replace(u.toString());
   });
-  navigator.serviceWorker.register('./sw.js').then(reg=>{
+
+  navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(reg=>{
     if(reg.waiting) showUpdateBanner(reg.waiting);
     reg.addEventListener('updatefound',()=>{
       const worker=reg.installing;
       if(!worker) return;
       worker.addEventListener('statechange',()=>{
-        if(worker.state==='installed' && navigator.serviceWorker.controller) showUpdateBanner(worker);
+        if(worker.state==='installed' && navigator.serviceWorker.controller){
+          showUpdateBanner(worker);
+        }
       });
     });
     reg.update().catch(()=>{});
   }).catch(()=>{});
 }
+
+checkRemoteVersion();
+setInterval(checkRemoteVersion,15*60*1000);
 
 </script>
 
