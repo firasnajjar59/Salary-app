@@ -508,7 +508,7 @@
         <button class="secondary" id="updateDdFromServer" type="button">עדכן טבלת DD מהשרת</button>
         <button class="secondary" id="editLocalDd" type="button">ערוך DD מקומי</button>
       </div>
-      <div id="ddStatus" class="note" style="margin-top:10px"></div><div class="note" style="margin-top:6px">גרסת אפליקציה: <strong>28</strong></div>
+      <div id="ddStatus" class="note" style="margin-top:10px"></div><div class="note" style="margin-top:6px">גרסת אפליקציה: <strong>29</strong></div>
     </div>
 
     <div class="card">
@@ -557,22 +557,10 @@
           </select>
         </div>
         <div>
-          <label>בחירת DD שמור</label>
+          <label>DD / DDR</label>
           <select id="ddPreset">
             <option value="">בחר DD</option>
           </select>
-        </div>
-        <div>
-          <label>סידור</label>
-          <select id="ddType">
-            <option value="">ללא</option>
-            <option value="DD">DD</option>
-            <option value="DDR">DDR</option>
-          </select>
-        </div>
-        <div>
-          <label>מספר</label>
-          <input id="ddNumber" type="number" min="0" step="1" inputmode="numeric" placeholder="40">
         </div>
         <div><label>תוספת ידנית ₪</label><input id="bonus" type="number" step="0.01" value="0"></div>
       </div>
@@ -714,7 +702,7 @@ const $ = id => document.getElementById(id);
 const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KEY_PAYSLIPS='salaryApp.payslips.v1';
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=28;
+const APP_VERSION=29;
 const VERSION_URL='./version.json';
 
 function shiftSignature(sh){
@@ -990,7 +978,7 @@ function renderShifts(){
           <div>
             <button type="button" class="shift-date-link" onclick="openShiftDetails('${sh.id}')">${sh.date.slice(8,10)}/${sh.date.slice(5,7)}</button>
             <div style="margin-top:3px">${sh.start}–${sh.end}</div>
-            ${(sh.ddType && sh.ddNumber!=='')?`<div style="margin-top:3px;font-weight:700">${sh.ddType}${sh.ddNumber}</div>`:''}
+            ${(sh.ddType && sh.ddNumber!=='')?`<div style="margin-top:3px;font-weight:700">${escapeHtml(displayDdNumber(sh.ddType,sh.ddNumber))}</div>`:''}
             <div style="margin-top:6px">
             <span class="pill">${label}</span>
             ${c.type==='saturday'?`<span class="pill">225%</span>`:''}
@@ -1033,7 +1021,7 @@ function openShiftDetails(id){
   const ot125Pay = c.ot1Pay||0;
   const ot150Pay = c.ot2Pay||0;
   const extraText = specialDescription(sh) || '';
-  const ddText = (sh.ddType && sh.ddNumber!=='') ? `${sh.ddType}${sh.ddNumber}` : '';
+  const ddText = (sh.ddType && sh.ddNumber!=='') ? `${escapeHtml(displayDdNumber(sh.ddType,sh.ddNumber))}` : '';
 
   $('shiftDetailsTitle').textContent=`פירוט משמרת ${formatDateHe(sh.date)}`;
   $('shiftDetailsContent').innerHTML=`
@@ -1096,8 +1084,11 @@ window.editShift=id=>{
   $('bonus').value=sh.bonus||0;
   $('extraLoopType').value=sh.extraLoopType||'none';
   $('nightLineType').value=sh.nightLineType||'none';
-  $('ddType').value=sh.ddType||'';
-  $('ddNumber').value=sh.ddNumber||'';
+  setTimeout(()=>{
+    refreshDdPresetOptions();
+    const savedDd=(sh.ddType && sh.ddNumber!=='') ? ddKey(sh.ddType,sh.ddNumber) : '';
+    if($('ddPreset')) $('ddPreset').value=savedDd;
+  },0);
   $('addShift').textContent='שמור שינויים';
   openShiftModal(true);
 };
@@ -1471,6 +1462,10 @@ function saveDdTables(t){
   localStorage.setItem(KEY_DD_TABLES,JSON.stringify(normalizeDdTables(t)));
   refreshDdStatus(); refreshDdPresetOptions();
 }
+function displayDdNumber(type,number){
+  if(number===undefined || number===null || String(number)==='') return '';
+  return String(type||'').toUpperCase()==='DDR' ? `DDR${number}` : String(number);
+}
 function ddKey(type,number){ return `${String(type||'').toUpperCase()}${String(number||'').trim()}`; }
 function isThursday(dateStr){
   const p=String(dateStr||'').split('-').map(Number);
@@ -1513,8 +1508,6 @@ function applyDdPreset(key){
   const type=m[1].toUpperCase(), number=m[2];
   const tpl=resolveDdTemplate($('date').value,type,number);
   if(!tpl){ alert('הסידור לא נמצא בטבלה המקומית.'); return; }
-  $('ddType').value=type;
-  $('ddNumber').value=number;
   $('start').value=operationalToClock(tpl.start);
   $('end').value=operationalToClock(tpl.end);
 }
@@ -1805,8 +1798,7 @@ $('openShiftModal').onclick=()=>{
   $('bonus').value='0';
   $('extraLoopType').value='none';
   $('nightLineType').value='none';
-  $('ddType').value='';
-  $('ddNumber').value='';
+  $('ddPreset').value='';
   openShiftModal(false);
 };
 $('closeShiftModal').onclick=closeShiftModal;
@@ -1825,6 +1817,11 @@ $('shiftDetailsBackdrop').onclick=closeShiftDetails;
 $('addShift').onclick=()=>{
   if(!$('date').value || !$('start').value || !$('end').value){ alert('יש למלא תאריך, התחלה וסיום.'); return; }
 
+  const selectedDdKey=$('ddPreset').value||'';
+  const selectedDdMatch=/^(DDR|DD)(.+)$/i.exec(selectedDdKey);
+  const selectedDdType=selectedDdMatch?selectedDdMatch[1].toUpperCase():'';
+  const selectedDdNumber=selectedDdMatch?selectedDdMatch[2]:'';
+
   const data = {
     id: editingShiftId || (crypto.randomUUID?crypto.randomUUID():String(Date.now())),
     date:$('date').value,
@@ -1836,8 +1833,8 @@ $('addShift').onclick=()=>{
     bonus:$('bonus').value,
     extraLoopType:$('extraLoopType').value,
     nightLineType:$('nightLineType').value,
-    ddType:$('ddType').value,
-    ddNumber:$('ddNumber').value
+    ddType:selectedDdType,
+    ddNumber:selectedDdNumber
   };
 
   if(editingShiftId){
@@ -1868,8 +1865,7 @@ $('addShift').onclick=()=>{
   $('bonus').value='0';
   $('extraLoopType').value='none';
   $('nightLineType').value='none';
-  $('ddType').value='';
-  $('ddNumber').value='';
+  $('ddPreset').value='';
   closeShiftModal();
 };
 
@@ -2022,7 +2018,7 @@ function exportMonthlyPdf(){
         <td>${escapeHtml(dayNameHe(sh.date))}</td>
         <td>
           ${escapeHtml(sh.start)}-${escapeHtml(sh.end)}
-          ${(sh.ddType && sh.ddNumber!=='')?`<div class="small">${escapeHtml(sh.ddType+sh.ddNumber)}</div>`:''}${sh.notes?`<div class="small">${escapeHtml(sh.notes)}</div>`:''}
+          ${(sh.ddType && sh.ddNumber!=='')?`<div class="small">${escapeHtml(displayDdNumber(sh.ddType,sh.ddNumber))}</div>`:''}${sh.notes?`<div class="small">${escapeHtml(sh.notes)}</div>`:''}
         </td>
         <td>${fmtMin(c.grossMinutes)}</td>
         <td>${fmtMin(c.regMin)}</td>
