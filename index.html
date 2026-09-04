@@ -270,10 +270,7 @@
       flex:0 0 auto;
       accent-color:currentColor;
     }
-    .shift.shift-selected{
-      outline:2px solid var(--accent);
-      outline-offset:1px;
-    }
+    .bulk-delete-bar.hidden{display:none}
     .bulk-delete-bar{
       position:fixed;
       left:50%;
@@ -511,7 +508,7 @@
         <button class="secondary" id="updateDdFromServer" type="button">עדכן טבלת DD מהשרת</button>
         <button class="secondary" id="editLocalDd" type="button">ערוך DD מקומי</button>
       </div>
-      <div id="ddStatus" class="note" style="margin-top:10px"></div><div class="note" style="margin-top:6px">גרסת אפליקציה: <strong>27</strong></div>
+      <div id="ddStatus" class="note" style="margin-top:10px"></div><div class="note" style="margin-top:6px">גרסת אפליקציה: <strong>28</strong></div>
     </div>
 
     <div class="card">
@@ -717,7 +714,7 @@ const $ = id => document.getElementById(id);
 const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KEY_PAYSLIPS='salaryApp.payslips.v1';
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=27;
+const APP_VERSION=28;
 const VERSION_URL='./version.json';
 
 function shiftSignature(sh){
@@ -945,8 +942,6 @@ function toggleShiftSelection(id,checked){
   if(checked) selectedShiftIds.add(id);
   else selectedShiftIds.delete(id);
 
-  const card=document.querySelector(`.shift[data-shift-id="${CSS.escape(id)}"]`);
-  if(card) card.classList.toggle('shift-selected',checked);
   updateBulkDeleteBar();
 }
 
@@ -982,7 +977,7 @@ function renderShifts(){
     const c=calcShift(sh);
     const label={regular:'רגיל',friday:'שישי',saturday:'שבת',holiday:'חג'}[c.type];
     const selected=selectedShiftIds.has(sh.id);
-    return `<div class="shift ${selected?'shift-selected':''}" data-shift-id="${escapeHtml(sh.id)}">
+    return `<div class="shift" data-shift-id="${escapeHtml(sh.id)}">
       <div class="shift-head">
         <div class="shift-select-wrap">
           <input
