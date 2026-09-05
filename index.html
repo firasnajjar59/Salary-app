@@ -356,6 +356,14 @@
     .calendar-dd{display:block;font-size:9px;font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .calendar-time{display:block;font-size:8px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
     .calendar-more{display:block;font-size:8px;color:#0369a1;font-weight:800;margin-top:2px}
+    .home-layout-list{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+    .home-layout-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;padding:10px;background:#fff}
+    .home-layout-main{display:flex;align-items:center;gap:9px;font-weight:800}
+    .home-layout-main input{width:18px;height:18px;margin:0}
+    .home-layout-actions{display:flex;gap:6px}
+    .home-layout-move{width:36px;height:34px;border:1px solid var(--line);background:#f8fafc;border-radius:9px;font-size:18px;cursor:pointer}
+    .home-layout-move:disabled{opacity:.35;cursor:default}
+    .dashboard-empty{padding:22px;text-align:center;color:var(--muted)}
     @media(max-width:420px){.today-shift-grid,.forecast-grid{grid-template-columns:1fr 1fr}.calendar-day{min-height:64px;padding:4px}.calendar-grid,.calendar-weekdays{gap:3px}.tabs{padding-left:5px;padding-right:5px}.tab{font-size:9px}.tab-icon{font-size:18px}.nav-add-inner{width:46px;height:46px}}
 
     .payroll-flow{display:flex;flex-direction:column;gap:10px}
@@ -393,13 +401,13 @@
 <main>
 
   <section id="todayDashboard">
-    <div class="card today-hero">
+    <div id="homeWidgetToday" class="card today-hero" data-home-widget="today">
       <div id="todayDateLabel" class="today-date"></div>
       <div class="today-title">היום שלי</div>
       <div id="todayShiftContent"></div>
     </div>
 
-    <div class="card">
+    <div id="homeWidgetForecast" class="card" data-home-widget="forecast">
       <div class="shift-head" style="margin-bottom:12px">
         <h2 style="margin:0">החודש שלי</h2>
         <span id="dashboardMonthLabel" class="filter-count"></span>
@@ -428,7 +436,7 @@
       </div>
     </div>
 
-    <div class="card">
+    <div id="homeWidgetCalendar" class="card" data-home-widget="calendar">
       <div class="calendar-head">
         <button id="calendarNext" class="calendar-nav" type="button" aria-label="חודש הבא">›</button>
         <h2 id="calendarTitle">לוח חודשי</h2>
@@ -440,6 +448,7 @@
       <div id="calendarGrid" class="calendar-grid"></div>
       <p class="note" style="margin:10px 0 0">לחיצה על יום עם משמרת פותחת את פרטי המשמרת. לחיצה על יום ריק פותחת הוספת משמרת באותו תאריך.</p>
     </div>
+    <div id="dashboardEmptyState" class="card dashboard-empty hidden">כל הרכיבים במסך היום מוסתרים. אפשר להפעיל אותם מחדש דרך הגדרות ← מסך היום.</div>
   </section>
 
   <section id="shifts" class="hidden">
@@ -547,6 +556,14 @@
 
   <section id="settings" class="hidden">
     <div class="card">
+      <h2>מסך היום</h2>
+      <p class="note">בחר אילו חלקים יוצגו במסך הבית ובאיזה סדר. אפשר לשנות את הסדר בכל זמן, וגם רכיבים שיתווספו בעתיד יוכלו להשתלב כאן.</p>
+      <div id="homeLayoutList" class="home-layout-list"></div>
+      <div style="height:10px"></div>
+      <button class="primary" id="saveHomeLayout" type="button">שמור תצוגת מסך הבית</button>
+    </div>
+
+    <div class="card">
       <h2>תעריפים</h2>
       <div class="grid">
         <div><label>שכר בסיס לשעה ₪</label><input id="baseRate" type="number" step="0.01" value="50"></div>
@@ -631,7 +648,7 @@
         <button class="secondary" id="updateDdFromServer" type="button">עדכן טבלת DD מהשרת</button>
         <button class="secondary" id="editLocalDd" type="button">ערוך DD מקומי</button>
       </div>
-      <div id="ddStatus" class="note" style="margin-top:10px"></div><div class="note" style="margin-top:6px">גרסת אפליקציה: <strong>33</strong></div>
+      <div id="ddStatus" class="note" style="margin-top:10px"></div><div class="note" style="margin-top:6px">גרסת אפליקציה: <strong>36</strong></div>
     </div>
 
     <div class="card">
@@ -862,7 +879,7 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=35;
+const APP_VERSION=36;
 const VERSION_URL='./version.json';
 const GOOGLE_CLIENT_ID='671607022405-ctegk4jl7koo9elm30odvsb1binp49cb.apps.googleusercontent.com';
 const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.appdata';
@@ -872,6 +889,89 @@ let driveTokenClient=null;
 let driveAccessToken='';
 let driveTokenExpiresAt=0;
 let drivePendingAction=null;
+
+const HOME_WIDGETS=[
+  {id:'today',label:'היום שלי'},
+  {id:'forecast',label:'תחזית שכר'},
+  {id:'calendar',label:'לוח שנה'}
+];
+let homeLayoutDraft=[];
+
+function defaultHomeLayout(){ return HOME_WIDGETS.map(w=>({id:w.id,visible:true})); }
+function normalizeHomeLayout(value){
+  const incoming=Array.isArray(value)?value:[];
+  const result=[];
+  const seen=new Set();
+  incoming.forEach(item=>{
+    const id=typeof item==='string'?item:item?.id;
+    if(!HOME_WIDGETS.some(w=>w.id===id) || seen.has(id)) return;
+    result.push({id,visible:typeof item==='string'?true:item.visible!==false});
+    seen.add(id);
+  });
+  HOME_WIDGETS.forEach(w=>{ if(!seen.has(w.id)) result.push({id:w.id,visible:true}); });
+  return result;
+}
+function readStoredSettings(){
+  try{
+    const s=JSON.parse(localStorage.getItem(KEY_SETTINGS)||'{}');
+    return s && typeof s==='object' && !Array.isArray(s) ? s : {};
+  }catch(e){ return {}; }
+}
+function getSavedHomeLayout(){ return normalizeHomeLayout(readStoredSettings().homeLayout); }
+function applyHomeLayout(layout=getSavedHomeLayout()){
+  const normalized=normalizeHomeLayout(layout);
+  const section=$('todayDashboard');
+  if(!section) return;
+  let visibleCount=0;
+  normalized.forEach(item=>{
+    const el=section.querySelector(`[data-home-widget="${item.id}"]`);
+    if(!el) return;
+    el.classList.toggle('hidden',!item.visible);
+    if(item.visible) visibleCount++;
+    section.appendChild(el);
+  });
+  const empty=$('dashboardEmptyState');
+  if(empty){
+    empty.classList.toggle('hidden',visibleCount>0);
+    section.appendChild(empty);
+  }
+}
+function renderHomeLayoutEditor(){
+  const list=$('homeLayoutList');
+  if(!list) return;
+  if(!homeLayoutDraft.length) homeLayoutDraft=getSavedHomeLayout();
+  list.innerHTML=homeLayoutDraft.map((item,index)=>{
+    const def=HOME_WIDGETS.find(w=>w.id===item.id);
+    return `<div class="home-layout-row">
+      <label class="home-layout-main"><input type="checkbox" data-home-visible="${item.id}" ${item.visible?'checked':''}><span>${escapeHtml(def?.label||item.id)}</span></label>
+      <div class="home-layout-actions">
+        <button type="button" class="home-layout-move" data-home-move="up" data-home-id="${item.id}" ${index===0?'disabled':''} aria-label="העבר למעלה">↑</button>
+        <button type="button" class="home-layout-move" data-home-move="down" data-home-id="${item.id}" ${index===homeLayoutDraft.length-1?'disabled':''} aria-label="העבר למטה">↓</button>
+      </div>
+    </div>`;
+  }).join('');
+  list.querySelectorAll('[data-home-visible]').forEach(cb=>cb.onchange=()=>{
+    const item=homeLayoutDraft.find(x=>x.id===cb.dataset.homeVisible);
+    if(item) item.visible=cb.checked;
+    applyHomeLayout(homeLayoutDraft);
+  });
+  list.querySelectorAll('[data-home-move]').forEach(btn=>btn.onclick=()=>{
+    const i=homeLayoutDraft.findIndex(x=>x.id===btn.dataset.homeId);
+    if(i<0) return;
+    const target=btn.dataset.homeMove==='up'?i-1:i+1;
+    if(target<0 || target>=homeLayoutDraft.length) return;
+    [homeLayoutDraft[i],homeLayoutDraft[target]]=[homeLayoutDraft[target],homeLayoutDraft[i]];
+    renderHomeLayoutEditor();
+    applyHomeLayout(homeLayoutDraft);
+  });
+}
+function saveHomeLayout(){
+  const current=readStoredSettings();
+  current.homeLayout=normalizeHomeLayout(homeLayoutDraft.length?homeLayoutDraft:getSavedHomeLayout());
+  localStorage.setItem(KEY_SETTINGS,JSON.stringify(current));
+  homeLayoutDraft=current.homeLayout.map(x=>({...x}));
+  applyHomeLayout(homeLayoutDraft);
+}
 
 function shiftSignature(sh){
   return [
@@ -922,16 +1022,21 @@ function getSettings(){
   return s;
 }
 function saveSettings(){
-  localStorage.setItem(KEY_SETTINGS, JSON.stringify(getSettings()));
+  const current=readStoredSettings();
+  const next={...current,...getSettings(),homeLayout:normalizeHomeLayout(homeLayoutDraft.length?homeLayoutDraft:current.homeLayout)};
+  localStorage.setItem(KEY_SETTINGS, JSON.stringify(next));
 }
 function loadSettings(){
-  const s=JSON.parse(localStorage.getItem(KEY_SETTINGS)||'{}');
+  const s=readStoredSettings();
   settingIds.forEach(id=>{
     if(s[id]!==undefined){
       const el=$(id);
       if(el.type==='checkbox') el.checked=!!s[id]; else el.value=s[id];
     }
   });
+  homeLayoutDraft=normalizeHomeLayout(s.homeLayout);
+  applyHomeLayout(homeLayoutDraft);
+  renderHomeLayoutEditor();
 }
 function toMin(t){ const [h,m]=t.split(':').map(Number); return h*60+m; }
 function fmtMin(min){
@@ -2188,6 +2293,7 @@ $('addShift').onclick=()=>{
 };
 
 $('saveSettings').onclick=()=>{ saveSettings(); renderShifts(); renderSummary(); renderTodayDashboard(); alert('ההגדרות נשמרו.'); };
+$('saveHomeLayout').onclick=()=>{ saveHomeLayout(); alert('תצוגת מסך הבית נשמרה.'); };
 $('monthFilter').onchange=renderSummary;
 
 function buildBackupPayload(){
@@ -2685,7 +2791,7 @@ function exportMonthlyPdf(){
 
 
 
-// v35 — Today dashboard, calendar and shift details editing
+// v36 — Customizable Today dashboard layout
 let dashboardCalendarMonth='';
 
 function localDateIso(d=new Date()){
