@@ -164,6 +164,8 @@
     }
     .detail-total span{font-size:12px;color:var(--muted)}
     .detail-total strong{display:block;font-size:22px;margin-top:4px}
+    .detail-actions{display:grid;grid-template-columns:1fr;gap:8px;margin-top:12px}
+    .detail-actions .secondary{width:100%;padding:12px;font-size:15px}
     @media(max-width:420px){
       .detail-grid{grid-template-columns:1fr}
     }
@@ -326,7 +328,7 @@
 
   
 
-    /* v34 — Today dashboard, monthly calendar and salary forecast */
+    /* v35 — Calendar empty-day add fix + shift details edit action */
     .today-hero{background:linear-gradient(135deg,#111827,#253147);color:white;overflow:hidden;position:relative}
     .today-hero::after{content:"";position:absolute;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.06);left:-40px;top:-70px}
     .today-date{font-size:13px;opacity:.8;margin-bottom:4px}
@@ -860,7 +862,7 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=34;
+const APP_VERSION=35;
 const VERSION_URL='./version.json';
 const GOOGLE_CLIENT_ID='671607022405-ctegk4jl7koo9elm30odvsb1binp49cb.apps.googleusercontent.com';
 const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.appdata';
@@ -1237,6 +1239,9 @@ function openShiftDetails(id){
       <span>סה"כ שכר למשמרת</span>
       <strong>${detailMoney(c.pay||0)}</strong>
     </div>
+    <div class="detail-actions">
+      <button type="button" class="secondary" onclick="editShiftFromDetails('${sh.id}')">✏️ עריכת משמרת</button>
+    </div>
   `;
 
   $('shiftDetailsModal').classList.remove('hidden');
@@ -1251,6 +1256,11 @@ function closeShiftDetails(){
 }
 
 window.openShiftDetails=openShiftDetails;
+
+window.editShiftFromDetails=id=>{
+  closeShiftDetails();
+  window.editShift(id);
+};
 
 window.editShift=id=>{
   const sh=shifts.find(x=>x.id===id);
@@ -2675,7 +2685,7 @@ function exportMonthlyPdf(){
 
 
 
-// v34 — Today dashboard, monthly calendar and salary forecast
+// v35 — Today dashboard, calendar and shift details editing
 let dashboardCalendarMonth='';
 
 function localDateIso(d=new Date()){
@@ -2789,7 +2799,7 @@ function openDashboardCalendarDate(date){
   $('start').value=''; $('end').value='';
   $('breakMin').value='0'; $('notes').value=''; $('dayType').value='auto'; $('bonus').value='0';
   $('extraLoopType').value='none'; $('nightLineType').value='none';
-  $('ddType').value=''; $('ddNumber').value=''; $('ddPreset').value='';
+  $('ddPreset').value='';
   refreshDdPresetOptions();
   openShiftModal(false);
 }
