@@ -499,27 +499,42 @@
 
     <div class="card">
       <h2>מס הכנסה</h2>
-      <p class="note">הכנס את התקרה החודשית לכל מדרגה. לדוגמה: בשורת 10% רשום עד איזה שכר חודשי חל שיעור 10%. מדרגת 50% תחול אוטומטית מעל התקרה של 47%.</p>
+      <p class="note">אפשר להזין מדרגות מותאמות לשנת המס. אם השדות ריקים או לא תקינים, האפליקציה משתמשת אוטומטית בברירת המחדל של 2026: 7,010 · 10,060 · 19,000 · 25,100 · 46,690 · 60,130 ₪. מעל התקרה האחרונה מחושב 50%.</p>
       <div class="grid">
-        <div><label>10% — עד ₪</label><input id="tax10UpTo" type="number" min="0" step="1" placeholder="הכנס תקרה"></div>
-        <div><label>14% — עד ₪</label><input id="tax14UpTo" type="number" min="0" step="1" placeholder="הכנס תקרה"></div>
-        <div><label>20% — עד ₪</label><input id="tax20UpTo" type="number" min="0" step="1" placeholder="הכנס תקרה"></div>
-        <div><label>31% — עד ₪</label><input id="tax31UpTo" type="number" min="0" step="1" placeholder="הכנס תקרה"></div>
-        <div><label>35% — עד ₪</label><input id="tax35UpTo" type="number" min="0" step="1" placeholder="הכנס תקרה"></div>
-        <div><label>47% — עד ₪</label><input id="tax47UpTo" type="number" min="0" step="1" placeholder="הכנס תקרה"></div>
+        <div><label>10% — עד ₪</label><input id="tax10UpTo" type="number" min="0" step="1" placeholder="7010"></div>
+        <div><label>14% — עד ₪</label><input id="tax14UpTo" type="number" min="0" step="1" placeholder="10060"></div>
+        <div><label>20% — עד ₪</label><input id="tax20UpTo" type="number" min="0" step="1" placeholder="19000"></div>
+        <div><label>31% — עד ₪</label><input id="tax31UpTo" type="number" min="0" step="1" placeholder="25100"></div>
+        <div><label>35% — עד ₪</label><input id="tax35UpTo" type="number" min="0" step="1" placeholder="46690"></div>
+        <div><label>47% — עד ₪</label><input id="tax47UpTo" type="number" min="0" step="1" placeholder="60130"></div>
         <div><label>50%</label><input type="text" value="מעל תקרת 47%" disabled></div>
       </div>
-      <p class="note">כל עוד לא מולאו כל התקרות בסדר עולה, האפליקציה תשמור על אומדן המס הישן ולא תשנה את חישוב הנטו.</p>
+      <p class="note">מדרגות שהוזנו ידנית ישמשו רק אם כל שש התקרות תקינות ובסדר עולה. אחרת יופעלו מדרגות ברירת המחדל של 2026.</p>
+    </div>
+
+    <div class="card">
+      <h2>ביטוח לאומי ובריאות</h2>
+      <p class="note">אפשר להתאים את המדרגה והשיעורים לשנה חדשה. אם אחד מהשדות ריק או לא תקין, האפליקציה משתמשת בברירת המחדל של 2026 לעובד שכיר תושב ישראל בגיל העבודה.</p>
+      <div class="grid">
+        <div><label>מדרגה מופחתת — עד ₪</label><input id="niReducedUpTo" type="number" min="0" step="1" placeholder="7703"></div>
+        <div><label>הכנסה מרבית לחיוב — ₪</label><input id="niMaxIncome" type="number" min="0" step="1" placeholder="51910"></div>
+        <div><label>ביטוח לאומי — שיעור מופחת %</label><input id="niLowPct" type="number" min="0" step="0.01" placeholder="1.04"></div>
+        <div><label>ביטוח לאומי — שיעור מלא %</label><input id="niHighPct" type="number" min="0" step="0.01" placeholder="7"></div>
+        <div><label>ביטוח בריאות — שיעור מופחת %</label><input id="healthLowPct" type="number" min="0" step="0.01" placeholder="3.23"></div>
+        <div><label>ביטוח בריאות — שיעור מלא %</label><input id="healthHighPct" type="number" min="0" step="0.01" placeholder="5.17"></div>
+      </div>
+      <p class="note">ברירת מחדל 2026: עד 7,703 ₪ — לאומי 1.04% ובריאות 3.23%; מעל 7,703 ₪ ועד 51,910 ₪ — לאומי 7% ובריאות 5.17%.</p>
     </div>
 
     <div class="card">
       <h2>ניכויים להערכת נטו</h2>
       <div class="grid">
         <div><label>נקודות זיכוי</label><input id="creditPoints" type="number" step="0.25" value="2.25"></div>
+        <div><label>שווי נקודת זיכוי ₪</label><input id="creditPointValue" type="number" min="0" step="1" placeholder="242"></div>
         <div><label>פנסיה עובד %</label><input id="pensionPct" type="number" step="0.1" value="6"></div>
         <div><label>ניכוי ועד %</label><input id="otherDeductPct" type="number" step="0.1" value="0"></div>
       </div>
-      <p class="note">נקודות הזיכוי עדיין מוצגות לצורך מידע ואינן מופחתות אוטומטית מהמס בשלב זה. ביטוח לאומי נשאר אומדן.</p>
+      <p class="note">נקודות הזיכוי מופחתות אוטומטית ממס ההכנסה. אם שווי נקודת הזיכוי ריק, ברירת המחדל היא 242 ₪ לחודש (2026).</p>
       <div style="height:10px"></div>
       <button class="primary" id="saveSettings">שמור הגדרות</button>
     </div>
@@ -531,7 +546,7 @@
         <button class="secondary" id="updateDdFromServer" type="button">עדכן טבלת DD מהשרת</button>
         <button class="secondary" id="editLocalDd" type="button">ערוך DD מקומי</button>
       </div>
-      <div id="ddStatus" class="note" style="margin-top:10px"></div><div class="note" style="margin-top:6px">גרסת אפליקציה: <strong>31</strong></div>
+      <div id="ddStatus" class="note" style="margin-top:10px"></div><div class="note" style="margin-top:6px">גרסת אפליקציה: <strong>32</strong></div>
     </div>
 
     <div class="card">
@@ -745,7 +760,7 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=31;
+const APP_VERSION=32;
 const VERSION_URL='./version.json';
 
 function shiftSignature(sh){
@@ -785,7 +800,8 @@ let editingShiftId = null;
 const settingIds = ['baseRate','travelPerDay','travelMonthlyCap','perDiemPerDay','nightPct','holidayPct','nightStart','nightEnd',
 'regularDailyHours','ot125Hours','halfLoopAmount','fullLoopAmount','nightLine2Amount','nightLine3Amount','nightLineOver3Amount',
 'tax10UpTo','tax14UpTo','tax20UpTo','tax31UpTo','tax35UpTo','tax47UpTo',
-'creditPoints','pensionPct','otherDeductPct'];
+'niReducedUpTo','niMaxIncome','niLowPct','niHighPct','healthLowPct','healthHighPct',
+'creditPoints','creditPointValue','pensionPct','otherDeductPct'];
 
 function getSettings(){
   let s={};
@@ -1264,58 +1280,100 @@ function savePayslipData(){
   renderPayslipComparison();
 }
 
+const DEFAULT_TAX_2026={
+  limits:[7010,10060,19000,25100,46690,60130],
+  rates:[.10,.14,.20,.31,.35,.47,.50],
+  creditPointValue:242
+};
+
+const DEFAULT_INSURANCE_2026={
+  reducedUpTo:7703,
+  maxIncome:51910,
+  niLow:.0104,
+  niHigh:.07,
+  healthLow:.0323,
+  healthHigh:.0517
+};
+
 function getCustomTaxBrackets(s){
   const limits=[
-    Number(s.tax10UpTo),
-    Number(s.tax14UpTo),
-    Number(s.tax20UpTo),
-    Number(s.tax31UpTo),
-    Number(s.tax35UpTo),
-    Number(s.tax47UpTo)
+    Number(s.tax10UpTo),Number(s.tax14UpTo),Number(s.tax20UpTo),
+    Number(s.tax31UpTo),Number(s.tax35UpTo),Number(s.tax47UpTo)
   ];
   const valid=limits.every((v,i)=>Number.isFinite(v) && v>0 && (i===0 || v>limits[i-1]));
   if(!valid) return null;
   return {limits,rates:[.10,.14,.20,.31,.35,.47,.50]};
 }
 
-function calculateConfiguredTax(gross,s){
-  const brackets=getCustomTaxBrackets(s);
-  if(!brackets) return null;
+function getTaxBrackets(s){
+  return getCustomTaxBrackets(s) || DEFAULT_TAX_2026;
+}
 
-  let tax=0;
-  let from=0;
+function calculateMarginalTax(gross,brackets){
+  let tax=0, from=0;
   brackets.limits.forEach((to,i)=>{
-    if(gross>from){
-      tax += Math.max(0,Math.min(gross,to)-from) * brackets.rates[i];
-    }
+    if(gross>from) tax += Math.max(0,Math.min(gross,to)-from)*brackets.rates[i];
     from=to;
   });
-  if(gross>from) tax += (gross-from)*brackets.rates[6];
+  if(gross>from) tax+=(gross-from)*brackets.rates[6];
   return tax;
+}
+
+function getInsuranceConfig(s){
+  const vals={
+    reducedUpTo:Number(s.niReducedUpTo),
+    maxIncome:Number(s.niMaxIncome),
+    niLow:Number(s.niLowPct)/100,
+    niHigh:Number(s.niHighPct)/100,
+    healthLow:Number(s.healthLowPct)/100,
+    healthHigh:Number(s.healthHighPct)/100
+  };
+  const valid=
+    Number.isFinite(vals.reducedUpTo) && vals.reducedUpTo>0 &&
+    Number.isFinite(vals.maxIncome) && vals.maxIncome>vals.reducedUpTo &&
+    [vals.niLow,vals.niHigh,vals.healthLow,vals.healthHigh].every(v=>Number.isFinite(v)&&v>=0);
+  return valid ? {...vals,custom:true} : {...DEFAULT_INSURANCE_2026,custom:false};
+}
+
+function calculateTwoTierInsurance(gross,cfg,lowRate,highRate){
+  const chargeable=Math.max(0,Math.min(gross,cfg.maxIncome));
+  const lowBase=Math.min(chargeable,cfg.reducedUpTo);
+  const highBase=Math.max(0,chargeable-cfg.reducedUpTo);
+  return lowBase*lowRate + highBase*highRate;
 }
 
 function estimateNetDetails(gross){
   const s=getSettings();
-  const pension=gross*(Number(s.pensionPct)/100);
-  const unionDeduction=gross*(Number(s.otherDeductPct)/100);
+  const pension=gross*(Number(s.pensionPct||0)/100);
+  const unionDeduction=gross*(Number(s.otherDeductPct||0)/100);
 
-  const configuredTax=calculateConfiguredTax(gross,s);
-  let tax=0;
-  let customTaxUsed=false;
+  const customTax=getCustomTaxBrackets(s);
+  const taxBrackets=customTax || DEFAULT_TAX_2026;
+  const taxBeforeCredits=calculateMarginalTax(gross,taxBrackets);
+  const creditPoints=Math.max(0,Number(s.creditPoints||0));
+  const enteredPointValue=Number(s.creditPointValue);
+  const creditPointValue=Number.isFinite(enteredPointValue)&&enteredPointValue>0
+    ? enteredPointValue : DEFAULT_TAX_2026.creditPointValue;
+  const taxCredits=creditPoints*creditPointValue;
+  const tax=Math.max(0,taxBeforeCredits-taxCredits);
 
-  if(configuredTax!==null){
-    tax=configuredTax;
-    customTaxUsed=true;
-  }else{
-    // Preserve the previous rough estimate until all custom tax brackets are entered.
-    if(gross>7000) tax+=(Math.min(gross,10000)-7000)*.08;
-    if(gross>10000) tax+=(Math.min(gross,16000)-10000)*.14;
-    if(gross>16000) tax+=(gross-16000)*.22;
-  }
+  const insuranceCfg=getInsuranceConfig(s);
+  const nationalInsurance=calculateTwoTierInsurance(
+    gross,insuranceCfg,insuranceCfg.niLow,insuranceCfg.niHigh
+  );
+  const healthInsurance=calculateTwoTierInsurance(
+    gross,insuranceCfg,insuranceCfg.healthLow,insuranceCfg.healthHigh
+  );
+  const insurance=nationalInsurance+healthInsurance;
 
-  const insurance = gross * (gross<=8000 ? .035 : .07);
-  const net=Math.max(0,gross-pension-unionDeduction-tax-insurance);
-  return {gross,tax,insurance,pension,unionDeduction,net,customTaxUsed};
+  const net=Math.max(0,gross-pension-unionDeduction-tax-nationalInsurance-healthInsurance);
+  return {
+    gross,tax,taxBeforeCredits,taxCredits,creditPoints,creditPointValue,
+    nationalInsurance,healthInsurance,insurance,pension,unionDeduction,net,
+    customTaxUsed:!!customTax,
+    customInsuranceUsed:insuranceCfg.custom,
+    insuranceConfig:insuranceCfg
+  };
 }
 function estimateNet(gross){
   return estimateNetDetails(gross).net;
@@ -1432,19 +1490,42 @@ function renderSummary(){
           <span class="payroll-amount">− ${currency(netDetails.tax)}</span>
         </button>
         <div id="taxDetails" class="payroll-details hidden">
-          <div class="payroll-row"><span>מס הכנסה משוער</span><span>${currency(netDetails.tax)}</span></div>
-          <div class="payroll-row"><span>נקודות זיכוי</span><span>${creditPoints}</span></div>
-          <div class="note" style="padding-top:8px">המס עדיין מחושב באומדן בלבד.</div>
+          <div class="payroll-row"><span>מס לפני נקודות זיכוי</span><span>${currency(netDetails.taxBeforeCredits)}</span></div>
+          <div class="payroll-row"><span>נקודות זיכוי</span><span>${netDetails.creditPoints} × ${currency(netDetails.creditPointValue)}</span></div>
+          <div class="payroll-row"><span>זיכוי ממס</span><span>− ${currency(netDetails.taxCredits)}</span></div>
+          <div class="payroll-row"><strong>מס הכנסה לאחר זיכוי</strong><strong>${currency(netDetails.tax)}</strong></div>
+          <div class="note" style="padding-top:8px">${netDetails.customTaxUsed?'מדרגות מס מותאמות מההגדרות.':'מדרגות ברירת מחדל 2026.'}</div>
         </div>
       </div>
 
       <div class="payroll-accordion">
-        <button type="button" class="payroll-toggle" data-payroll-toggle="insuranceDetails">
-          <span class="payroll-toggle-main"><span class="payroll-arrow">◀</span><strong>ביטוחים וניכויים סוציאליים</strong></span>
-          <span class="payroll-amount">− ${currency(netDetails.insurance + netDetails.pension)}</span>
+        <button type="button" class="payroll-toggle" data-payroll-toggle="nationalInsuranceDetails">
+          <span class="payroll-toggle-main"><span class="payroll-arrow">◀</span><strong>ביטוח לאומי</strong></span>
+          <span class="payroll-amount">− ${currency(netDetails.nationalInsurance)}</span>
         </button>
-        <div id="insuranceDetails" class="payroll-details hidden">
-          <div class="payroll-row"><span>ביטוח לאומי ובריאות — אומדן</span><span>${currency(netDetails.insurance)}</span></div>
+        <div id="nationalInsuranceDetails" class="payroll-details hidden">
+          <div class="payroll-row"><span>ביטוח לאומי</span><span>${currency(netDetails.nationalInsurance)}</span></div>
+          <div class="note" style="padding-top:8px">${netDetails.customInsuranceUsed?'מדרגות מותאמות מההגדרות.':'ברירת מחדל 2026.'}</div>
+        </div>
+      </div>
+
+      <div class="payroll-accordion">
+        <button type="button" class="payroll-toggle" data-payroll-toggle="healthInsuranceDetails">
+          <span class="payroll-toggle-main"><span class="payroll-arrow">◀</span><strong>ביטוח בריאות</strong></span>
+          <span class="payroll-amount">− ${currency(netDetails.healthInsurance)}</span>
+        </button>
+        <div id="healthInsuranceDetails" class="payroll-details hidden">
+          <div class="payroll-row"><span>ביטוח בריאות</span><span>${currency(netDetails.healthInsurance)}</span></div>
+          <div class="note" style="padding-top:8px">${netDetails.customInsuranceUsed?'מדרגות מותאמות מההגדרות.':'ברירת מחדל 2026.'}</div>
+        </div>
+      </div>
+
+      <div class="payroll-accordion">
+        <button type="button" class="payroll-toggle" data-payroll-toggle="pensionDetails">
+          <span class="payroll-toggle-main"><span class="payroll-arrow">◀</span><strong>פנסיה עובד</strong></span>
+          <span class="payroll-amount">− ${currency(netDetails.pension)}</span>
+        </button>
+        <div id="pensionDetails" class="payroll-details hidden">
           <div class="payroll-row"><span>פנסיה עובד</span><span>${currency(netDetails.pension)}</span></div>
         </div>
       </div>
@@ -2252,12 +2333,16 @@ function exportMonthlyPdf(){
     <div class="box">תוספת לילה<b>${currency(totals.nightExtra)}</b></div>
     <div class="box">תוספות ידניות<b>${currency(totals.bonus)}</b></div>
     <div class="box">ברוטו מחושב<b>${currency(totals.pay)}</b></div>
-    <div class="box">ניכויים משוערים<b>${currency(net.tax+net.insurance+net.pension+net.unionDeduction)}</b></div>
+    <div class="box">מס הכנסה<b>${currency(net.tax)}</b></div>
+    <div class="box">ביטוח לאומי<b>${currency(net.nationalInsurance)}</b></div>
+    <div class="box">ביטוח בריאות<b>${currency(net.healthInsurance)}</b></div>
+    <div class="box">פנסיה עובד<b>${currency(net.pension)}</b></div>
+    <div class="box">ניכוי ועד<b>${currency(net.unionDeduction)}</b></div>
     <div class="box net">נטו משוער<b>${currency(net.net)}</b></div>
   </div>
 
   <div class="note">
-    הדוח מבוסס על הנתונים וההגדרות שהוזנו באפליקציה. חישובי מס הכנסה, ביטוח לאומי והנטו הם אומדן בלבד.
+    הדוח מבוסס על הנתונים וההגדרות שהוזנו באפליקציה. מס הכנסה, ביטוח לאומי וביטוח בריאות מחושבים לפי המדרגות שבהגדרות או לפי ברירת המחדל של 2026; הנטו עדיין משוער.
   </div>
 
 <script>
