@@ -590,7 +590,10 @@
         <label>DD / DDR<select id="shiftValueDd"><option value="">בחר DD</option></select></label>
       </div>
       <div style="height:10px"></div>
-      <button id="calculateShiftValue" class="primary" type="button">חשב כמה המשמרת שווה לי</button>
+      <div class="grid">
+        <button id="calculateShiftValue" class="primary" type="button">חשב כמה המשמרת שווה לי</button>
+        <button id="clearShiftValue" class="secondary hidden" type="button">נקה</button>
+      </div>
       <div id="shiftValueResult" class="hidden"></div>
     </div>
 
@@ -804,7 +807,7 @@
         <button class="secondary" id="updateDdFromServer" type="button">עדכן טבלת DD מהשרת</button>
         <button class="secondary" id="editLocalDd" type="button">ערוך DD מקומי</button>
       </div>
-      <div id="ddStatus" class="note" style="margin-top:10px"></div><div class="note" style="margin-top:6px">גרסת אפליקציה: <strong>40</strong></div>
+      <div id="ddStatus" class="note" style="margin-top:10px"></div><div class="note" style="margin-top:6px">גרסת אפליקציה: <strong>41</strong></div>
     </div>
 
     <div class="card settings-accordion">
@@ -1047,7 +1050,7 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=40;
+const APP_VERSION=41;
 const VERSION_URL='./version.json';
 const GOOGLE_CLIENT_ID='671607022405-ctegk4jl7koo9elm30odvsb1binp49cb.apps.googleusercontent.com';
 const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.appdata';
@@ -3214,12 +3217,15 @@ function calculateShiftValue(){
   };
   const result=$('shiftValueResult');
   result.classList.remove('hidden');
+  $('clearShiftValue')?.classList.remove('hidden');
   result.innerHTML=`
     <div class="shift-value-grid">
       <div class="shift-value-box"><span>ברוטו שנוסף לחודש</span><strong>${currency(grossDelta)}</strong></div>
       <div class="shift-value-box"><span>נטו שנשאר מהמשמרת</span><strong>${currency(netDelta)}</strong></div>
       <div class="shift-value-box"><span>ברוטו חודשי לפני</span><strong>${currency(beforeGross)}</strong></div>
       <div class="shift-value-box"><span>ברוטו חודשי אחרי</span><strong>${currency(afterGross)}</strong></div>
+      <div class="shift-value-box"><span>נטו חודשי לפני</span><strong>${currency(before.net)}</strong></div>
+      <div class="shift-value-box"><span>נטו חודשי אחרי</span><strong>${currency(after.net)}</strong></div>
     </div>
     <div class="shift-value-deductions">
       <div class="shift-value-row"><span>מס הכנסה נוסף</span><strong>− ${currency(d.tax)}</strong></div>
@@ -3230,6 +3236,14 @@ function calculateShiftValue(){
       <div class="shift-value-row"><span>שעות המשמרת</span><strong>${fmtMin(raw.grossMinutes)}</strong></div>
     </div>
     <p class="note">הנטו הוא ההפרש בין הנטו החודשי המשוער אחרי הוספת המשמרת לבין הנטו לפני הוספתה. נסיעות מתחשבות גם בתקרה החודשית.</p>`;
+}
+function clearShiftValue(){
+  const dateEl=$('shiftValueDate'), ddEl=$('shiftValueDd'), result=$('shiftValueResult'), clearBtn=$('clearShiftValue');
+  if(dateEl) dateEl.value=localDateIso();
+  refreshShiftValueDdOptions();
+  if(ddEl) ddEl.value='';
+  if(result){ result.innerHTML=''; result.classList.add('hidden'); }
+  if(clearBtn) clearBtn.classList.add('hidden');
 }
 function renderTodayDashboard(){
   const todayIso=localDateIso();
@@ -3314,6 +3328,7 @@ if($('shiftValueDate')){
   refreshShiftValueDdOptions();
 }
 if($('calculateShiftValue')) $('calculateShiftValue').onclick=calculateShiftValue;
+if($('clearShiftValue')) $('clearShiftValue').onclick=clearShiftValue;
 $('calendarPrev').onclick=()=>{dashboardCalendarMonth=addMonthsToYm(dashboardCalendarMonth||localDateIso().slice(0,7),-1);renderDashboardCalendar();};
 $('calendarNext').onclick=()=>{dashboardCalendarMonth=addMonthsToYm(dashboardCalendarMonth||localDateIso().slice(0,7),1);renderDashboardCalendar();};
 setInterval(()=>{ if(!$('todayDashboard').classList.contains('hidden') || !$('mainDashboard').classList.contains('hidden')) renderTodayDashboard(); },60000);
