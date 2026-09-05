@@ -531,7 +531,7 @@
         <button class="secondary" id="updateDdFromServer" type="button">עדכן טבלת DD מהשרת</button>
         <button class="secondary" id="editLocalDd" type="button">ערוך DD מקומי</button>
       </div>
-      <div id="ddStatus" class="note" style="margin-top:10px"></div><div class="note" style="margin-top:6px">גרסת אפליקציה: <strong>30</strong></div>
+      <div id="ddStatus" class="note" style="margin-top:10px"></div><div class="note" style="margin-top:6px">גרסת אפליקציה: <strong>31</strong></div>
     </div>
 
     <div class="card">
@@ -745,7 +745,7 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=30;
+const APP_VERSION=31;
 const VERSION_URL='./version.json';
 
 function shiftSignature(sh){
@@ -1033,7 +1033,7 @@ function renderShifts(){
             onchange="toggleShiftSelection('${sh.id}',this.checked)"
           >
           <div>
-            <button type="button" class="shift-date-link" onclick="openShiftDetails('${sh.id}')">${sh.date.slice(8,10)}/${sh.date.slice(5,7)}</button>
+            <button type="button" class="shift-date-link" onclick="openShiftDetails('${sh.id}')">${sh.date.slice(8,10)}/${sh.date.slice(5,7)} · ${escapeHtml(dayNameHe(sh.date))}</button>
             <div style="margin-top:3px">${sh.start}–${sh.end}</div>
             ${(sh.ddType && sh.ddNumber!=='')?`<div style="margin-top:3px;font-weight:700">${escapeHtml(displayDdNumber(sh.ddType,sh.ddNumber))}</div>`:''}
             <div style="margin-top:6px">
