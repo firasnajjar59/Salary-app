@@ -28,7 +28,7 @@
       bottom:0;
       z-index:25;
       display:grid;
-      grid-template-columns:repeat(6,1fr);
+      grid-template-columns:repeat(7,1fr);
       gap:4px;
       padding:8px 10px calc(8px + env(safe-area-inset-bottom));
       background:rgba(255,255,255,.96);
@@ -436,6 +436,15 @@
       border-top:1px solid var(--line);
     }
 
+  
+    /* v40: main dashboard + marginal shift value simulator */
+    .shift-value-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+    .shift-value-box{border:1px solid var(--line);border-radius:14px;padding:13px;background:#f9fafb}
+    .shift-value-box span{display:block;color:var(--muted);font-size:11px;margin-bottom:4px}
+    .shift-value-box strong{display:block;font-size:20px}
+    .shift-value-deductions{margin-top:12px;border-top:1px solid var(--line);padding-top:8px}
+    .shift-value-row{display:flex;justify-content:space-between;gap:12px;padding:6px 0;font-size:12px}
+    @media(max-width:420px){.shift-value-grid{grid-template-columns:1fr 1fr}.tabs{gap:1px}.tab{font-size:8px;padding-left:1px;padding-right:1px}.tab-icon{font-size:17px}.nav-add-inner{width:43px;height:43px}}
   </style>
 </head>
 <body>
@@ -456,13 +465,15 @@
 
 <main>
 
-  <section id="todayDashboard">
-    <div id="homeWidgetToday" class="card today-hero" data-home-widget="today">
+  <section id="todayDashboard" class="hidden">
+    <div id="homeWidgetToday" class="card today-hero">
       <div id="todayDateLabel" class="today-date"></div>
       <div class="today-title">היום שלי</div>
       <div id="todayShiftContent"></div>
     </div>
+  </section>
 
+  <section id="mainDashboard">
     <div id="homeWidgetForecast" class="card" data-home-widget="forecast">
       <div class="shift-head" style="margin-bottom:12px">
         <h2 style="margin:0">החודש שלי</h2>
@@ -568,7 +579,22 @@
       <div id="calendarGrid" class="calendar-grid"></div>
       <p class="note" style="margin:10px 0 0">לחיצה על יום עם משמרת פותחת את פרטי המשמרת. לחיצה על יום ריק פותחת הוספת משמרת באותו תאריך.</p>
     </div>
-    <div id="dashboardEmptyState" class="card dashboard-empty hidden">כל הרכיבים במסך היום מוסתרים. אפשר להפעיל אותם מחדש דרך הגדרות ← מסך היום.</div>
+    <div id="homeWidgetShiftValue" class="card" data-home-widget="shiftValue">
+      <div class="shift-head" style="margin-bottom:8px">
+        <h2 style="margin:0">כמה שווה לי משמרת?</h2>
+        <span class="filter-count">נטו שולי</span>
+      </div>
+      <p class="note">החישוב מוסיף את המשמרת לחודש הקיים ומחשב מחדש מס הכנסה, ביטוח לאומי, בריאות, פנסיה וניכוי ועד. כך רואים כמה באמת נשאר מהמשמרת.</p>
+      <div class="grid">
+        <label>תאריך<input id="shiftValueDate" type="date"></label>
+        <label>DD / DDR<select id="shiftValueDd"><option value="">בחר DD</option></select></label>
+      </div>
+      <div style="height:10px"></div>
+      <button id="calculateShiftValue" class="primary" type="button">חשב כמה המשמרת שווה לי</button>
+      <div id="shiftValueResult" class="hidden"></div>
+    </div>
+
+    <div id="dashboardEmptyState" class="card dashboard-empty hidden">כל הרכיבים במסך הראשי מוסתרים. אפשר להפעיל אותם מחדש דרך הגדרות ← מסך ראשי.</div>
   </section>
 
   <section id="shifts" class="hidden">
@@ -677,12 +703,12 @@
   <section id="settings" class="hidden">
     <div class="card settings-accordion">
       <details>
-        <summary>מסך היום</summary>
+        <summary>מסך ראשי</summary>
         <div class="settings-accordion-body">
           <p class="note">בחר אילו חלקים יוצגו במסך הבית ובאיזה סדר. אפשר לשנות את הסדר בכל זמן, וגם רכיבים שיתווספו בעתיד יוכלו להשתלב כאן.</p>
           <div id="homeLayoutList" class="home-layout-list"></div>
           <div style="height:10px"></div>
-          <button class="primary" id="saveHomeLayout" type="button">שמור תצוגת מסך הבית</button>
+          <button class="primary" id="saveHomeLayout" type="button">שמור תצוגת מסך ראשי</button>
           <div style="height:18px"></div>
           <h3 style="margin:0 0 6px">גרפים בהשוואה וגרפים</h3>
           <p class="note">בחר אילו גרפים יוצגו ובאיזה סדר. ההגדרה נשמרת יחד עם שאר ההגדרות ונכללת בגיבוי.</p>
@@ -778,7 +804,7 @@
         <button class="secondary" id="updateDdFromServer" type="button">עדכן טבלת DD מהשרת</button>
         <button class="secondary" id="editLocalDd" type="button">ערוך DD מקומי</button>
       </div>
-      <div id="ddStatus" class="note" style="margin-top:10px"></div><div class="note" style="margin-top:6px">גרסת אפליקציה: <strong>39</strong></div>
+      <div id="ddStatus" class="note" style="margin-top:10px"></div><div class="note" style="margin-top:6px">גרסת אפליקציה: <strong>40</strong></div>
     </div>
 
     <div class="card settings-accordion">
@@ -929,8 +955,12 @@
 </div>
 
 <nav class="tabs" aria-label="ניווט ראשי">
-  <button class="tab active" data-tab="todayDashboard" type="button">
+  <button class="tab active" data-tab="mainDashboard" type="button">
     <span class="tab-icon">⌂</span>
+    <span>ראשי</span>
+  </button>
+  <button class="tab" data-tab="todayDashboard" type="button">
+    <span class="tab-icon">◉</span>
     <span>היום</span>
   </button>
   <button class="tab" data-tab="shifts" type="button">
@@ -1017,7 +1047,7 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=39;
+const APP_VERSION=40;
 const VERSION_URL='./version.json';
 const GOOGLE_CLIENT_ID='671607022405-ctegk4jl7koo9elm30odvsb1binp49cb.apps.googleusercontent.com';
 const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.appdata';
@@ -1029,10 +1059,10 @@ let driveTokenExpiresAt=0;
 let drivePendingAction=null;
 
 const HOME_WIDGETS=[
-  {id:'today',label:'היום שלי'},
   {id:'forecast',label:'תחזית שכר'},
   {id:'calendar',label:'לוח שנה'},
-  {id:'analytics',label:'השוואה וגרפים'}
+  {id:'analytics',label:'השוואה וגרפים'},
+  {id:'shiftValue',label:'כמה שווה לי משמרת?'}
 ];
 let homeLayoutDraft=[];
 
@@ -1132,7 +1162,7 @@ function readStoredSettings(){
 function getSavedHomeLayout(){ return normalizeHomeLayout(readStoredSettings().homeLayout); }
 function applyHomeLayout(layout=getSavedHomeLayout()){
   const normalized=normalizeHomeLayout(layout);
-  const section=$('todayDashboard');
+  const section=$('mainDashboard');
   if(!section) return;
   let visibleCount=0;
   normalized.forEach(item=>{
@@ -3145,6 +3175,62 @@ function renderDashboardAnalytics(){
   renderMiniBarChart('nightHistoryChart',rows,'night',v=>`${v.toFixed(1)}ש׳`,currentYm);
   applyAnalyticsChartLayout(analyticsChartLayoutDraft.length?analyticsChartLayoutDraft:getSavedAnalyticsChartLayout());
 }
+function refreshShiftValueDdOptions(){
+  const dateEl=$('shiftValueDate'), ddEl=$('shiftValueDd');
+  if(!dateEl||!ddEl) return;
+  const current=ddEl.value;
+  const items=allDdForDate(dateEl.value||localDateIso());
+  ddEl.innerHTML='<option value="">בחר DD</option>'+items.map(x=>{
+    const key=ddKey(x.type,x.number);
+    const src=x.sourceTable==='thursday'?'חמישי':(x.sourceTable==='ddr'?'DDR':'שבוע');
+    return `<option value="${escapeHtml(key)}">${escapeHtml(key)} · ${escapeHtml(x.start)}–${escapeHtml(x.end)} · ${src}</option>`;
+  }).join('');
+  if([...ddEl.options].some(o=>o.value===current)) ddEl.value=current;
+}
+function calculateShiftValue(){
+  const date=$('shiftValueDate').value, key=$('shiftValueDd').value;
+  if(!date || !key){ alert('בחר תאריך ו-DD / DDR.'); return; }
+  const m=/^(DDR|DD)(.+)$/i.exec(key); if(!m) return;
+  const tpl=resolveDdTemplate(date,m[1].toUpperCase(),m[2]);
+  if(!tpl){ alert('ה-DD לא נמצא בטבלה המקומית.'); return; }
+  const candidate={
+    id:'sim-'+Date.now(),date,start:operationalToClock(tpl.start),end:operationalToClock(tpl.end),breakMin:0,notes:'',
+    dayType:'auto',bonus:0,extraLoopType:'none',nightLineType:'none',ddType:m[1].toUpperCase(),ddNumber:m[2]
+  };
+  const ym=date.slice(0,7);
+  const beforeList=shifts.filter(sh=>sh.date.startsWith(ym));
+  const afterList=[...beforeList,candidate];
+  const beforeGross=dashboardTotalsForList(beforeList).gross;
+  const afterGross=dashboardTotalsForList(afterList).gross;
+  const before=estimateNetDetails(beforeGross), after=estimateNetDetails(afterGross);
+  const grossDelta=afterGross-beforeGross, netDelta=after.net-before.net;
+  const raw=calcShift(candidate);
+  const d={
+    tax:after.tax-before.tax,
+    ni:after.nationalInsurance-before.nationalInsurance,
+    health:after.healthInsurance-before.healthInsurance,
+    pension:after.pension-before.pension,
+    union:after.unionDeduction-before.unionDeduction
+  };
+  const result=$('shiftValueResult');
+  result.classList.remove('hidden');
+  result.innerHTML=`
+    <div class="shift-value-grid">
+      <div class="shift-value-box"><span>ברוטו שנוסף לחודש</span><strong>${currency(grossDelta)}</strong></div>
+      <div class="shift-value-box"><span>נטו שנשאר מהמשמרת</span><strong>${currency(netDelta)}</strong></div>
+      <div class="shift-value-box"><span>ברוטו חודשי לפני</span><strong>${currency(beforeGross)}</strong></div>
+      <div class="shift-value-box"><span>ברוטו חודשי אחרי</span><strong>${currency(afterGross)}</strong></div>
+    </div>
+    <div class="shift-value-deductions">
+      <div class="shift-value-row"><span>מס הכנסה נוסף</span><strong>− ${currency(d.tax)}</strong></div>
+      <div class="shift-value-row"><span>ביטוח לאומי נוסף</span><strong>− ${currency(d.ni)}</strong></div>
+      <div class="shift-value-row"><span>ביטוח בריאות נוסף</span><strong>− ${currency(d.health)}</strong></div>
+      <div class="shift-value-row"><span>פנסיה עובד נוספת</span><strong>− ${currency(d.pension)}</strong></div>
+      <div class="shift-value-row"><span>ניכוי ועד נוסף</span><strong>− ${currency(d.union)}</strong></div>
+      <div class="shift-value-row"><span>שעות המשמרת</span><strong>${fmtMin(raw.grossMinutes)}</strong></div>
+    </div>
+    <p class="note">הנטו הוא ההפרש בין הנטו החודשי המשוער אחרי הוספת המשמרת לבין הנטו לפני הוספתה. נסיעות מתחשבות גם בתקרה החודשית.</p>`;
+}
 function renderTodayDashboard(){
   const todayIso=localDateIso();
   const currentYm=todayIso.slice(0,7);
@@ -3222,9 +3308,15 @@ function openDashboardCalendarDate(date){
   refreshDdPresetOptions();
   openShiftModal(false);
 }
+if($('shiftValueDate')){
+  $('shiftValueDate').value=localDateIso();
+  $('shiftValueDate').onchange=refreshShiftValueDdOptions;
+  refreshShiftValueDdOptions();
+}
+if($('calculateShiftValue')) $('calculateShiftValue').onclick=calculateShiftValue;
 $('calendarPrev').onclick=()=>{dashboardCalendarMonth=addMonthsToYm(dashboardCalendarMonth||localDateIso().slice(0,7),-1);renderDashboardCalendar();};
 $('calendarNext').onclick=()=>{dashboardCalendarMonth=addMonthsToYm(dashboardCalendarMonth||localDateIso().slice(0,7),1);renderDashboardCalendar();};
-setInterval(()=>{ if(!$('todayDashboard').classList.contains('hidden')) renderTodayDashboard(); },60000);
+setInterval(()=>{ if(!$('todayDashboard').classList.contains('hidden') || !$('mainDashboard').classList.contains('hidden')) renderTodayDashboard(); },60000);
 
 $('exportPdfBtn').onclick=exportMonthlyPdf;
 
@@ -3232,9 +3324,9 @@ $('exportPdfBtn').onclick=exportMonthlyPdf;
 document.querySelectorAll('.tab').forEach(btn=>btn.onclick=()=>{
   document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  ['todayDashboard','shifts','summary','payslip','settings'].forEach(id=>$(id).classList.add('hidden'));
+  ['mainDashboard','todayDashboard','shifts','summary','payslip','settings'].forEach(id=>$(id).classList.add('hidden'));
   $(btn.dataset.tab).classList.remove('hidden');
-  if(btn.dataset.tab==='todayDashboard') renderTodayDashboard();
+  if(btn.dataset.tab==='todayDashboard' || btn.dataset.tab==='mainDashboard') renderTodayDashboard();
   if(btn.dataset.tab==='summary') renderSummary();
   if(btn.dataset.tab==='payslip') renderPayslipComparison();
 });
