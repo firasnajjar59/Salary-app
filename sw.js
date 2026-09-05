@@ -1,10 +1,11 @@
-const CACHE_NAME = 'salary-app-v32';
+const CACHE_NAME = 'salary-app-v33';
 const APP_FILES = [
   './',
   './index.html',
   './manifest.json',
   './dd.json',
   './version.json',
+  './privacy.html',
   './icon-192.png',
   './icon-512.png'
 ];

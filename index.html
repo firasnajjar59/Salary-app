@@ -10,6 +10,7 @@
   <title>מחשבון שעות ושכר</title>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
     :root{
       --bg:#f5f7fb;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;
@@ -546,12 +547,25 @@
         <button class="secondary" id="updateDdFromServer" type="button">עדכן טבלת DD מהשרת</button>
         <button class="secondary" id="editLocalDd" type="button">ערוך DD מקומי</button>
       </div>
-      <div id="ddStatus" class="note" style="margin-top:10px"></div><div class="note" style="margin-top:6px">גרסת אפליקציה: <strong>32</strong></div>
+      <div id="ddStatus" class="note" style="margin-top:10px"></div><div class="note" style="margin-top:6px">גרסת אפליקציה: <strong>33</strong></div>
     </div>
 
     <div class="card">
-      <h2>גיבוי ושחזור</h2>
-      <p class="note">הגיבוי כולל את כל המשמרות, ההגדרות ונתוני השוואת התלושים. קובץ הגיבוי נשמר בפורמט JSON.</p>
+      <h2>גיבוי Google Drive</h2>
+      <p class="note">הגיבוי נשמר באזור הפרטי של Salary App ב-Google Drive (appDataFolder), ואינו מופיע ברשימת הקבצים הרגילה ב-Drive.</p>
+      <div class="grid">
+        <button class="secondary" id="connectDriveBtn" type="button">חבר Google Drive</button>
+        <button class="secondary" id="cloudBackupBtn" type="button">גבה עכשיו</button>
+        <button class="secondary" id="cloudRestoreBtn" type="button">שחזר מהענן</button>
+      </div>
+      <div id="cloudBackupStatus" class="note" style="margin-top:10px">Google Drive עדיין לא חובר.</div>
+      <p class="note" style="margin-top:8px">לאחר החיבור, האפליקציה מנסה לבצע גיבוי אוטומטי פעם ב-24 שעות כשהיא נפתחת או פעילה. אם Google דורשת הרשאה מחדש, יש ללחוץ על גבה עכשיו.</p>
+      <p class="note"><a href="privacy.html" target="_blank" rel="noopener">מדיניות פרטיות</a></p>
+    </div>
+
+    <div class="card">
+      <h2>גיבוי ושחזור מקומי</h2>
+      <p class="note">הגיבוי המקומי כולל את כל המשמרות, ההגדרות, נתוני השוואת התלושים וטבלאות DD/DDR. קובץ הגיבוי נשמר בפורמט JSON.</p>
       <div class="grid">
         <button class="secondary" id="backupBtn">צור גיבוי JSON</button>
         <button class="secondary" id="restoreBtn">שחזר מקובץ JSON</button>
@@ -760,8 +774,16 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=32;
+const APP_VERSION=33;
 const VERSION_URL='./version.json';
+const GOOGLE_CLIENT_ID='671607022405-ctegk4jl7koo9elm30odvsb1binp49cb.apps.googleusercontent.com';
+const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.appdata';
+const DRIVE_BACKUP_FILE='salary-app-backup.json';
+const KEY_DRIVE_BACKUP='salaryApp.driveBackup.v1';
+let driveTokenClient=null;
+let driveAccessToken='';
+let driveTokenExpiresAt=0;
+let drivePendingAction=null;
 
 function shiftSignature(sh){
   return [
@@ -2092,6 +2114,212 @@ function buildBackupPayload(){
   };
 }
 
+function getDriveBackupMeta(){
+  try{
+    const v=JSON.parse(localStorage.getItem(KEY_DRIVE_BACKUP)||'{}');
+    return v && typeof v==='object' ? v : {};
+  }catch(e){ return {}; }
+}
+
+function saveDriveBackupMeta(patch){
+  const current=getDriveBackupMeta();
+  const next={...current,...patch};
+  localStorage.setItem(KEY_DRIVE_BACKUP,JSON.stringify(next));
+  renderCloudBackupStatus();
+  return next;
+}
+
+function formatBackupDate(value){
+  if(!value) return 'אין עדיין גיבוי';
+  const d=new Date(value);
+  if(Number.isNaN(d.getTime())) return 'אין עדיין גיבוי';
+  try{return new Intl.DateTimeFormat('he-IL',{dateStyle:'short',timeStyle:'short'}).format(d);}
+  catch(e){return d.toLocaleString('he-IL');}
+}
+
+function renderCloudBackupStatus(extra=''){
+  const el=$('cloudBackupStatus');
+  if(!el) return;
+  const meta=getDriveBackupMeta();
+  const state=meta.connected ? 'Google Drive מחובר' : 'Google Drive עדיין לא חובר';
+  const last=`גיבוי אחרון: ${formatBackupDate(meta.lastBackupAt)}`;
+  el.textContent=extra ? `${state} · ${last} · ${extra}` : `${state} · ${last}`;
+}
+
+function driveTokenValid(){
+  return !!driveAccessToken && Date.now() < driveTokenExpiresAt-60000;
+}
+
+function initDriveTokenClient(){
+  if(driveTokenClient || !window.google?.accounts?.oauth2) return !!driveTokenClient;
+  driveTokenClient=google.accounts.oauth2.initTokenClient({
+    client_id:GOOGLE_CLIENT_ID,
+    scope:DRIVE_SCOPE,
+    callback:async response=>{
+      if(!response || response.error || !response.access_token){
+        const message=response?.error ? `שגיאת הרשאה: ${response.error}` : 'לא התקבלה הרשאה מ-Google.';
+        renderCloudBackupStatus(message);
+        drivePendingAction=null;
+        return;
+      }
+      driveAccessToken=response.access_token;
+      driveTokenExpiresAt=Date.now()+(Number(response.expires_in||3600)*1000);
+      const action=drivePendingAction;
+      drivePendingAction=null;
+      saveDriveBackupMeta({connected:true});
+      try{
+        if(action==='backup' || action==='autoBackup' || action==='connect') await backupToDrive(action==='autoBackup');
+        else if(action==='restore') await restoreFromDrive();
+        else renderCloudBackupStatus('החיבור הצליח');
+      }catch(e){
+        console.error(e);
+        renderCloudBackupStatus(e?.message||'פעולת Google Drive נכשלה');
+        if(action!=='autoBackup') alert(e?.message||'פעולת Google Drive נכשלה.');
+      }
+    },
+    error_callback:error=>{
+      console.error('Google OAuth error',error);
+      drivePendingAction=null;
+      renderCloudBackupStatus('לא ניתן לפתוח את הרשאת Google כרגע');
+    }
+  });
+  return true;
+}
+
+function requestDriveAccess(action,interactive=true){
+  if(driveTokenValid()){
+    if(action==='backup' || action==='autoBackup' || action==='connect') return backupToDrive(action==='autoBackup');
+    if(action==='restore') return restoreFromDrive();
+    return;
+  }
+  if(!initDriveTokenClient()){
+    renderCloudBackupStatus('שירות ההתחברות של Google עדיין נטען');
+    if(interactive) alert('שירות ההתחברות של Google עדיין נטען. נסה שוב בעוד כמה שניות.');
+    return;
+  }
+  drivePendingAction=action;
+  const meta=getDriveBackupMeta();
+  try{
+    driveTokenClient.requestAccessToken({prompt:(interactive && !meta.connected)?'consent':''});
+  }catch(e){
+    drivePendingAction=null;
+    console.error(e);
+    renderCloudBackupStatus('לא ניתן לבקש הרשאת Google כרגע');
+  }
+}
+
+async function driveFetch(url,options={}){
+  if(!driveTokenValid()) throw new Error('פג תוקף החיבור ל-Google Drive. לחץ שוב על הפעולה כדי להתחבר מחדש.');
+  const headers=new Headers(options.headers||{});
+  headers.set('Authorization',`Bearer ${driveAccessToken}`);
+  const response=await fetch(url,{...options,headers});
+  if(response.status===401){
+    driveAccessToken=''; driveTokenExpiresAt=0;
+    throw new Error('פג תוקף החיבור ל-Google Drive. לחץ שוב כדי להתחבר מחדש.');
+  }
+  if(!response.ok){
+    let detail='';
+    try{detail=(await response.json())?.error?.message||'';}catch(e){}
+    throw new Error(detail ? `Google Drive: ${detail}` : `Google Drive החזיר שגיאה ${response.status}.`);
+  }
+  return response;
+}
+
+async function findDriveBackup(){
+  const params=new URLSearchParams({
+    spaces:'appDataFolder',
+    q:`name='${DRIVE_BACKUP_FILE.replaceAll("'","\\'")}' and trashed=false`,
+    fields:'files(id,name,modifiedTime,size)',
+    orderBy:'modifiedTime desc',
+    pageSize:'10'
+  });
+  const r=await driveFetch(`https://www.googleapis.com/drive/v3/files?${params}`);
+  const data=await r.json();
+  return Array.isArray(data.files) && data.files.length ? data.files[0] : null;
+}
+
+async function createDriveBackupFile(){
+  const r=await driveFetch('https://www.googleapis.com/drive/v3/files?fields=id,modifiedTime',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name:DRIVE_BACKUP_FILE,parents:['appDataFolder'],mimeType:'application/json'})
+  });
+  return r.json();
+}
+
+async function uploadDriveBackup(fileId,payload){
+  const r=await driveFetch(`https://www.googleapis.com/upload/drive/v3/files/${encodeURIComponent(fileId)}?uploadType=media&fields=id,modifiedTime`,{
+    method:'PATCH',
+    headers:{'Content-Type':'application/json;charset=utf-8'},
+    body:JSON.stringify(payload)
+  });
+  return r.json();
+}
+
+async function backupToDrive(silent=false){
+  if(!silent) renderCloudBackupStatus('מגבה...');
+  const payload=buildBackupPayload();
+  let file=await findDriveBackup();
+  if(!file) file=await createDriveBackupFile();
+  const uploaded=await uploadDriveBackup(file.id,payload);
+  saveDriveBackupMeta({connected:true,lastBackupAt:new Date().toISOString()});
+  renderCloudBackupStatus('הגיבוי הושלם');
+  return uploaded;
+}
+
+function applyBackupPayload(payload){
+  const cleanShifts=dedupeShifts(payload.data.shifts);
+  localStorage.setItem(KEY_SHIFTS,JSON.stringify(cleanShifts));
+  localStorage.setItem(KEY_SETTINGS,JSON.stringify(payload.data.settings));
+  localStorage.setItem(KEY_PAYSLIPS,JSON.stringify(payload.data.payslips));
+  if(payload.data.ddTables!==undefined) localStorage.setItem(KEY_DD_TABLES,JSON.stringify(normalizeDdTables(payload.data.ddTables)));
+}
+
+async function restoreFromDrive(){
+  renderCloudBackupStatus('מחפש גיבוי בענן...');
+  const file=await findDriveBackup();
+  if(!file){
+    renderCloudBackupStatus('לא נמצא גיבוי בענן');
+    alert('לא נמצא עדיין גיבוי של Salary App ב-Google Drive.');
+    return;
+  }
+  const r=await driveFetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(file.id)}?alt=media`);
+  const payload=await r.json();
+  if(!validateBackupPayload(payload)) throw new Error('קובץ הגיבוי בענן אינו תקין או אינו שייך לאפליקציה הזו.');
+  const when=file.modifiedTime ? `\nגיבוי מתאריך: ${formatBackupDate(file.modifiedTime)}` : '';
+  if(!confirm(`השחזור מהענן יחליף את הנתונים הקיימים באפליקציה.${when}\n\nלהמשיך?`)){
+    renderCloudBackupStatus('השחזור בוטל');
+    return;
+  }
+  applyBackupPayload(payload);
+  saveDriveBackupMeta({connected:true,lastCloudRestoreAt:new Date().toISOString()});
+  alert('השחזור מהענן הושלם בהצלחה. האפליקציה תיטען מחדש.');
+  location.reload();
+}
+
+function maybeRunDailyCloudBackup(){
+  const meta=getDriveBackupMeta();
+  if(!meta.connected) return;
+  const last=Date.parse(meta.lastBackupAt||'')||0;
+  if(Date.now()-last < 24*60*60*1000) return;
+  requestDriveAccess('autoBackup',false);
+}
+
+function setupGoogleDriveBackup(){
+  renderCloudBackupStatus();
+  if($('connectDriveBtn')) $('connectDriveBtn').onclick=()=>requestDriveAccess('connect',true);
+  if($('cloudBackupBtn')) $('cloudBackupBtn').onclick=()=>requestDriveAccess('backup',true);
+  if($('cloudRestoreBtn')) $('cloudRestoreBtn').onclick=()=>requestDriveAccess('restore',true);
+  let tries=0;
+  const timer=setInterval(()=>{
+    tries++;
+    if(initDriveTokenClient() || tries>=20){
+      clearInterval(timer);
+      setTimeout(maybeRunDailyCloudBackup,500);
+    }
+  },250);
+}
+
 function downloadBackupJson(){
   const payload=buildBackupPayload();
   const json=JSON.stringify(payload,null,2);
@@ -2138,11 +2366,7 @@ async function restoreBackupFromFile(file){
       return;
     }
 
-    const cleanShifts=dedupeShifts(payload.data.shifts);
-    localStorage.setItem(KEY_SHIFTS,JSON.stringify(cleanShifts));
-    localStorage.setItem(KEY_SETTINGS,JSON.stringify(payload.data.settings));
-    localStorage.setItem(KEY_PAYSLIPS,JSON.stringify(payload.data.payslips));
-    if(payload.data.ddTables!==undefined) localStorage.setItem(KEY_DD_TABLES,JSON.stringify(normalizeDdTables(payload.data.ddTables)));
+    applyBackupPayload(payload);
 
     alert('השחזור הושלם בהצלחה. האפליקציה תיטען מחדש.');
     location.reload();
@@ -2158,6 +2382,8 @@ $('restoreFile').addEventListener('change',()=>{
   if(file) restoreBackupFromFile(file);
   $('restoreFile').value='';
 });
+
+setupGoogleDriveBackup();
 
 $('clearBtn').onclick=()=>{
   if(confirm('למחוק את כל המשמרות וההגדרות?')){
