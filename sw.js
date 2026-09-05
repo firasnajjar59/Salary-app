@@ -1,4 +1,19 @@
-const CACHE_NAME = 'salary-app-v45';
+importScripts("https://www.gstatic.com/firebasejs/12.18.0/firebase-app-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/12.18.0/firebase-messaging-compat.js");
+
+firebase.initializeApp({
+  apiKey: "AIzaSyAFDEs33DVG3O_RYz_b3yaAgJ1LYmNbbRQ",
+  authDomain: "salary-app-507708.firebaseapp.com",
+  projectId: "salary-app-507708",
+  storageBucket: "salary-app-507708.firebasestorage.app",
+  messagingSenderId: "671607022405",
+  appId: "1:671607022405:web:05d26d5fbe92f49870542c"
+});
+
+// Firebase Messaging attaches background Push handling to the existing PWA service worker.
+firebase.messaging();
+
+const CACHE_NAME = 'salary-app-v46';
 const APP_FILES = [
   './',
   './index.html',
