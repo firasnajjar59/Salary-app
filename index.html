@@ -379,6 +379,14 @@
     .mini-chart-bar{width:min(30px,72%);min-height:2px;border-radius:7px 7px 3px 3px;background:linear-gradient(180deg,#111827,#475569)}
     .mini-chart-label{font-size:9px;font-weight:750;margin-top:5px;white-space:nowrap}
     .mini-chart-current .mini-chart-label{font-weight:950;text-decoration:underline}
+    .analytics-chart-hidden{display:none!important}
+    .analytics-chart-controls{display:grid;gap:8px;margin-top:10px}
+    .analytics-chart-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+    .analytics-chart-main{display:flex;align-items:center;gap:10px;font-weight:750;cursor:pointer;min-width:0}
+    .analytics-chart-main input{width:18px;height:18px;accent-color:#111827}
+    .analytics-chart-actions{display:flex;gap:6px;flex:0 0 auto}
+    .analytics-chart-move{width:34px;height:34px;border:1px solid var(--line);border-radius:9px;background:var(--card);font-weight:900}
+    .analytics-chart-move:disabled{opacity:.3}
     .dashboard-empty{padding:22px;text-align:center;color:var(--muted)}
     @media(max-width:420px){.today-shift-grid,.forecast-grid{grid-template-columns:1fr 1fr}.calendar-day{min-height:64px;padding:4px}.calendar-grid,.calendar-weekdays{gap:3px}.tabs{padding-left:5px;padding-right:5px}.tab{font-size:9px}.tab-icon{font-size:18px}.nav-add-inner{width:46px;height:46px}}
 
@@ -480,13 +488,39 @@
         </div>
       </div>
       <p id="compareNote" class="analytics-note"></p>
-      <div class="chart-card">
-        <div class="chart-title">ברוטו — 6 חודשים אחרונים</div>
-        <div id="grossHistoryChart" class="mini-chart"></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-title">שעות עבודה — 6 חודשים אחרונים</div>
-        <div id="hoursHistoryChart" class="mini-chart"></div>
+      <div id="analyticsChartsContainer">
+        <div class="chart-card" data-analytics-chart="gross">
+          <div class="chart-title">ברוטו — 6 חודשים אחרונים</div>
+          <div id="grossHistoryChart" class="mini-chart"></div>
+        </div>
+        <div class="chart-card" data-analytics-chart="net">
+          <div class="chart-title">נטו משוער — 6 חודשים אחרונים</div>
+          <div id="netHistoryChart" class="mini-chart"></div>
+        </div>
+        <div class="chart-card" data-analytics-chart="hours">
+          <div class="chart-title">שעות עבודה — 6 חודשים אחרונים</div>
+          <div id="hoursHistoryChart" class="mini-chart"></div>
+        </div>
+        <div class="chart-card" data-analytics-chart="regular">
+          <div class="chart-title">שעות רגילות — 6 חודשים אחרונים</div>
+          <div id="regularHistoryChart" class="mini-chart"></div>
+        </div>
+        <div class="chart-card" data-analytics-chart="ot125">
+          <div class="chart-title">שעות 125% — 6 חודשים אחרונים</div>
+          <div id="ot125HistoryChart" class="mini-chart"></div>
+        </div>
+        <div class="chart-card" data-analytics-chart="ot150">
+          <div class="chart-title">שעות 150% — 6 חודשים אחרונים</div>
+          <div id="ot150HistoryChart" class="mini-chart"></div>
+        </div>
+        <div class="chart-card" data-analytics-chart="saturday">
+          <div class="chart-title">שעות שבת 225% — 6 חודשים אחרונים</div>
+          <div id="saturdayHistoryChart" class="mini-chart"></div>
+        </div>
+        <div class="chart-card" data-analytics-chart="night">
+          <div class="chart-title">שעות לילה — 6 חודשים אחרונים</div>
+          <div id="nightHistoryChart" class="mini-chart"></div>
+        </div>
       </div>
     </div>
 
@@ -615,6 +649,12 @@
       <div id="homeLayoutList" class="home-layout-list"></div>
       <div style="height:10px"></div>
       <button class="primary" id="saveHomeLayout" type="button">שמור תצוגת מסך הבית</button>
+      <div style="height:18px"></div>
+      <h3 style="margin:0 0 6px">גרפים בהשוואה וגרפים</h3>
+      <p class="note">בחר אילו גרפים יוצגו ובאיזה סדר. ההגדרה נשמרת יחד עם שאר ההגדרות ונכללת בגיבוי.</p>
+      <div id="analyticsChartLayoutList" class="analytics-chart-controls"></div>
+      <div style="height:10px"></div>
+      <button class="secondary" id="saveAnalyticsCharts" type="button">שמור תצוגת גרפים</button>
     </div>
 
     <div class="card">
@@ -933,7 +973,7 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=37;
+const APP_VERSION=38;
 const VERSION_URL='./version.json';
 const GOOGLE_CLIENT_ID='671607022405-ctegk4jl7koo9elm30odvsb1binp49cb.apps.googleusercontent.com';
 const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.appdata';
@@ -951,6 +991,79 @@ const HOME_WIDGETS=[
   {id:'analytics',label:'השוואה וגרפים'}
 ];
 let homeLayoutDraft=[];
+
+const ANALYTICS_CHARTS=[
+  {id:'gross',label:'ברוטו'},
+  {id:'net',label:'נטו משוער'},
+  {id:'hours',label:'שעות עבודה'},
+  {id:'regular',label:'שעות רגילות'},
+  {id:'ot125',label:'שעות 125%'},
+  {id:'ot150',label:'שעות 150%'},
+  {id:'saturday',label:'שעות שבת 225%'},
+  {id:'night',label:'שעות לילה'}
+];
+let analyticsChartLayoutDraft=[];
+function defaultAnalyticsChartLayout(){ return ANALYTICS_CHARTS.map((c,i)=>({id:c.id,visible:i<3})); }
+function normalizeAnalyticsChartLayout(value){
+  const incoming=Array.isArray(value)?value:[];
+  const result=[]; const seen=new Set();
+  incoming.forEach(item=>{
+    const id=typeof item==='string'?item:item?.id;
+    if(!ANALYTICS_CHARTS.some(c=>c.id===id) || seen.has(id)) return;
+    result.push({id,visible:typeof item==='string'?true:item.visible!==false});
+    seen.add(id);
+  });
+  ANALYTICS_CHARTS.forEach((c,i)=>{ if(!seen.has(c.id)) result.push({id:c.id,visible:incoming.length?false:i<3}); });
+  return result;
+}
+function getSavedAnalyticsChartLayout(){
+  const s=readStoredSettings();
+  return s.analyticsChartLayout===undefined?defaultAnalyticsChartLayout():normalizeAnalyticsChartLayout(s.analyticsChartLayout);
+}
+function applyAnalyticsChartLayout(layout=getSavedAnalyticsChartLayout()){
+  const container=$('analyticsChartsContainer'); if(!container) return;
+  const normalized=normalizeAnalyticsChartLayout(layout);
+  normalized.forEach(item=>{
+    const el=container.querySelector(`[data-analytics-chart="${item.id}"]`);
+    if(!el) return;
+    el.classList.toggle('analytics-chart-hidden',!item.visible);
+    container.appendChild(el);
+  });
+}
+function renderAnalyticsChartLayoutEditor(){
+  const list=$('analyticsChartLayoutList'); if(!list) return;
+  if(!analyticsChartLayoutDraft.length) analyticsChartLayoutDraft=getSavedAnalyticsChartLayout();
+  list.innerHTML=analyticsChartLayoutDraft.map((item,index)=>{
+    const def=ANALYTICS_CHARTS.find(c=>c.id===item.id);
+    return `<div class="analytics-chart-row">
+      <label class="analytics-chart-main"><input type="checkbox" data-chart-visible="${item.id}" ${item.visible?'checked':''}><span>${escapeHtml(def?.label||item.id)}</span></label>
+      <div class="analytics-chart-actions">
+        <button type="button" class="analytics-chart-move" data-chart-move="up" data-chart-id="${item.id}" ${index===0?'disabled':''}>↑</button>
+        <button type="button" class="analytics-chart-move" data-chart-move="down" data-chart-id="${item.id}" ${index===analyticsChartLayoutDraft.length-1?'disabled':''}>↓</button>
+      </div>
+    </div>`;
+  }).join('');
+  list.querySelectorAll('[data-chart-visible]').forEach(cb=>cb.onchange=()=>{
+    const item=analyticsChartLayoutDraft.find(x=>x.id===cb.dataset.chartVisible);
+    if(item) item.visible=cb.checked;
+    applyAnalyticsChartLayout(analyticsChartLayoutDraft);
+  });
+  list.querySelectorAll('[data-chart-move]').forEach(btn=>btn.onclick=()=>{
+    const i=analyticsChartLayoutDraft.findIndex(x=>x.id===btn.dataset.chartId);
+    const target=btn.dataset.chartMove==='up'?i-1:i+1;
+    if(i<0 || target<0 || target>=analyticsChartLayoutDraft.length) return;
+    [analyticsChartLayoutDraft[i],analyticsChartLayoutDraft[target]]=[analyticsChartLayoutDraft[target],analyticsChartLayoutDraft[i]];
+    renderAnalyticsChartLayoutEditor();
+    applyAnalyticsChartLayout(analyticsChartLayoutDraft);
+  });
+}
+function saveAnalyticsChartLayout(){
+  const current=readStoredSettings();
+  current.analyticsChartLayout=normalizeAnalyticsChartLayout(analyticsChartLayoutDraft.length?analyticsChartLayoutDraft:getSavedAnalyticsChartLayout());
+  localStorage.setItem(KEY_SETTINGS,JSON.stringify(current));
+  analyticsChartLayoutDraft=current.analyticsChartLayout.map(x=>({...x}));
+  applyAnalyticsChartLayout(analyticsChartLayoutDraft);
+}
 
 function defaultHomeLayout(){ return HOME_WIDGETS.map(w=>({id:w.id,visible:true})); }
 function normalizeHomeLayout(value){
@@ -1078,7 +1191,7 @@ function getSettings(){
 }
 function saveSettings(){
   const current=readStoredSettings();
-  const next={...current,...getSettings(),homeLayout:normalizeHomeLayout(homeLayoutDraft.length?homeLayoutDraft:current.homeLayout)};
+  const next={...current,...getSettings(),homeLayout:normalizeHomeLayout(homeLayoutDraft.length?homeLayoutDraft:current.homeLayout),analyticsChartLayout:normalizeAnalyticsChartLayout(analyticsChartLayoutDraft.length?analyticsChartLayoutDraft:(current.analyticsChartLayout===undefined?defaultAnalyticsChartLayout():current.analyticsChartLayout))};
   localStorage.setItem(KEY_SETTINGS, JSON.stringify(next));
 }
 function loadSettings(){
@@ -1090,8 +1203,11 @@ function loadSettings(){
     }
   });
   homeLayoutDraft=normalizeHomeLayout(s.homeLayout);
+  analyticsChartLayoutDraft=s.analyticsChartLayout===undefined?defaultAnalyticsChartLayout():normalizeAnalyticsChartLayout(s.analyticsChartLayout);
   applyHomeLayout(homeLayoutDraft);
+  applyAnalyticsChartLayout(analyticsChartLayoutDraft);
   renderHomeLayoutEditor();
+  renderAnalyticsChartLayoutEditor();
 }
 function toMin(t){ const [h,m]=t.split(':').map(Number); return h*60+m; }
 function fmtMin(min){
@@ -2349,6 +2465,7 @@ $('addShift').onclick=()=>{
 
 $('saveSettings').onclick=()=>{ saveSettings(); renderShifts(); renderSummary(); renderTodayDashboard(); alert('ההגדרות נשמרו.'); };
 $('saveHomeLayout').onclick=()=>{ saveHomeLayout(); alert('תצוגת מסך הבית נשמרה.'); };
+$('saveAnalyticsCharts').onclick=()=>{ saveAnalyticsChartLayout(); alert('תצוגת הגרפים נשמרה.'); };
 $('monthFilter').onchange=renderSummary;
 
 function buildBackupPayload(){
@@ -2929,6 +3046,29 @@ function renderMiniBarChart(containerId,rows,valueKey,formatter,currentYm){
     </div>`;
   }).join('');
 }
+function analyticsTotalsForMonth(ym){
+  const list=shifts.filter(sh=>sh.date.startsWith(ym));
+  const base=dashboardTotalsForList(list);
+  let regularMin=0,ot125Min=0,ot150Min=0,saturdayMin=0,nightMin=0;
+  list.forEach(sh=>{
+    const c=calcShift(sh);
+    if(c.type==='saturday') saturdayMin+=c.grossMinutes||0;
+    else regularMin+=c.regMin||0;
+    ot125Min+=c.ot1Min||0;
+    ot150Min+=c.ot2Min||0;
+    nightMin+=c.nightMin||0;
+  });
+  return {
+    gross:base.gross,
+    net:estimateNetDetails(base.gross).net,
+    hours:base.minutes/60,
+    regular:regularMin/60,
+    ot125:ot125Min/60,
+    ot150:ot150Min/60,
+    saturday:saturdayMin/60,
+    night:nightMin/60
+  };
+}
 function renderDashboardAnalytics(){
   const todayIso=localDateIso();
   const currentYm=todayIso.slice(0,7);
@@ -2950,12 +3090,16 @@ function renderDashboardAnalytics(){
   setCompareDelta('compareNetDelta',curNet,prevNet);
   const prevFull=dashboardTotalsForList(shifts.filter(sh=>sh.date.startsWith(prevYm)));
   $('compareNote').textContent=`ההשוואה היא לאותה נקודה בחודש: ${monthLabelHe(currentYm)} עד יום ${dayLimit} מול ${monthLabelHe(prevYm)} עד יום ${Math.min(dayLimit,prevDays)}. סך החודש הקודם: ${currency(prevFull.gross)} · ${fmtMin(prevFull.minutes)} שעות.`;
-  const rows=historyMonths(currentYm,6).map(ym=>{
-    const t=dashboardTotalsForList(shifts.filter(sh=>sh.date.startsWith(ym)));
-    return {ym,gross:t.gross,hours:t.minutes/60};
-  });
+  const rows=historyMonths(currentYm,6).map(ym=>({ym,...analyticsTotalsForMonth(ym)}));
   renderMiniBarChart('grossHistoryChart',rows,'gross',v=>currency(v),currentYm);
+  renderMiniBarChart('netHistoryChart',rows,'net',v=>currency(v),currentYm);
   renderMiniBarChart('hoursHistoryChart',rows,'hours',v=>`${v.toFixed(1)}ש׳`,currentYm);
+  renderMiniBarChart('regularHistoryChart',rows,'regular',v=>`${v.toFixed(1)}ש׳`,currentYm);
+  renderMiniBarChart('ot125HistoryChart',rows,'ot125',v=>`${v.toFixed(1)}ש׳`,currentYm);
+  renderMiniBarChart('ot150HistoryChart',rows,'ot150',v=>`${v.toFixed(1)}ש׳`,currentYm);
+  renderMiniBarChart('saturdayHistoryChart',rows,'saturday',v=>`${v.toFixed(1)}ש׳`,currentYm);
+  renderMiniBarChart('nightHistoryChart',rows,'night',v=>`${v.toFixed(1)}ש׳`,currentYm);
+  applyAnalyticsChartLayout(analyticsChartLayoutDraft.length?analyticsChartLayoutDraft:getSavedAnalyticsChartLayout());
 }
 function renderTodayDashboard(){
   const todayIso=localDateIso();

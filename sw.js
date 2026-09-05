@@ -1,4 +1,4 @@
-const CACHE_NAME = 'salary-app-v37';
+const CACHE_NAME = 'salary-app-v38';
 const APP_FILES = [
   './',
   './index.html',
