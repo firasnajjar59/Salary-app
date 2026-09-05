@@ -28,7 +28,7 @@
       bottom:0;
       z-index:25;
       display:grid;
-      grid-template-columns:1fr 1fr 1fr 1fr 1fr;
+      grid-template-columns:repeat(6,1fr);
       gap:4px;
       padding:8px 10px calc(8px + env(safe-area-inset-bottom));
       background:rgba(255,255,255,.96);
@@ -325,6 +325,37 @@
     }
 
   
+
+    /* v34 — Today dashboard, monthly calendar and salary forecast */
+    .today-hero{background:linear-gradient(135deg,#111827,#253147);color:white;overflow:hidden;position:relative}
+    .today-hero::after{content:"";position:absolute;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.06);left:-40px;top:-70px}
+    .today-date{font-size:13px;opacity:.8;margin-bottom:4px}
+    .today-title{font-size:25px;font-weight:900;margin:0 0 14px}
+    .today-shift-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;position:relative;z-index:1}
+    .today-chip{background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.13);border-radius:13px;padding:10px}
+    .today-chip span{display:block;font-size:11px;opacity:.75;margin-bottom:2px}
+    .today-chip strong{font-size:17px}
+    .today-status{margin-top:10px;font-size:12px;font-weight:750;position:relative;z-index:1}
+    .forecast-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .forecast-box{border:1px solid var(--line);border-radius:14px;padding:13px;background:#f9fafb}
+    .forecast-box span{display:block;color:var(--muted);font-size:11px;margin-bottom:4px}
+    .forecast-box strong{display:block;font-size:21px}
+    .forecast-box small{display:block;color:var(--muted);margin-top:4px;font-size:10px;line-height:1.35}
+    .calendar-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+    .calendar-head h2{margin:0;text-align:center;flex:1}
+    .calendar-nav{width:38px;height:38px;border:1px solid var(--line);background:white;border-radius:10px;font-size:21px;cursor:pointer}
+    .calendar-weekdays,.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+    .calendar-weekdays div{text-align:center;color:var(--muted);font-size:10px;font-weight:800;padding-bottom:3px}
+    .calendar-day{min-height:72px;border:1px solid var(--line);border-radius:10px;background:white;padding:5px;overflow:hidden;text-align:right;cursor:pointer;font:inherit;color:inherit}
+    .calendar-day.empty{visibility:hidden;cursor:default}
+    .calendar-day.today{border:2px solid #111827;padding:4px}
+    .calendar-day.has-shift{background:#f8fafc}
+    .calendar-num{display:block;font-size:12px;font-weight:900;margin-bottom:4px}
+    .calendar-dd{display:block;font-size:9px;font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .calendar-time{display:block;font-size:8px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+    .calendar-more{display:block;font-size:8px;color:#0369a1;font-weight:800;margin-top:2px}
+    @media(max-width:420px){.today-shift-grid,.forecast-grid{grid-template-columns:1fr 1fr}.calendar-day{min-height:64px;padding:4px}.calendar-grid,.calendar-weekdays{gap:3px}.tabs{padding-left:5px;padding-right:5px}.tab{font-size:9px}.tab-icon{font-size:18px}.nav-add-inner{width:46px;height:46px}}
+
     .payroll-flow{display:flex;flex-direction:column;gap:10px}
     .payroll-accordion{border:1px solid var(--line);border-radius:15px;overflow:hidden;background:var(--card)}
     .payroll-toggle{width:100%;border:0;background:transparent;color:inherit;padding:14px 15px;display:flex;align-items:center;justify-content:space-between;gap:12px;font:inherit;cursor:pointer;text-align:right}
@@ -358,7 +389,58 @@
 
 
 <main>
-  <section id="shifts">
+
+  <section id="todayDashboard">
+    <div class="card today-hero">
+      <div id="todayDateLabel" class="today-date"></div>
+      <div class="today-title">היום שלי</div>
+      <div id="todayShiftContent"></div>
+    </div>
+
+    <div class="card">
+      <div class="shift-head" style="margin-bottom:12px">
+        <h2 style="margin:0">החודש שלי</h2>
+        <span id="dashboardMonthLabel" class="filter-count"></span>
+      </div>
+      <div class="forecast-grid">
+        <div class="forecast-box">
+          <span>נצבר עד היום</span>
+          <strong id="dashboardAccruedGross">₪0</strong>
+          <small id="dashboardAccruedMeta"></small>
+        </div>
+        <div class="forecast-box">
+          <span>צפי לפי משמרות שהוזנו</span>
+          <strong id="dashboardForecastGross">₪0</strong>
+          <small id="dashboardForecastMeta"></small>
+        </div>
+        <div class="forecast-box">
+          <span>נטו משוער לחודש</span>
+          <strong id="dashboardForecastNet">₪0</strong>
+          <small>לפי הגדרות המס והניכויים הנוכחיות</small>
+        </div>
+        <div class="forecast-box">
+          <span>שעות מתוכננות בחודש</span>
+          <strong id="dashboardForecastHours">0:00</strong>
+          <small id="dashboardForecastShiftCount">0 משמרות</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="calendar-head">
+        <button id="calendarNext" class="calendar-nav" type="button" aria-label="חודש הבא">›</button>
+        <h2 id="calendarTitle">לוח חודשי</h2>
+        <button id="calendarPrev" class="calendar-nav" type="button" aria-label="חודש קודם">‹</button>
+      </div>
+      <div class="calendar-weekdays" aria-hidden="true">
+        <div>א׳</div><div>ב׳</div><div>ג׳</div><div>ד׳</div><div>ה׳</div><div>ו׳</div><div>ש׳</div>
+      </div>
+      <div id="calendarGrid" class="calendar-grid"></div>
+      <p class="note" style="margin:10px 0 0">לחיצה על יום עם משמרת פותחת את פרטי המשמרת. לחיצה על יום ריק פותחת הוספת משמרת באותו תאריך.</p>
+    </div>
+  </section>
+
+  <section id="shifts" class="hidden">
     <div class="card shift-filter-card">
       <div class="shift-filter-head">
         <h2 style="margin:0">המשמרות שלי</h2>
@@ -690,16 +772,20 @@
 </div>
 
 <nav class="tabs" aria-label="ניווט ראשי">
-  <button class="tab active" data-tab="shifts" type="button">
+  <button class="tab active" data-tab="todayDashboard" type="button">
+    <span class="tab-icon">⌂</span>
+    <span>היום</span>
+  </button>
+  <button class="tab" data-tab="shifts" type="button">
     <span class="tab-icon">▤</span>
     <span>משמרות</span>
+  </button>
+  <button id="openShiftModal" class="nav-add" type="button" aria-label="הוסף משמרת">
+    <span class="nav-add-inner">＋</span>
   </button>
   <button class="tab" data-tab="summary" type="button">
     <span class="tab-icon">⌁</span>
     <span>סיכום</span>
-  </button>
-  <button id="openShiftModal" class="nav-add" type="button" aria-label="הוסף משמרת">
-    <span class="nav-add-inner">＋</span>
   </button>
   <button class="tab" data-tab="payslip" type="button">
     <span class="tab-icon">₪</span>
@@ -774,7 +860,7 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=33;
+const APP_VERSION=34;
 const VERSION_URL='./version.json';
 const GOOGLE_CLIENT_ID='671607022405-ctegk4jl7koo9elm30odvsb1binp49cb.apps.googleusercontent.com';
 const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.appdata';
@@ -1192,7 +1278,7 @@ window.deleteShift=id=>{
   selectedShiftIds.delete(id);
   shifts=shifts.filter(x=>x.id!==id);
   localStorage.setItem(KEY_SHIFTS,JSON.stringify(shifts));
-  renderShifts(); renderSummary();
+  renderShifts(); renderSummary(); renderTodayDashboard();
   if(typeof renderPayslipComparison==='function') renderPayslipComparison();
 };
 
@@ -2080,7 +2166,7 @@ $('addShift').onclick=()=>{
 
   shifts=dedupeShifts(shifts);
   localStorage.setItem(KEY_SHIFTS,JSON.stringify(shifts));
-  renderShifts(); renderSummary();
+  renderShifts(); renderSummary(); renderTodayDashboard();
 
   $('start').value='';
   $('end').value='';
@@ -2091,7 +2177,7 @@ $('addShift').onclick=()=>{
   closeShiftModal();
 };
 
-$('saveSettings').onclick=()=>{ saveSettings(); renderShifts(); renderSummary(); alert('ההגדרות נשמרו.'); };
+$('saveSettings').onclick=()=>{ saveSettings(); renderShifts(); renderSummary(); renderTodayDashboard(); alert('ההגדרות נשמרו.'); };
 $('monthFilter').onchange=renderSummary;
 
 function buildBackupPayload(){
@@ -2587,22 +2673,149 @@ function exportMonthlyPdf(){
   reportWindow.document.close();
 }
 
+
+
+// v34 — Today dashboard, monthly calendar and salary forecast
+let dashboardCalendarMonth='';
+
+function localDateIso(d=new Date()){
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function addMonthsToYm(ym,delta){
+  const [y,m]=ym.split('-').map(Number);
+  const d=new Date(y,m-1+delta,1);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+function monthLabelHe(ym){
+  const [y,m]=ym.split('-').map(Number);
+  return new Intl.DateTimeFormat('he-IL',{month:'long',year:'numeric'}).format(new Date(y,m-1,1));
+}
+function dashboardTotalsForList(list){
+  const items=Array.isArray(list)?list:[];
+  const travelInfo=monthlyTravelForShifts(items);
+  let gross=0,minutes=0;
+  items.forEach(sh=>{
+    const c=calcShift(sh);
+    minutes+=c.grossMinutes||0;
+    gross+=(c.pay||0)-(c.travel||0);
+  });
+  gross+=travelInfo.paid;
+  return {gross,minutes,count:items.length,travelInfo};
+}
+function shiftStatusText(sh){
+  if(!sh) return '';
+  const now=new Date();
+  const [y,m,d]=sh.date.split('-').map(Number);
+  const [shh,smm]=sh.start.split(':').map(Number);
+  const [ehh,emm]=sh.end.split(':').map(Number);
+  const start=new Date(y,m-1,d,shh,smm,0,0);
+  let end=new Date(y,m-1,d,ehh,emm,0,0);
+  if(end<=start) end.setDate(end.getDate()+1);
+  const mins=n=>Math.max(0,Math.round(n/60000));
+  if(now<start){ const x=mins(start-now); return `המשמרת מתחילה בעוד ${Math.floor(x/60)}:${String(x%60).padStart(2,'0')}`; }
+  if(now<=end){ const x=mins(end-now); return `במשמרת עכשיו · נשארו בערך ${Math.floor(x/60)}:${String(x%60).padStart(2,'0')}`; }
+  return 'המשמרת הסתיימה';
+}
+function renderTodayDashboard(){
+  const todayIso=localDateIso();
+  const currentYm=todayIso.slice(0,7);
+  if(!dashboardCalendarMonth) dashboardCalendarMonth=currentYm;
+
+  const todayDate=new Date(todayIso+'T12:00:00');
+  $('todayDateLabel').textContent=new Intl.DateTimeFormat('he-IL',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(todayDate);
+
+  const todays=shifts.filter(sh=>sh.date===todayIso).sort((a,b)=>(a.start||'').localeCompare(b.start||''));
+  if(!todays.length){
+    $('todayShiftContent').innerHTML=`<div class="today-chip" style="position:relative;z-index:1"><span>משמרת היום</span><strong>לא הוזנה משמרת</strong></div><div class="today-status">אפשר ללחוץ על ＋ ולהוסיף משמרת להיום.</div>`;
+  }else{
+    const sh=todays[0], c=calcShift(sh);
+    const dd=(sh.ddType && sh.ddNumber!=='')?displayDdNumber(sh.ddType,sh.ddNumber):'ללא DD';
+    $('todayShiftContent').innerHTML=`
+      <div class="today-shift-grid">
+        <div class="today-chip"><span>DD / משמרת</span><strong>${escapeHtml(dd)}</strong></div>
+        <div class="today-chip"><span>שעות</span><strong>${escapeHtml(sh.start)}–${escapeHtml(sh.end)}</strong></div>
+        <div class="today-chip"><span>משך</span><strong>${fmtMin(c.grossMinutes)}</strong></div>
+        <div class="today-chip"><span>שכר צפוי למשמרת</span><strong>${currency(c.pay)}</strong></div>
+      </div>
+      <div class="today-status">${escapeHtml(shiftStatusText(sh))}${todays.length>1?` · קיימות ${todays.length} משמרות היום`:''}</div>`;
+  }
+
+  const monthShifts=shifts.filter(sh=>sh.date.startsWith(currentYm));
+  const accrued=monthShifts.filter(sh=>sh.date<=todayIso);
+  const accruedTotals=dashboardTotalsForList(accrued);
+  const forecastTotals=dashboardTotalsForList(monthShifts);
+  const forecastNet=estimateNetDetails(forecastTotals.gross).net;
+  $('dashboardMonthLabel').textContent=monthLabelHe(currentYm);
+  $('dashboardAccruedGross').textContent=currency(accruedTotals.gross);
+  $('dashboardAccruedMeta').textContent=`${accruedTotals.count} משמרות · ${fmtMin(accruedTotals.minutes)} שעות`;
+  $('dashboardForecastGross').textContent=currency(forecastTotals.gross);
+  $('dashboardForecastMeta').textContent=monthShifts.some(sh=>sh.date>todayIso)?'כולל משמרות עתידיות שכבר הוזנו':'לפי המשמרות שהוזנו עד עכשיו';
+  $('dashboardForecastNet').textContent=currency(forecastNet);
+  $('dashboardForecastHours').textContent=fmtMin(forecastTotals.minutes);
+  $('dashboardForecastShiftCount').textContent=`${forecastTotals.count} משמרות`;
+  renderDashboardCalendar();
+}
+function renderDashboardCalendar(){
+  const ym=dashboardCalendarMonth||localDateIso().slice(0,7);
+  const [y,m]=ym.split('-').map(Number);
+  $('calendarTitle').textContent=monthLabelHe(ym);
+  const firstDay=new Date(y,m-1,1).getDay();
+  const days=new Date(y,m,0).getDate();
+  const todayIso=localDateIso();
+  const cells=[];
+  for(let i=0;i<firstDay;i++) cells.push('<div class="calendar-day empty"></div>');
+  for(let day=1;day<=days;day++){
+    const date=`${ym}-${String(day).padStart(2,'0')}`;
+    const items=shifts.filter(sh=>sh.date===date).sort((a,b)=>(a.start||'').localeCompare(b.start||''));
+    const first=items[0];
+    const dd=first && first.ddType && first.ddNumber!=='' ? displayDdNumber(first.ddType,first.ddNumber) : '';
+    const cls=['calendar-day',items.length?'has-shift':'',date===todayIso?'today':''].filter(Boolean).join(' ');
+    cells.push(`<button type="button" class="${cls}" data-calendar-date="${date}">
+      <span class="calendar-num">${day}</span>
+      ${first?`<span class="calendar-dd">${escapeHtml(dd||'משמרת')}</span><span class="calendar-time">${escapeHtml(first.start)}–${escapeHtml(first.end)}</span>${items.length>1?`<span class="calendar-more">+${items.length-1} נוספת</span>`:''}`:''}
+    </button>`);
+  }
+  $('calendarGrid').innerHTML=cells.join('');
+  document.querySelectorAll('[data-calendar-date]').forEach(btn=>btn.onclick=()=>openDashboardCalendarDate(btn.dataset.calendarDate));
+}
+function openDashboardCalendarDate(date){
+  const items=shifts.filter(sh=>sh.date===date).sort((a,b)=>(a.start||'').localeCompare(b.start||''));
+  if(items.length){ openShiftDetails(items[0].id); return; }
+  editingShiftId=null;
+  $('addShift').textContent='הוסף משמרת';
+  $('shiftModalTitle').textContent='הוספת משמרת';
+  $('date').value=date;
+  $('start').value=''; $('end').value='';
+  $('breakMin').value='0'; $('notes').value=''; $('dayType').value='auto'; $('bonus').value='0';
+  $('extraLoopType').value='none'; $('nightLineType').value='none';
+  $('ddType').value=''; $('ddNumber').value=''; $('ddPreset').value='';
+  refreshDdPresetOptions();
+  openShiftModal(false);
+}
+$('calendarPrev').onclick=()=>{dashboardCalendarMonth=addMonthsToYm(dashboardCalendarMonth||localDateIso().slice(0,7),-1);renderDashboardCalendar();};
+$('calendarNext').onclick=()=>{dashboardCalendarMonth=addMonthsToYm(dashboardCalendarMonth||localDateIso().slice(0,7),1);renderDashboardCalendar();};
+setInterval(()=>{ if(!$('todayDashboard').classList.contains('hidden')) renderTodayDashboard(); },60000);
+
 $('exportPdfBtn').onclick=exportMonthlyPdf;
 
 
 document.querySelectorAll('.tab').forEach(btn=>btn.onclick=()=>{
   document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  ['shifts','summary','payslip','settings'].forEach(id=>$(id).classList.add('hidden'));
+  ['todayDashboard','shifts','summary','payslip','settings'].forEach(id=>$(id).classList.add('hidden'));
   $(btn.dataset.tab).classList.remove('hidden');
+  if(btn.dataset.tab==='todayDashboard') renderTodayDashboard();
   if(btn.dataset.tab==='summary') renderSummary();
   if(btn.dataset.tab==='payslip') renderPayslipComparison();
 });
 
 loadSettings();
 const today=new Date();
-const currentMonth=today.toISOString().slice(0,7);
-$('date').value=today.toISOString().slice(0,10);
+const currentDate=localDateIso(today);
+const currentMonth=currentDate.slice(0,7);
+dashboardCalendarMonth=currentMonth;
+$('date').value=currentDate;
 $('monthFilter').value=currentMonth;
 
 const availableShiftMonths=[...new Set(shifts.map(s=>s.date.slice(0,7)))].sort().reverse();
@@ -2617,7 +2830,7 @@ $('payslipMonth').value=currentMonth;
 $('payslipMonth').addEventListener('change',renderPayslipComparison);
 $('savePayslip').addEventListener('click',savePayslipData);
 
-renderShifts(); renderSummary(); renderPayslipComparison();
+renderShifts(); renderSummary(); renderPayslipComparison(); renderTodayDashboard();
 
 
 let pendingServiceWorker=null;
