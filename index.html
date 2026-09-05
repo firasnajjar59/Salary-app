@@ -10,7 +10,14 @@
   <title>מחשבון שעות ושכר</title>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://accounts.google.com/gsi/client" async defer>
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible' && !$('appLockOverlay')?.classList.contains('hidden')){
+    setTimeout(()=>triggerAutomaticBiometricUnlock(), 250);
+  }
+});
+
+</script>
   <style>
     :root{
       --bg:#f5f7fb;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;
@@ -819,7 +826,7 @@
         <button class="secondary" id="updateDdFromServer" type="button">עדכן טבלת DD מהשרת</button>
         <button class="secondary" id="editLocalDd" type="button">ערוך DD מקומי</button>
       </div>
-      <div id="ddStatus" class="note" style="margin-top:10px"></div><div class="note" style="margin-top:6px">גרסת אפליקציה: <strong>43</strong></div>
+      <div id="ddStatus" class="note" style="margin-top:10px"></div><div class="note" style="margin-top:6px">גרסת אפליקציה: <strong>44</strong></div>
     </div>
 
     <div class="card settings-accordion">
@@ -1076,7 +1083,7 @@
     <div class="app-lock-icon">🔐</div>
     <h2>Salary App נעולה</h2>
     <p>השתמש באימות המכשיר כדי לפתוח את האפליקציה.</p>
-    <button id="unlockAppBtn" class="primary" type="button" onclick="authenticateBiometricUnlock()">פתח באמצעות ביומטריה</button>
+    <button id="unlockAppBtn" class="primary" type="button" onclick="authenticateBiometricUnlock()">נסה שוב</button>
     <div id="lockScreenStatus" class="note" style="margin-top:12px"></div>
   </div>
 </div>
@@ -1087,7 +1094,7 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=43;
+const APP_VERSION=44;
 const VERSION_URL='./version.json';
 const GOOGLE_CLIENT_ID='671607022405-ctegk4jl7koo9elm30odvsb1binp49cb.apps.googleusercontent.com';
 const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.appdata';
@@ -3313,6 +3320,8 @@ async function registerBiometricLock(){
   }catch(e){console.warn('Biometric registration failed',e);updateBiometricLockUi('ההפעלה לא הושלמה. אפשר לנסות שוב.');}
 }
 async function authenticateBiometricUnlock(){
+  const statusEl=$('appLockStatus');
+  if(statusEl) statusEl.textContent='פותח את אימות המכשיר…';
   const config=getBiometricLockConfig();if(!config?.credentialId) return false;
   const status=$('lockScreenStatus');if(status) status.textContent='ממתין לאימות המכשיר...';
   try{
