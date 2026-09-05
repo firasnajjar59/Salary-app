@@ -13,7 +13,7 @@ firebase.initializeApp({
 // Firebase Messaging attaches background Push handling to the existing PWA service worker.
 firebase.messaging();
 
-const CACHE_NAME = 'salary-app-v46';
+const CACHE_NAME = 'salary-app-v47';
 const APP_FILES = [
   './',
   './index.html',
@@ -78,4 +78,21 @@ self.addEventListener('fetch', event => {
 
 self.addEventListener('message', event => {
   if(event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
+});
+
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const targetUrl = event.notification?.data?.url || './';
+  event.waitUntil((async()=>{
+    const absoluteUrl = new URL(targetUrl, self.location.origin + self.location.pathname).href;
+    const clientList = await self.clients.matchAll({type:'window', includeUncontrolled:true});
+    for(const client of clientList){
+      if('focus' in client){
+        if('navigate' in client) await client.navigate(absoluteUrl);
+        return client.focus();
+      }
+    }
+    if(self.clients.openWindow) return self.clients.openWindow(absoluteUrl);
+  })());
 });
