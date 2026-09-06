@@ -499,6 +499,15 @@
     .today-report-pill{font-size:11px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);padding:5px 8px;border-radius:999px}
     @media(max-width:460px){.shift-detail-cards{grid-template-columns:1fr 1fr}.shift-detail-card{padding:12px}.shift-detail-card-main{font-size:19px}}
 
+    .approval-list{display:flex;flex-direction:column;gap:9px;margin-top:10px}
+    .approval-card{border:1px solid var(--line);border-radius:15px;background:var(--card);padding:12px}
+    .approval-card-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+    .approval-card-title{font-weight:850}
+    .approval-card-meta{font-size:12px;color:var(--muted);margin-top:4px}
+    .approval-card-text{white-space:pre-wrap;line-height:1.55;margin-top:8px}
+    .approval-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+    .today-approval-pill{font-size:11px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);padding:5px 8px;border-radius:999px}
+
   </style>
 </head>
 <body>
@@ -861,7 +870,7 @@
         <button class="secondary" id="updateDdFromServer" type="button">עדכן טבלת DD מהשרת</button>
         <button class="secondary" id="editLocalDd" type="button">ערוך DD מקומי</button>
       </div>
-      <div id="ddStatus" class="note" style="margin-top:10px"></div><div class="note" style="margin-top:6px">גרסת אפליקציה: <strong>55</strong></div>
+      <div id="ddStatus" class="note" style="margin-top:10px"></div><div class="note" style="margin-top:6px">גרסת אפליקציה: <strong>56</strong></div>
     </div>
 
     <div class="card settings-accordion">
@@ -1017,7 +1026,7 @@
       <details>
         <summary>גיבוי ושחזור מקומי</summary>
         <div class="settings-accordion-body">
-          <p class="note">הגיבוי המקומי כולל את כל המשמרות ודוחות הנהג המקושרים אליהן, ההגדרות וסוגי הדוחות, נתוני השוואת התלושים וטבלאות DD/DDR. קובץ הגיבוי נשמר בפורמט JSON.</p>
+          <p class="note">הגיבוי המקומי כולל את כל המשמרות, דוחות הנהג והאישורים/שינויים המקושרים אליהן, ההגדרות וסוגי הדוחות, נתוני השוואת התלושים וטבלאות DD/DDR. קובץ הגיבוי נשמר בפורמט JSON.</p>
           <div class="grid">
             <button class="secondary" id="backupBtn">צור גיבוי JSON</button>
             <button class="secondary" id="restoreBtn">שחזר מקובץ JSON</button>
@@ -1275,13 +1284,44 @@
   </div>
 </div>
 
+
+<div id="approvalModal" class="modal hidden" aria-hidden="true">
+  <div class="modal-backdrop" id="approvalModalBackdrop"></div>
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="approvalModalTitle">
+    <div class="modal-header">
+      <h2 id="approvalModalTitle" style="margin:0">הוספת אישור / שינוי משמרת</h2>
+      <button type="button" class="modal-close" id="closeApprovalModal" aria-label="סגור">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="approvalShiftInfo" class="note" style="margin-bottom:12px"></div>
+      <div class="grid">
+        <div>
+          <label>מה קרה</label>
+          <input id="approvalWhat" type="text" maxlength="160" placeholder="לדוגמה: נשארתי עוד שעה / חצי סיבוב נוסף">
+        </div>
+        <div>
+          <label>באישור של מי</label>
+          <input id="approvalBy" type="text" maxlength="120" placeholder="לדוגמה: עומר">
+        </div>
+      </div>
+      <div style="height:10px"></div>
+      <div>
+        <label>הערה נוספת</label>
+        <textarea id="approvalNote" rows="4" maxlength="1500" placeholder="פרטים נוספים אם צריך..."></textarea>
+      </div>
+      <div style="height:12px"></div>
+      <button class="primary" id="saveApprovalBtn" type="button" style="width:100%">שמור</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const $ = id => document.getElementById(id);
 const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KEY_PAYSLIPS='salaryApp.payslips.v1';
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=55;
+const APP_VERSION=56;
 const VERSION_URL='./version.json';
 const GOOGLE_CLIENT_ID='671607022405-ctegk4jl7koo9elm30odvsb1binp49cb.apps.googleusercontent.com';
 const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.appdata';
@@ -1664,6 +1704,101 @@ function reportsHtmlForShift(sh){
 }
 window.openReportModal=openReportModal;
 window.deleteDriverReport=deleteDriverReport;
+
+let approvalShiftId=null;
+let editingApprovalId=null;
+
+function normalizedApprovals(sh){
+  return Array.isArray(sh?.approvals)?sh.approvals:[];
+}
+function approvalById(sh,id){
+  return normalizedApprovals(sh).find(a=>a.id===id);
+}
+function openApprovalModal(shiftId,approvalId=''){
+  const sh=shifts.find(x=>x.id===shiftId);
+  if(!sh) return;
+  approvalShiftId=shiftId;
+  editingApprovalId=approvalId||null;
+  const existing=editingApprovalId?approvalById(sh,editingApprovalId):null;
+  const dd=(sh.ddType && sh.ddNumber!=='')?displayDdNumber(sh.ddType,sh.ddNumber):'ללא DD';
+  $('approvalShiftInfo').textContent=`משמרת ${formatDateHe(sh.date)} · ${dd} · ${sh.start}–${sh.end}`;
+  $('approvalModalTitle').textContent=existing?'עריכת אישור / שינוי משמרת':'הוספת אישור / שינוי משמרת';
+  $('approvalWhat').value=existing?.what||'';
+  $('approvalBy').value=existing?.approvedBy||'';
+  $('approvalNote').value=existing?.note||'';
+  $('saveApprovalBtn').textContent=existing?'שמור שינויים':'שמור';
+  $('approvalModal').classList.remove('hidden');
+  $('approvalModal').setAttribute('aria-hidden','false');
+  document.body.classList.add('modal-open');
+}
+function closeApprovalModal(){
+  $('approvalModal').classList.add('hidden');
+  $('approvalModal').setAttribute('aria-hidden','true');
+  document.body.classList.remove('modal-open');
+  approvalShiftId=null;
+  editingApprovalId=null;
+}
+function saveShiftApproval(){
+  const sh=shifts.find(x=>x.id===approvalShiftId);
+  if(!sh) return;
+  const what=String($('approvalWhat').value||'').trim();
+  const approvedBy=String($('approvalBy').value||'').trim();
+  const note=String($('approvalNote').value||'').trim();
+  if(!what){ alert('כתוב מה קרה.'); return; }
+  if(!approvedBy){ alert('כתוב באישור של מי.'); return; }
+
+  const approvals=normalizedApprovals(sh).map(a=>({...a}));
+  if(editingApprovalId){
+    const i=approvals.findIndex(a=>a.id===editingApprovalId);
+    if(i<0) return;
+    approvals[i]={...approvals[i],what,approvedBy,note,updatedAt:new Date().toISOString()};
+  }else{
+    approvals.push({
+      id:crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`,
+      createdAt:new Date().toISOString(),
+      what,approvedBy,note
+    });
+  }
+  sh.approvals=approvals;
+  localStorage.setItem(KEY_SHIFTS,JSON.stringify(shifts));
+  const sid=sh.id;
+  closeApprovalModal();
+  renderTodayDashboard();
+  renderShifts();
+  openShiftDetails(sid);
+}
+function deleteShiftApproval(shiftId,approvalId){
+  const sh=shifts.find(x=>x.id===shiftId);
+  if(!sh) return;
+  const a=approvalById(sh,approvalId);
+  if(!a) return;
+  if(!confirm(`למחוק את הרישום "${a.what}"?`)) return;
+  sh.approvals=normalizedApprovals(sh).filter(x=>x.id!==approvalId);
+  localStorage.setItem(KEY_SHIFTS,JSON.stringify(shifts));
+  renderTodayDashboard();
+  renderShifts();
+  openShiftDetails(shiftId);
+}
+function approvalsHtmlForShift(sh){
+  const items=normalizedApprovals(sh).slice().sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+  if(!items.length) return `<p class="note" style="margin:8px 0 0">אין אישורים או שינויים מתועדים למשמרת הזו.</p>`;
+  return `<div class="approval-list">${items.map(a=>`
+    <div class="approval-card">
+      <div class="approval-card-head">
+        <div>
+          <div class="approval-card-title">${escapeHtml(a.what||'')}</div>
+          <div class="approval-card-meta">באישור: ${escapeHtml(a.approvedBy||'—')} · נוצר: ${escapeHtml(formatDateTimeHe(a.createdAt)||'—')}</div>
+        </div>
+      </div>
+      ${a.note?`<div class="approval-card-text">${escapeHtml(a.note)}</div>`:''}
+      <div class="approval-actions">
+        <button type="button" class="secondary" onclick="openApprovalModal('${sh.id}','${a.id}')">ערוך</button>
+        <button type="button" class="danger" onclick="deleteShiftApproval('${sh.id}','${a.id}')">מחק</button>
+      </div>
+    </div>`).join('')}</div>`;
+}
+window.openApprovalModal=openApprovalModal;
+window.deleteShiftApproval=deleteShiftApproval;
 
 
 const settingIds = ['baseRate','travelPerDay','travelMonthlyCap','perDiemPerDay','nightPct','holidayPct','nightStart','nightEnd',
@@ -2112,6 +2247,17 @@ function openShiftDetails(id){
 
     <div class="detail-actions" style="margin-top:14px">
       <button type="button" class="secondary" onclick="editShiftFromDetails('${sh.id}')">✏️ עריכת משמרת</button>
+    </div>
+
+    <div class="shift-details-section">
+      <div class="shift-head" style="margin-bottom:8px">
+        <h3 style="margin:0">אישורים ושינויים במשמרת</h3>
+        <span class="filter-count">${normalizedApprovals(sh).length} רישומים</span>
+      </div>
+      ${approvalsHtmlForShift(sh)}
+      <div class="detail-actions" style="margin-top:12px">
+        <button type="button" class="secondary" onclick="openApprovalModal('${sh.id}')">➕ הוסף אישור / שינוי</button>
+      </div>
     </div>
 
     <div class="shift-details-section">
@@ -3086,6 +3232,11 @@ $('closeReportModal')?.addEventListener('click',closeReportModal);
 $('reportModalBackdrop')?.addEventListener('click',closeReportModal);
 $('saveReportBtn')?.addEventListener('click',saveDriverReport);
 
+$('closeApprovalModal')?.addEventListener('click',closeApprovalModal);
+$('approvalModalBackdrop')?.addEventListener('click',closeApprovalModal);
+$('saveApprovalBtn')?.addEventListener('click',saveShiftApproval);
+
+
 $('saveHomeLayout').onclick=()=>{ saveHomeLayout(); alert('תצוגת מסך הבית נשמרה.'); };
 $('saveAnalyticsCharts').onclick=()=>{ saveAnalyticsChartLayout(); alert('תצוגת הגרפים נשמרה.'); };
 $('monthFilter').onchange=renderSummary;
@@ -4003,6 +4154,16 @@ function renderTodayDashboard(){
           <div class="today-chip"><span>שכר צפוי</span><strong>${currency(c.pay)}</strong></div>
         </div>
         <div class="today-status">${escapeHtml(shiftStatusText(sh))}${todays.length>1?` · קיימות ${todays.length} משמרות היום`:''}</div>
+      </div>
+
+      <div class="today-reports-separator">
+        <div class="today-reports-header">
+          <strong>אישורים ושינויים</strong>
+          <button type="button" class="secondary" onclick="openApprovalModal('${sh.id}')">➕ הוסף</button>
+        </div>
+        ${normalizedApprovals(sh).length
+          ? `<div class="today-report-preview">${normalizedApprovals(sh).slice(-3).reverse().map(a=>`<span class="today-approval-pill">${escapeHtml(a.what||'')} · ${escapeHtml(a.approvedBy||'')}</span>`).join('')}</div>`
+          : `<div class="today-status">אין אישורים או שינויים מתועדים.</div>`}
       </div>
 
       <div class="today-reports-separator">
