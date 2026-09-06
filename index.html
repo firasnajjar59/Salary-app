@@ -819,7 +819,7 @@
         <button class="secondary" id="updateDdFromServer" type="button">עדכן טבלת DD מהשרת</button>
         <button class="secondary" id="editLocalDd" type="button">ערוך DD מקומי</button>
       </div>
-      <div id="ddStatus" class="note" style="margin-top:10px"></div><div class="note" style="margin-top:6px">גרסת אפליקציה: <strong>48</strong></div>
+      <div id="ddStatus" class="note" style="margin-top:10px"></div><div class="note" style="margin-top:6px">גרסת אפליקציה: <strong>49</strong></div>
     </div>
 
     <div class="card settings-accordion">
@@ -1182,7 +1182,7 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=48;
+const APP_VERSION=49;
 const VERSION_URL='./version.json';
 const GOOGLE_CLIENT_ID='671607022405-ctegk4jl7koo9elm30odvsb1binp49cb.apps.googleusercontent.com';
 const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.appdata';
@@ -1874,6 +1874,9 @@ window.deleteShift=id=>{
   selectedShiftIds.delete(id);
   shifts=shifts.filter(x=>x.id!==id);
   localStorage.setItem(KEY_SHIFTS,JSON.stringify(shifts));
+  window.dispatchEvent(new CustomEvent('salary-shift-changed',{
+    detail:{action:'delete',shiftId:id}
+  }));
   renderShifts(); renderSummary(); renderTodayDashboard();
   if(typeof renderPayslipComparison==='function') renderPayslipComparison();
 };
@@ -2763,6 +2766,9 @@ $('addShift').onclick=()=>{
   shifts=dedupeShifts(shifts);
   localStorage.setItem(KEY_SHIFTS,JSON.stringify(shifts));
   renderShifts(); renderSummary(); renderTodayDashboard();
+  window.dispatchEvent(new CustomEvent('salary-shift-changed',{
+    detail:{action:'upsert',shiftId:data.id}
+  }));
 
   $('start').value='';
   $('end').value='';
@@ -4055,7 +4061,13 @@ setInterval(checkDdServerUpdate,6*60*60*1000);
 
   function localDateTime(dateStr,timeStr){
     if(!dateStr||!timeStr) return null;
-    const d=new Date(`${dateStr}T${timeStr}:00`);
+    const dm=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateStr));
+    const tm=/^(\d{1,2}):(\d{2})$/.exec(String(timeStr));
+    if(!dm||!tm) return null;
+    const totalMinutes=Number(tm[1])*60+Number(tm[2]);
+    if(!Number.isFinite(totalMinutes)) return null;
+    const d=new Date(Number(dm[1]),Number(dm[2])-1,Number(dm[3]),0,0,0,0);
+    d.setMinutes(totalMinutes);
     return Number.isNaN(d.getTime())?null:d;
   }
 
@@ -4107,6 +4119,58 @@ setInterval(checkDdServerUpdate,6*60*60*1000);
     },device);
   }
 
+
+  async function syncOneShiftReminder(shiftId){
+    const device=loadPushDevice();
+    if(!device?.deviceId || !device?.deviceSecret || Notification.permission!=="granted") return;
+
+    const p=pushPrefs();
+    const ref=String(shiftId||"");
+    if(!ref) return;
+
+    if(!p.shift?.enabled){
+      await cancelServerReminder(device,"shift",ref).catch(()=>{});
+      return;
+    }
+
+    const sh=allLocalShifts().find(x=>String(x.id)===ref);
+    if(!sh){
+      await cancelServerReminder(device,"shift",ref).catch(()=>{});
+      return;
+    }
+
+    const lead=Math.max(1,Number(p.shift.leadMinutes||60));
+    const start=localDateTime(sh.date,sh.start);
+    if(!start) return;
+
+    const sendAt=new Date(start.getTime()-lead*60000);
+    if(sendAt.getTime()<=Date.now()){
+      await cancelServerReminder(device,"shift",ref).catch(()=>{});
+      return;
+    }
+
+    const dd=shiftDdLabel(sh);
+    const leadText=lead<60?`${lead} דקות`:lead===60?"שעה":lead%60===0?`${lead/60} שעות`:`${lead} דקות`;
+
+    await createServerReminder(device,{
+      type:"shift",
+      referenceId:ref,
+      title:"תזכורת למשמרת",
+      body:`המשמרת שלך מתחילה בעוד ${leadText}${dd?" · "+dd:""} · ${sh.start}`,
+      sendAt:sendAt.toISOString(),
+      deepLink:`?view=shift&id=${encodeURIComponent(ref)}`
+    });
+  }
+
+  async function cancelAllCurrentShiftReminders(){
+    const device=loadPushDevice();
+    if(!device?.deviceId || !device?.deviceSecret) return;
+    for(const sh of allLocalShifts()){
+      const ref=shiftRef(sh);
+      await cancelServerReminder(device,"shift",ref).catch(()=>{});
+    }
+  }
+
   async function syncNotificationSchedules(){
     const device=loadPushDevice();
     if(!device?.deviceId || !device?.deviceSecret || Notification.permission!=="granted") return;
@@ -4135,6 +4199,8 @@ setInterval(checkDdServerUpdate,6*60*60*1000);
           deepLink:`?view=shift&id=${encodeURIComponent(ref)}`
         });
       }
+    }else{
+      await cancelAllCurrentShiftReminders();
     }
 
     // MONTHLY SUMMARY: keep one upcoming occurrence. When app is opened later,
@@ -4228,6 +4294,19 @@ setInterval(checkDdServerUpdate,6*60*60*1000);
   }
 
   window.addEventListener('salary-notification-settings-changed',()=>syncNotificationSchedules().catch(e=>console.warn("Reminder sync failed",e)));
+  window.addEventListener('salary-shift-changed',ev=>{
+    const action=ev.detail?.action;
+    const shiftId=ev.detail?.shiftId;
+    if(!shiftId) return;
+    if(action==='delete'){
+      const device=loadPushDevice();
+      if(device?.deviceId && device?.deviceSecret){
+        cancelServerReminder(device,"shift",String(shiftId)).catch(e=>console.warn("Reminder cancel failed",e));
+      }
+    }else{
+      syncOneShiftReminder(String(shiftId)).catch(e=>console.warn("Shift reminder sync failed",e));
+    }
+  });
   refreshPushUi();
   setTimeout(()=>syncNotificationSchedules().catch(e=>console.warn("Reminder startup sync failed",e)),1500);
 </script>

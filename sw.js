@@ -13,7 +13,7 @@ firebase.initializeApp({
 // Firebase Messaging attaches background Push handling to the existing PWA service worker.
 firebase.messaging();
 
-const CACHE_NAME = 'salary-app-v48';
+const CACHE_NAME = 'salary-app-v49';
 const APP_FILES = [
   './',
   './index.html',
