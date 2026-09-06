@@ -31,7 +31,7 @@ messaging.onBackgroundMessage((payload) => {
   });
 });
 
-const CACHE_NAME = 'salary-app-v51';
+const CACHE_NAME = 'salary-app-v52';
 const APP_FILES = [
   './',
   './index.html',
@@ -103,14 +103,28 @@ self.addEventListener('notificationclick', event => {
   event.notification.close();
 
   const appBase = "https://firasnajjar59.github.io/salary-app/";
-  const raw = event.notification?.data?.url || appBase;
-  let targetUrl = appBase;
+  const raw = String(event.notification?.data?.url || "").trim();
 
+  // No link for this notification: close it and do nothing else.
+  if (!raw) {
+    return;
+  }
+
+  let targetUrl = "";
   try {
-    if (raw.startsWith("?")) targetUrl = appBase + raw;
-    else if (raw.startsWith(appBase)) targetUrl = raw;
-    else if (raw.startsWith("./")) targetUrl = new URL(raw, appBase).href;
+    if (raw.startsWith("?")) {
+      targetUrl = appBase + raw;
+    } else if (raw.startsWith(appBase)) {
+      targetUrl = raw;
+    } else if (raw.startsWith("./")) {
+      targetUrl = new URL(raw, appBase).href;
+    }
   } catch (_) {}
+
+  // Invalid / unsupported link: close only.
+  if (!targetUrl) {
+    return;
+  }
 
   event.waitUntil((async () => {
     const clientList = await self.clients.matchAll({
@@ -125,6 +139,8 @@ self.addEventListener('notificationclick', event => {
       if ("focus" in client) return client.focus();
     }
 
-    if (self.clients.openWindow) return self.clients.openWindow(targetUrl);
+    if (self.clients.openWindow) {
+      return self.clients.openWindow(targetUrl);
+    }
   })());
 });
