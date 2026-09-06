@@ -768,6 +768,18 @@
 
   <section id="settings" class="hidden">
     <div class="card settings-accordion">
+      <details open>
+        <summary>אודות</summary>
+        <div class="settings-accordion-body">
+          <div style="font-size:17px;font-weight:850">נוצר ע״י פראס נג׳אר</div>
+          <div class="note" style="margin-top:5px">גרסה <strong>57</strong></div>
+          <div style="height:12px"></div>
+          <button class="secondary" id="manualUpdateCheckBtn" type="button">בדיקת עדכונים</button>
+          <div id="manualUpdateStatus" class="note" style="margin-top:8px"></div>
+        </div>
+      </details>
+    </div>
+    <div class="card settings-accordion">
       <details>
         <summary>מסך ראשי</summary>
         <div class="settings-accordion-body">
@@ -870,7 +882,7 @@
         <button class="secondary" id="updateDdFromServer" type="button">עדכן טבלת DD מהשרת</button>
         <button class="secondary" id="editLocalDd" type="button">ערוך DD מקומי</button>
       </div>
-      <div id="ddStatus" class="note" style="margin-top:10px"></div><div class="note" style="margin-top:6px">גרסת אפליקציה: <strong>56</strong></div>
+      <div id="ddStatus" class="note" style="margin-top:10px"></div>
     </div>
 
     <div class="card settings-accordion">
@@ -1301,7 +1313,7 @@
         </div>
         <div>
           <label>באישור של מי</label>
-          <input id="approvalBy" type="text" maxlength="120" placeholder="לדוגמה: עומר">
+          <input id="approvalBy" type="text" maxlength="120" placeholder="לדוגמה: שם סדרן">
         </div>
       </div>
       <div style="height:10px"></div>
@@ -1321,7 +1333,7 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=56;
+const APP_VERSION=57;
 const VERSION_URL='./version.json';
 const GOOGLE_CLIENT_ID='671607022405-ctegk4jl7koo9elm30odvsb1binp49cb.apps.googleusercontent.com';
 const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.appdata';
@@ -3221,6 +3233,33 @@ $('addShift').onclick=()=>{
 };
 
 $('saveSettings').onclick=()=>{ saveSettings(); renderShifts(); renderSummary(); renderTodayDashboard(); alert('ההגדרות נשמרו.'); };
+
+$('manualUpdateCheckBtn')?.addEventListener('click',async()=>{
+  const btn=$('manualUpdateCheckBtn'), status=$('manualUpdateStatus');
+  btn.disabled=true; btn.textContent='בודק...'; status.textContent='';
+  try{
+    const res=await fetch(`version.json?t=${Date.now()}`,{cache:'no-store'});
+    if(!res.ok) throw new Error('version');
+    const data=await res.json(), latest=Number(data.version||0);
+    if(latest>APP_VERSION){
+      status.innerHTML=`קיים עדכון חדש: גרסה <strong>${latest}</strong>.`;
+      if(confirm(`קיים עדכון חדש לגרסה ${latest}. לעדכן עכשיו?`)){
+        const reg=await navigator.serviceWorker?.getRegistration?.();
+        if(reg) await reg.update().catch(()=>{});
+        location.reload();
+      }
+    }else if(latest===APP_VERSION){
+      status.textContent=`האפליקציה מעודכנת לגרסה ${APP_VERSION}.`;
+    }else{
+      status.textContent=`הגרסה המותקנת היא ${APP_VERSION}.`;
+    }
+  }catch(e){
+    status.textContent='לא ניתן לבדוק עדכונים כרגע. נסה שוב כשיש חיבור לאינטרנט.';
+  }finally{
+    btn.disabled=false; btn.textContent='בדיקת עדכונים';
+  }
+});
+
 
 $('addReportTypeBtn')?.addEventListener('click',addReportType);
 $('newReportType')?.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); addReportType(); } });
