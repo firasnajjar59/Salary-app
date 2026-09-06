@@ -457,6 +457,18 @@
     .app-lock-card button{width:100%}
     .security-status{margin-top:10px;padding:10px 12px;border-radius:12px;background:#f3f4f6;font-size:13px;color:var(--muted)}
 
+    .report-list{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+    .report-card{border:1px solid var(--line);border-radius:14px;padding:12px;background:var(--card)}
+    .report-card-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+    .report-type{font-weight:800}
+    .report-meta{font-size:12px;color:var(--muted);margin-top:4px}
+    .report-text{white-space:pre-wrap;line-height:1.55;margin-top:8px}
+    .report-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+    .report-settings-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+    .report-type-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 9px;background:var(--card)}
+    .report-type-chip button{border:0;background:transparent;color:var(--danger);padding:0 2px;font-size:18px;line-height:1}
+    .report-created-box{padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--soft);font-size:13px}
+
   </style>
 </head>
 <body>
@@ -819,7 +831,7 @@
         <button class="secondary" id="updateDdFromServer" type="button">עדכן טבלת DD מהשרת</button>
         <button class="secondary" id="editLocalDd" type="button">ערוך DD מקומי</button>
       </div>
-      <div id="ddStatus" class="note" style="margin-top:10px"></div><div class="note" style="margin-top:6px">גרסת אפליקציה: <strong>53</strong></div>
+      <div id="ddStatus" class="note" style="margin-top:10px"></div><div class="note" style="margin-top:6px">גרסת אפליקציה: <strong>54</strong></div>
     </div>
 
     <div class="card settings-accordion">
@@ -932,6 +944,28 @@
       </details>
     </div>
 
+
+    <div class="card settings-accordion">
+      <details>
+        <summary>סוגי דוחות נהג</summary>
+        <div class="settings-accordion-body">
+          <p class="note">הסוגים משמשים כרשימת בחירה בדוח, כדי שבהמשך יהיה אפשר לבצע חיפוש וסינון לפי סוג אירוע. אפשר להוסיף סוגים משלך. מחיקת סוג מהרשימה לא מוחקת דוחות שכבר נוצרו.</p>
+          <div class="grid">
+            <div>
+              <label>סוג אירוע חדש</label>
+              <input id="newReportType" type="text" maxlength="60" placeholder="לדוגמה: תקלה ב-TTL">
+            </div>
+            <div style="display:flex;align-items:end">
+              <button class="primary" id="addReportTypeBtn" type="button" style="width:100%">הוסף סוג</button>
+            </div>
+          </div>
+          <div id="reportTypesList" class="report-settings-list"></div>
+          <div style="height:10px"></div>
+          <button class="secondary" id="resetReportTypesBtn" type="button">שחזר סוגי ברירת מחדל</button>
+        </div>
+      </details>
+    </div>
+
 <div class="card settings-accordion">
       <details>
         <summary>גיבוי Google Drive</summary>
@@ -953,7 +987,7 @@
       <details>
         <summary>גיבוי ושחזור מקומי</summary>
         <div class="settings-accordion-body">
-          <p class="note">הגיבוי המקומי כולל את כל המשמרות, ההגדרות, נתוני השוואת התלושים וטבלאות DD/DDR. קובץ הגיבוי נשמר בפורמט JSON.</p>
+          <p class="note">הגיבוי המקומי כולל את כל המשמרות ודוחות הנהג המקושרים אליהן, ההגדרות וסוגי הדוחות, נתוני השוואת התלושים וטבלאות DD/DDR. קובץ הגיבוי נשמר בפורמט JSON.</p>
           <div class="grid">
             <button class="secondary" id="backupBtn">צור גיבוי JSON</button>
             <button class="secondary" id="restoreBtn">שחזר מקובץ JSON</button>
@@ -1176,13 +1210,48 @@
   </div>
 </div>
 
+
+<div id="reportModal" class="modal hidden" aria-hidden="true">
+  <div class="modal-backdrop" id="reportModalBackdrop"></div>
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="reportModalTitle">
+    <div class="modal-header">
+      <h2 id="reportModalTitle" style="margin:0">הוספת דוח נהג</h2>
+      <button type="button" class="modal-close" id="closeReportModal" aria-label="סגור">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="reportShiftInfo" class="note" style="margin-bottom:12px"></div>
+      <div class="report-created-box">
+        <strong>נוצר:</strong> <span id="reportCreatedAtLabel"></span>
+      </div>
+      <div style="height:12px"></div>
+      <div class="grid">
+        <div>
+          <label>זמן האירוע</label>
+          <input id="reportEventTime" type="time">
+        </div>
+        <div>
+          <label>סוג אירוע</label>
+          <select id="reportType"></select>
+        </div>
+      </div>
+      <div style="height:10px"></div>
+      <div>
+        <label>תיאור האירוע</label>
+        <textarea id="reportDescription" rows="6" maxlength="3000" placeholder="כתוב מה קרה, מה דווח, למי פנית ומה הייתה ההנחיה..."></textarea>
+      </div>
+      <div style="height:12px"></div>
+      <button class="primary" id="saveReportBtn" type="button" style="width:100%">שמור דוח</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const $ = id => document.getElementById(id);
 const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KEY_PAYSLIPS='salaryApp.payslips.v1';
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=53;
+const APP_VERSION=54;
 const VERSION_URL='./version.json';
 const GOOGLE_CLIENT_ID='671607022405-ctegk4jl7koo9elm30odvsb1binp49cb.apps.googleusercontent.com';
 const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.appdata';
@@ -1384,6 +1453,188 @@ if(shifts.length !== (Array.isArray(rawShifts)?rawShifts.length:0)){
 
 let editingShiftId = null;
 
+const DEFAULT_REPORT_TYPES=[
+  'סיגנל סגור',
+  'בקרה לא ענו',
+  'איחור',
+  'תקלה ברכבת',
+  'אירוע עם נוסע',
+  'אירוע בטיחותי',
+  'הנחיה תפעולית',
+  'אחר'
+];
+let reportShiftId=null;
+let editingReportId=null;
+let pendingReportCreatedAt=null;
+
+function getReportTypes(){
+  const s=readStoredSettings();
+  const raw=Array.isArray(s.reportTypes)?s.reportTypes:[];
+  const cleaned=[...new Set(raw.map(v=>String(v||'').trim()).filter(Boolean))];
+  return cleaned.length?cleaned:[...DEFAULT_REPORT_TYPES];
+}
+function saveReportTypes(types){
+  const current=readStoredSettings();
+  current.reportTypes=[...new Set((types||[]).map(v=>String(v||'').trim()).filter(Boolean))];
+  if(!current.reportTypes.length) current.reportTypes=[...DEFAULT_REPORT_TYPES];
+  localStorage.setItem(KEY_SETTINGS,JSON.stringify(current));
+  renderReportTypesSettings();
+}
+function renderReportTypesSettings(){
+  const list=$('reportTypesList');
+  if(!list) return;
+  const types=getReportTypes();
+  list.innerHTML=types.map((type,i)=>`
+    <span class="report-type-chip">
+      <span>${escapeHtml(type)}</span>
+      <button type="button" data-remove-report-type="${i}" aria-label="מחק סוג">×</button>
+    </span>`).join('');
+  list.querySelectorAll('[data-remove-report-type]').forEach(btn=>btn.onclick=()=>{
+    const arr=getReportTypes();
+    const i=Number(btn.dataset.removeReportType);
+    if(!Number.isInteger(i) || i<0 || i>=arr.length) return;
+    const removed=arr[i];
+    if(!confirm(`להסיר את "${removed}" מרשימת סוגי הדוחות? דוחות קיימים לא יימחקו.`)) return;
+    arr.splice(i,1);
+    saveReportTypes(arr);
+  });
+}
+function addReportType(){
+  const input=$('newReportType');
+  const value=String(input?.value||'').trim();
+  if(!value) return;
+  const arr=getReportTypes();
+  if(arr.some(x=>x.toLocaleLowerCase('he')===value.toLocaleLowerCase('he'))){
+    alert('סוג האירוע כבר קיים ברשימה.');
+    return;
+  }
+  arr.push(value);
+  saveReportTypes(arr);
+  if(input) input.value='';
+}
+function localTimeHm(date=new Date()){
+  return `${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
+}
+function formatDateTimeHe(value){
+  const d=new Date(value);
+  if(Number.isNaN(d.getTime())) return '';
+  try{return new Intl.DateTimeFormat('he-IL',{dateStyle:'short',timeStyle:'short'}).format(d);}
+  catch(e){return d.toLocaleString('he-IL');}
+}
+function normalizedReports(sh){
+  return Array.isArray(sh?.reports)?sh.reports:[];
+}
+function reportById(sh,id){
+  return normalizedReports(sh).find(r=>r.id===id);
+}
+function populateReportTypeSelect(selected=''){
+  const select=$('reportType');
+  if(!select) return;
+  const types=getReportTypes();
+  if(selected && !types.includes(selected)) types.push(selected);
+  select.innerHTML=types.map(t=>`<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join('');
+  select.value=selected && types.includes(selected)?selected:types[0];
+}
+function openReportModal(shiftId,reportId=''){
+  const sh=shifts.find(x=>x.id===shiftId);
+  if(!sh) return;
+  reportShiftId=shiftId;
+  editingReportId=reportId||null;
+  const existing=editingReportId?reportById(sh,editingReportId):null;
+  pendingReportCreatedAt=existing?.createdAt || new Date().toISOString();
+
+  $('reportModalTitle').textContent=existing?'עריכת דוח נהג':'הוספת דוח נהג';
+  const dd=(sh.ddType && sh.ddNumber!=='')?displayDdNumber(sh.ddType,sh.ddNumber):'ללא DD';
+  $('reportShiftInfo').textContent=`משמרת ${formatDateHe(sh.date)} · ${dd} · ${sh.start}–${sh.end}`;
+  $('reportCreatedAtLabel').textContent=formatDateTimeHe(pendingReportCreatedAt);
+  $('reportEventTime').value=existing?.eventTime || localTimeHm();
+  populateReportTypeSelect(existing?.type||'');
+  $('reportDescription').value=existing?.description||'';
+  $('saveReportBtn').textContent=existing?'שמור שינויים':'שמור דוח';
+
+  $('reportModal').classList.remove('hidden');
+  $('reportModal').setAttribute('aria-hidden','false');
+  document.body.classList.add('modal-open');
+}
+function closeReportModal(){
+  $('reportModal').classList.add('hidden');
+  $('reportModal').setAttribute('aria-hidden','true');
+  document.body.classList.remove('modal-open');
+  reportShiftId=null;
+  editingReportId=null;
+  pendingReportCreatedAt=null;
+}
+function saveDriverReport(){
+  const sh=shifts.find(x=>x.id===reportShiftId);
+  if(!sh) return;
+  const eventTime=String($('reportEventTime').value||'').trim();
+  const type=String($('reportType').value||'').trim();
+  const description=String($('reportDescription').value||'').trim();
+  if(!eventTime){ alert('בחר זמן אירוע.'); return; }
+  if(!type){ alert('בחר סוג אירוע.'); return; }
+  if(!description){ alert('כתוב תיאור לדוח.'); return; }
+
+  const reports=normalizedReports(sh).map(r=>({...r}));
+  if(editingReportId){
+    const i=reports.findIndex(r=>r.id===editingReportId);
+    if(i<0) return;
+    reports[i]={...reports[i],eventTime,type,description,updatedAt:new Date().toISOString()};
+  }else{
+    reports.push({
+      id:crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`,
+      createdAt:pendingReportCreatedAt || new Date().toISOString(),
+      eventTime,
+      type,
+      description
+    });
+  }
+  sh.reports=reports;
+  localStorage.setItem(KEY_SHIFTS,JSON.stringify(shifts));
+  const shiftId=sh.id;
+  closeReportModal();
+  renderTodayDashboard();
+  renderShifts();
+  openShiftDetails(shiftId);
+}
+function deleteDriverReport(shiftId,reportId){
+  const sh=shifts.find(x=>x.id===shiftId);
+  if(!sh) return;
+  const report=reportById(sh,reportId);
+  if(!report) return;
+  if(!confirm(`למחוק את הדוח מסוג "${report.type}"?`)) return;
+  sh.reports=normalizedReports(sh).filter(r=>r.id!==reportId);
+  localStorage.setItem(KEY_SHIFTS,JSON.stringify(shifts));
+  renderTodayDashboard();
+  renderShifts();
+  openShiftDetails(shiftId);
+}
+function reportsHtmlForShift(sh){
+  const reports=normalizedReports(sh).slice().sort((a,b)=>{
+    const ta=String(a.eventTime||'');
+    const tb=String(b.eventTime||'');
+    if(ta!==tb) return ta.localeCompare(tb);
+    return String(a.createdAt||'').localeCompare(String(b.createdAt||''));
+  });
+  if(!reports.length) return `<p class="note" style="margin:8px 0 0">אין דוחות מקושרים למשמרת הזו.</p>`;
+  return `<div class="report-list">${reports.map(r=>`
+    <div class="report-card">
+      <div class="report-card-head">
+        <div>
+          <div class="report-type">${escapeHtml(r.type||'ללא סוג')}</div>
+          <div class="report-meta">זמן אירוע: ${escapeHtml(r.eventTime||'—')} · נוצר: ${escapeHtml(formatDateTimeHe(r.createdAt)||'—')}</div>
+        </div>
+      </div>
+      <div class="report-text">${escapeHtml(r.description||'')}</div>
+      <div class="report-actions">
+        <button type="button" class="secondary" onclick="openReportModal('${sh.id}','${r.id}')">ערוך</button>
+        <button type="button" class="danger" onclick="deleteDriverReport('${sh.id}','${r.id}')">מחק</button>
+      </div>
+    </div>`).join('')}</div>`;
+}
+window.openReportModal=openReportModal;
+window.deleteDriverReport=deleteDriverReport;
+
+
 const settingIds = ['baseRate','travelPerDay','travelMonthlyCap','perDiemPerDay','nightPct','holidayPct','nightStart','nightEnd',
 'regularDailyHours','ot125Hours','halfLoopAmount','fullLoopAmount','nightLine2Amount','nightLine3Amount','nightLineOver3Amount',
 'tax10UpTo','tax14UpTo','tax20UpTo','tax31UpTo','tax35UpTo','tax47UpTo',
@@ -1417,6 +1668,7 @@ function loadSettings(){
   applyAnalyticsChartLayout(analyticsChartLayoutDraft);
   renderHomeLayoutEditor();
   renderAnalyticsChartLayoutEditor();
+  renderReportTypesSettings();
 }
 
 const DEFAULT_NOTIFICATION_PREFERENCES={
@@ -1825,7 +2077,14 @@ function openShiftDetails(id){
       <span>סה"כ שכר למשמרת</span>
       <strong>${detailMoney(c.pay||0)}</strong>
     </div>
-    <div class="detail-actions">
+    <div style="height:14px"></div>
+    <div class="shift-head" style="margin-bottom:6px">
+      <h3 style="margin:0">דוחות נהג</h3>
+      <span class="filter-count">${normalizedReports(sh).length} דוחות</span>
+    </div>
+    ${reportsHtmlForShift(sh)}
+    <div class="detail-actions" style="margin-top:12px">
+      <button type="button" class="primary" onclick="openReportModal('${sh.id}')">📝 הוסף דוח</button>
       <button type="button" class="secondary" onclick="editShiftFromDetails('${sh.id}')">✏️ עריכת משמרת</button>
     </div>
   `;
@@ -2780,6 +3039,17 @@ $('addShift').onclick=()=>{
 };
 
 $('saveSettings').onclick=()=>{ saveSettings(); renderShifts(); renderSummary(); renderTodayDashboard(); alert('ההגדרות נשמרו.'); };
+
+$('addReportTypeBtn')?.addEventListener('click',addReportType);
+$('newReportType')?.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); addReportType(); } });
+$('resetReportTypesBtn')?.addEventListener('click',()=>{
+  if(!confirm('לשחזר את רשימת סוגי הדוחות לברירת המחדל?')) return;
+  saveReportTypes([...DEFAULT_REPORT_TYPES]);
+});
+$('closeReportModal')?.addEventListener('click',closeReportModal);
+$('reportModalBackdrop')?.addEventListener('click',closeReportModal);
+$('saveReportBtn')?.addEventListener('click',saveDriverReport);
+
 $('saveHomeLayout').onclick=()=>{ saveHomeLayout(); alert('תצוגת מסך הבית נשמרה.'); };
 $('saveAnalyticsCharts').onclick=()=>{ saveAnalyticsChartLayout(); alert('תצוגת הגרפים נשמרה.'); };
 $('monthFilter').onchange=renderSummary;
@@ -3690,7 +3960,11 @@ function renderTodayDashboard(){
         <div class="today-chip"><span>משך</span><strong>${fmtMin(c.grossMinutes)}</strong></div>
         <div class="today-chip"><span>שכר צפוי למשמרת</span><strong>${currency(c.pay)}</strong></div>
       </div>
-      <div class="today-status">${escapeHtml(shiftStatusText(sh))}${todays.length>1?` · קיימות ${todays.length} משמרות היום`:''}</div>`;
+      <div class="today-status">${escapeHtml(shiftStatusText(sh))}${todays.length>1?` · קיימות ${todays.length} משמרות היום`:''}</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px;position:relative;z-index:1">
+        <button type="button" class="primary" onclick="openReportModal('${sh.id}')">📝 הוסף דוח</button>
+        <span class="filter-count">${normalizedReports(sh).length} דוחות במשמרת</span>
+      </div>`;
   }
 
   const monthShifts=shifts.filter(sh=>sh.date.startsWith(currentYm));
