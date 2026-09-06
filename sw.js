@@ -10,10 +10,28 @@ firebase.initializeApp({
   appId: "1:671607022405:web:05d26d5fbe92f49870542c"
 });
 
-// Firebase Messaging attaches background Push handling to the existing PWA service worker.
-firebase.messaging();
+// Explicit background Push handling.
+// The backend sends data-only FCM messages. This service worker displays them
+// even when the Salary App is closed.
+const messaging = firebase.messaging();
 
-const CACHE_NAME = 'salary-app-v50';
+messaging.onBackgroundMessage((payload) => {
+  const data = payload?.data || {};
+  const title = data.title || "Salary App";
+  const body = data.body || "";
+  const targetUrl = data.url || data.deepLink || "https://firasnajjar59.github.io/salary-app/";
+
+  self.registration.showNotification(title, {
+    body,
+    icon: "./icon-192.png",
+    badge: "./icon-192.png",
+    data: { url: targetUrl },
+    tag: data.tag || data.reminderId || undefined,
+    renotify: false
+  });
+});
+
+const CACHE_NAME = 'salary-app-v51';
 const APP_FILES = [
   './',
   './index.html',
@@ -83,16 +101,30 @@ self.addEventListener('message', event => {
 
 self.addEventListener('notificationclick', event => {
   event.notification.close();
-  const targetUrl = event.notification?.data?.url || './';
-  event.waitUntil((async()=>{
-    const absoluteUrl = new URL(targetUrl, self.location.origin + self.location.pathname).href;
-    const clientList = await self.clients.matchAll({type:'window', includeUncontrolled:true});
-    for(const client of clientList){
-      if('focus' in client){
-        if('navigate' in client) await client.navigate(absoluteUrl);
-        return client.focus();
+
+  const appBase = "https://firasnajjar59.github.io/salary-app/";
+  const raw = event.notification?.data?.url || appBase;
+  let targetUrl = appBase;
+
+  try {
+    if (raw.startsWith("?")) targetUrl = appBase + raw;
+    else if (raw.startsWith(appBase)) targetUrl = raw;
+    else if (raw.startsWith("./")) targetUrl = new URL(raw, appBase).href;
+  } catch (_) {}
+
+  event.waitUntil((async () => {
+    const clientList = await self.clients.matchAll({
+      type: "window",
+      includeUncontrolled: true
+    });
+
+    for (const client of clientList) {
+      if ("navigate" in client) {
+        try { await client.navigate(targetUrl); } catch (_) {}
       }
+      if ("focus" in client) return client.focus();
     }
-    if(self.clients.openWindow) return self.clients.openWindow(absoluteUrl);
+
+    if (self.clients.openWindow) return self.clients.openWindow(targetUrl);
   })());
 });
