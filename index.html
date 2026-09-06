@@ -819,7 +819,7 @@
         <button class="secondary" id="updateDdFromServer" type="button">עדכן טבלת DD מהשרת</button>
         <button class="secondary" id="editLocalDd" type="button">ערוך DD מקומי</button>
       </div>
-      <div id="ddStatus" class="note" style="margin-top:10px"></div><div class="note" style="margin-top:6px">גרסת אפליקציה: <strong>47</strong></div>
+      <div id="ddStatus" class="note" style="margin-top:10px"></div><div class="note" style="margin-top:6px">גרסת אפליקציה: <strong>48</strong></div>
     </div>
 
     <div class="card settings-accordion">
@@ -1182,7 +1182,7 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=47;
+const APP_VERSION=48;
 const VERSION_URL='./version.json';
 const GOOGLE_CLIENT_ID='671607022405-ctegk4jl7koo9elm30odvsb1binp49cb.apps.googleusercontent.com';
 const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.appdata';
@@ -3740,7 +3740,7 @@ function openDashboardCalendarDate(date){
   refreshDdPresetOptions();
   openShiftModal(false);
 }
-if($('saveNotificationPreferences')) $('saveNotificationPreferences').onclick=()=>{ saveNotificationPreferences(); alert('הגדרות ההתראות נשמרו.'); };
+if($('saveNotificationPreferences')) $('saveNotificationPreferences').onclick=()=>{ saveNotificationPreferences(); alert('הגדרות ההתראות נשמרו.'); setTimeout(()=>window.dispatchEvent(new CustomEvent('salary-notification-settings-changed')),0); };
 loadNotificationPreferences();
 if($('enableBiometricLock')) $('enableBiometricLock').onclick=registerBiometricLock;
 if($('disableBiometricLock')) $('disableBiometricLock').onclick=disableBiometricLock;
@@ -3893,7 +3893,8 @@ setInterval(checkDdServerUpdate,6*60*60*1000);
     registerInstallation: "https://me-west1-salary-app-507708.cloudfunctions.net/registerInstallation",
     registerPushToken: "https://me-west1-salary-app-507708.cloudfunctions.net/registerPushToken",
     sendTestPush: "https://me-west1-salary-app-507708.cloudfunctions.net/sendTestPush",
-    createReminder: "https://me-west1-salary-app-507708.cloudfunctions.net/createReminder"
+    createReminder: "https://me-west1-salary-app-507708.cloudfunctions.net/createReminder",
+    cancelReminder: "https://me-west1-salary-app-507708.cloudfunctions.net/cancelReminder"
   };
 
   const pushApp = initializeApp(PUSH_FIREBASE_CONFIG, "salary-app-push");
@@ -3996,6 +3997,7 @@ setInterval(checkDdServerUpdate,6*60*60*1000);
     };
     savePushDevice(updated);
     setPushStatus("ההתראות פעילות במכשיר הזה.", "ok");
+    syncNotificationSchedules().catch(e=>console.warn("Reminder sync failed",e));
     const testBtn = pushEl("sendPushTest");
     if(testBtn) testBtn.disabled = false;
     return updated;
@@ -4035,6 +4037,136 @@ setInterval(checkDdServerUpdate,6*60*60*1000);
       setPushStatus(`שליחת הבדיקה נכשלה: ${e.message}`, "error");
     }finally{
       if(btn) btn.disabled = false;
+    }
+  }
+
+
+  function pushPrefs(){
+    try{
+      const s=JSON.parse(localStorage.getItem("salaryApp.settings.v1")||"{}");
+      return s.notificationPreferences||{};
+    }catch(e){ return {}; }
+  }
+
+  function allLocalShifts(){
+    try{ return JSON.parse(localStorage.getItem("salaryApp.shifts.v1")||"[]")||[]; }
+    catch(e){ return []; }
+  }
+
+  function localDateTime(dateStr,timeStr){
+    if(!dateStr||!timeStr) return null;
+    const d=new Date(`${dateStr}T${timeStr}:00`);
+    return Number.isNaN(d.getTime())?null:d;
+  }
+
+  function previousMonthKey(now=new Date()){
+    const d=new Date(now.getFullYear(),now.getMonth()-1,1);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+  }
+
+  function nextMonthlyOccurrence(day,time){
+    const [hh,mm]=(time||"14:00").split(":").map(Number);
+    const now=new Date();
+    let d=new Date(now.getFullYear(),now.getMonth(),Math.min(28,Number(day)||1),hh||0,mm||0,0,0);
+    if(d<=now) d=new Date(now.getFullYear(),now.getMonth()+1,Math.min(28,Number(day)||1),hh||0,mm||0,0,0);
+    return d;
+  }
+
+  function nextWeeklyOccurrence(day,time){
+    const [hh,mm]=(time||"18:00").split(":").map(Number);
+    const now=new Date();
+    const targetDay=Number(day)||0; // UI: 0 Sunday ... 6 Saturday, same as JS.
+    let d=new Date(now);
+    d.setHours(hh||0,mm||0,0,0);
+    let add=(targetDay-d.getDay()+7)%7;
+    if(add===0 && d<=now) add=7;
+    d.setDate(d.getDate()+add);
+    return d;
+  }
+
+  function shiftRef(sh){
+    // Existing shifts already have id; fallback only protects older imported data.
+    return String(sh.id || `${sh.date}|${sh.start}|${sh.end}|${sh.ddType||""}|${sh.ddNumber||""}`);
+  }
+
+  function shiftDdLabel(sh){
+    if(sh.ddNumber===undefined || sh.ddNumber===null || sh.ddNumber==="") return "";
+    const prefix=String(sh.ddType||"DD").toUpperCase();
+    return `${prefix}${sh.ddNumber}`;
+  }
+
+  async function createServerReminder(device,payload){
+    return postPush(PUSH_ENDPOINTS.createReminder,{
+      deviceId:device.deviceId,...payload
+    },device);
+  }
+
+  async function cancelServerReminder(device,type,referenceId){
+    return postPush(PUSH_ENDPOINTS.cancelReminder,{
+      deviceId:device.deviceId,type,referenceId
+    },device);
+  }
+
+  async function syncNotificationSchedules(){
+    const device=loadPushDevice();
+    if(!device?.deviceId || !device?.deviceSecret || Notification.permission!=="granted") return;
+
+    const p=pushPrefs();
+    const now=Date.now();
+
+    // SHIFT REMINDERS
+    const shifts=allLocalShifts();
+    if(p.shift?.enabled){
+      const lead=Math.max(1,Number(p.shift.leadMinutes||60));
+      for(const sh of shifts){
+        const start=localDateTime(sh.date,sh.start);
+        if(!start) continue;
+        const sendAt=new Date(start.getTime()-lead*60000);
+        if(sendAt.getTime()<=now) continue;
+        const ref=shiftRef(sh);
+        const dd=shiftDdLabel(sh);
+        const body=`המשמרת שלך מתחילה בעוד ${lead<60?lead+" דקות":lead===60?"שעה":lead%60===0?(lead/60)+" שעות":lead+" דקות"}${dd?" · "+dd:""} · ${sh.start}`;
+        await createServerReminder(device,{
+          type:"shift",
+          referenceId:ref,
+          title:"תזכורת למשמרת",
+          body,
+          sendAt:sendAt.toISOString(),
+          deepLink:`?view=shift&id=${encodeURIComponent(ref)}`
+        });
+      }
+    }
+
+    // MONTHLY SUMMARY: keep one upcoming occurrence. When app is opened later,
+    // deterministic replacement advances it to the next month.
+    if(p.monthly?.enabled){
+      const sendAt=nextMonthlyOccurrence(p.monthly.day||1,p.monthly.time||"14:00");
+      const monthKey=previousMonthKey(sendAt);
+      await createServerReminder(device,{
+        type:"monthly_summary",
+        referenceId:"monthly-summary",
+        title:"סיכום חודשי",
+        body:"הסיכום של החודש הקודם מוכן לצפייה.",
+        sendAt:sendAt.toISOString(),
+        deepLink:`?view=summary&month=${encodeURIComponent(monthKey)}`
+      });
+    }else{
+      await cancelServerReminder(device,"monthly_summary","monthly-summary").catch(()=>{});
+    }
+
+    // WEEKLY SUMMARY
+    if(p.weekly?.enabled){
+      const sendAt=nextWeeklyOccurrence(p.weekly.day??0,p.weekly.time||"18:00");
+      await createServerReminder(device,{
+        type:"weekly_summary",
+        referenceId:"weekly-summary",
+        title:"סיכום שבועי",
+        body:"הסיכום השבועי שלך מוכן לצפייה.",
+        sendAt:sendAt.toISOString(),
+        deepLink:"?view=summary"
+      });
+    }else{
+      await cancelServerReminder(device,"weekly_summary","weekly-summary").catch(()=>{});
     }
   }
 
@@ -4095,7 +4227,9 @@ setInterval(checkDdServerUpdate,6*60*60*1000);
     }
   }
 
+  window.addEventListener('salary-notification-settings-changed',()=>syncNotificationSchedules().catch(e=>console.warn("Reminder sync failed",e)));
   refreshPushUi();
+  setTimeout(()=>syncNotificationSchedules().catch(e=>console.warn("Reminder startup sync failed",e)),1500);
 </script>
 
 </body>
