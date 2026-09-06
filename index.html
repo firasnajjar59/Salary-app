@@ -508,6 +508,8 @@
     .approval-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
     .today-approval-pill{font-size:11px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);padding:5px 8px;border-radius:999px}
 
+    .trip-list{display:flex;flex-direction:column;gap:9px;margin-top:10px}.trip-card{border:1px solid var(--line);border-radius:15px;background:var(--card);padding:12px}.trip-card-title{font-weight:900}.trip-card-meta{font-size:12px;color:var(--muted);margin-top:4px}.trip-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.today-trip-pill{font-size:11px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);padding:5px 8px;border-radius:999px}
+
   </style>
 </head>
 <body>
@@ -772,7 +774,7 @@
         <summary>אודות</summary>
         <div class="settings-accordion-body">
           <div style="font-size:17px;font-weight:850">נוצר ע״י פראס נג׳אר</div>
-          <div class="note" style="margin-top:5px">גרסה <strong>58</strong></div>
+          <div class="note" style="margin-top:5px">גרסה <strong>59</strong></div>
           <div style="height:12px"></div>
           <button class="secondary" id="manualUpdateCheckBtn" type="button">בדיקת עדכונים</button>
           <div id="manualUpdateStatus" class="note" style="margin-top:8px"></div>
@@ -1287,6 +1289,11 @@
       </div>
       <div style="height:10px"></div>
       <div>
+        <label>קישור לנסיעה <span class="note">(אופציונלי)</span></label>
+        <select id="reportTrip"><option value="">ללא קישור לנסיעה</option></select>
+      </div>
+      <div style="height:10px"></div>
+      <div>
         <label>תיאור האירוע</label>
         <textarea id="reportDescription" rows="6" maxlength="3000" placeholder="כתוב מה קרה, מה דווח, למי פנית ומה הייתה ההנחיה..."></textarea>
       </div>
@@ -1327,13 +1334,15 @@
   </div>
 </div>
 
+
+<div id="tripModal" class="modal hidden" aria-hidden="true"><div class="modal-backdrop" id="tripModalBackdrop"></div><div class="modal-sheet" role="dialog" aria-modal="true"><div class="modal-header"><h2 id="tripModalTitle" style="margin:0">הוספת חצי סיבוב</h2><button type="button" class="modal-close" id="closeTripModal">×</button></div><div class="modal-body"><div id="tripShiftInfo" class="note" style="margin-bottom:12px"></div><div class="grid"><div><label>התחלה</label><input id="tripStartPoint" type="text" maxlength="120" placeholder="לדוגמה: נווה יעקב"></div><div><label>מספר RB</label><input id="tripRb" type="text" maxlength="60" placeholder="לדוגמה: RB12"></div><div><label>שעת התחלה</label><input id="tripStartTime" type="time"></div><div><label>שעת סיום</label><input id="tripEndTime" type="time"></div></div><div class="note" style="margin-top:8px">ברירת המחדל: שעת ההתחלה היא זמן הלחיצה, ושעת הסיום שעה ו־8 דקות אחריה. אפשר לשנות את שתיהן.</div><div style="height:12px"></div><button class="primary" id="saveTripBtn" type="button" style="width:100%">שמור חצי סיבוב</button></div></div></div>
 <script>
 const $ = id => document.getElementById(id);
 const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KEY_PAYSLIPS='salaryApp.payslips.v1';
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=58;
+const APP_VERSION=59;
 const VERSION_URL='./version.json';
 const GOOGLE_CLIENT_ID='671607022405-ctegk4jl7koo9elm30odvsb1binp49cb.apps.googleusercontent.com';
 const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.appdata';
@@ -1631,6 +1640,8 @@ function openReportModal(shiftId,reportId=''){
   $('reportCreatedAtLabel').textContent=formatDateTimeHe(pendingReportCreatedAt);
   $('reportEventTime').value=existing?.eventTime || localTimeHm();
   populateReportTypeSelect(existing?.type||'');
+  const tripSelect=$('reportTrip');
+  if(tripSelect){tripSelect.innerHTML=`<option value="">ללא קישור לנסיעה</option>`+normalizedTrips(sh).map((t,i)=>`<option value="${escapeHtml(t.id)}">חצי ${i+1} · ${escapeHtml(tripLabel(t))}</option>`).join('');tripSelect.value=existing?.tripId||'';}
   $('reportDescription').value=existing?.description||'';
   $('saveReportBtn').textContent=existing?'שמור שינויים':'שמור דוח';
 
@@ -1652,6 +1663,7 @@ function saveDriverReport(){
   const eventTime=String($('reportEventTime').value||'').trim();
   const type=String($('reportType').value||'').trim();
   const description=String($('reportDescription').value||'').trim();
+  const tripId=String($('reportTrip')?.value||'');
   if(!eventTime){ alert('בחר זמן אירוע.'); return; }
   if(!type){ alert('בחר סוג אירוע.'); return; }
   if(!description){ alert('כתוב תיאור לדוח.'); return; }
@@ -1660,7 +1672,7 @@ function saveDriverReport(){
   if(editingReportId){
     const i=reports.findIndex(r=>r.id===editingReportId);
     if(i<0) return;
-    reports[i]={...reports[i],eventTime,type,description,updatedAt:new Date().toISOString()};
+    reports[i]={...reports[i],eventTime,type,description,tripId,updatedAt:new Date().toISOString()};
   }else{
     reports.push({
       id:crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`,
@@ -1706,6 +1718,7 @@ function reportsHtmlForShift(sh){
       </summary>
       <div class="report-accordion-body">
         <div class="report-accordion-created">נוצר: ${escapeHtml(formatDateTimeHe(r.createdAt)||'—')}</div>
+        ${r.tripId&&tripById(sh,r.tripId)?`<div class="report-accordion-created">נסיעה: ${escapeHtml(tripLabel(tripById(sh,r.tripId)))}</div>`:''}
         <div class="report-text">${escapeHtml(r.description||'')}</div>
         <div class="report-actions">
           <button type="button" class="secondary" onclick="openReportModal('${sh.id}','${r.id}')">ערוך</button>
@@ -1716,6 +1729,19 @@ function reportsHtmlForShift(sh){
 }
 window.openReportModal=openReportModal;
 window.deleteDriverReport=deleteDriverReport;
+
+
+let tripShiftId=null,editingTripId=null;
+function normalizedTrips(sh){return Array.isArray(sh?.trips)?sh.trips:[]}
+function tripById(sh,id){return normalizedTrips(sh).find(t=>t.id===id)}
+function hmAddMinutes(hm,mins){const m=String(hm||'').match(/^(\d{1,2}):(\d{2})$/);if(!m)return'';let x=(+m[1]*60 + +m[2]+mins)%1440;if(x<0)x+=1440;return `${String(Math.floor(x/60)).padStart(2,'0')}:${String(x%60).padStart(2,'0')}`}
+function tripLabel(t){return [t.startPoint,t.rb,t.startTime&&t.endTime?`${t.startTime}–${t.endTime}`:''].filter(Boolean).join(' · ')||'חצי סיבוב'}
+function openTripModal(shiftId,tripId=''){const sh=shifts.find(x=>x.id===shiftId);if(!sh)return;tripShiftId=shiftId;editingTripId=tripId||null;const t=editingTripId?tripById(sh,editingTripId):null;const start=t?.startTime||localTimeHm();$('tripModalTitle').textContent=t?'עריכת חצי סיבוב':'הוספת חצי סיבוב';$('tripShiftInfo').textContent=`משמרת ${formatDateHe(sh.date)} · ${sh.start}–${sh.end}`;$('tripStartPoint').value=t?.startPoint||'';$('tripRb').value=t?.rb||'';$('tripStartTime').value=start;$('tripEndTime').value=t?.endTime||hmAddMinutes(start,68);$('tripModal').classList.remove('hidden');$('tripModal').setAttribute('aria-hidden','false');document.body.classList.add('modal-open')}
+function closeTripModal(){$('tripModal').classList.add('hidden');$('tripModal').setAttribute('aria-hidden','true');document.body.classList.remove('modal-open');tripShiftId=null;editingTripId=null}
+function saveTrip(){const sh=shifts.find(x=>x.id===tripShiftId);if(!sh)return;const startPoint=$('tripStartPoint').value.trim(),rb=$('tripRb').value.trim(),startTime=$('tripStartTime').value,endTime=$('tripEndTime').value;if(!startPoint){alert('רשום נקודת התחלה.');return}if(!rb){alert('רשום מספר RB.');return}if(!startTime||!endTime){alert('יש להזין שעת התחלה וסיום.');return}const a=normalizedTrips(sh).map(t=>({...t}));if(editingTripId){const i=a.findIndex(t=>t.id===editingTripId);if(i<0)return;a[i]={...a[i],startPoint,rb,startTime,endTime,updatedAt:new Date().toISOString()}}else a.push({id:crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`,createdAt:new Date().toISOString(),startPoint,rb,startTime,endTime});sh.trips=a;localStorage.setItem(KEY_SHIFTS,JSON.stringify(shifts));const sid=sh.id;closeTripModal();renderTodayDashboard();renderShifts();openShiftDetails(sid)}
+function deleteTrip(shiftId,tripId){const sh=shifts.find(x=>x.id===shiftId);if(!sh)return;const t=tripById(sh,tripId);if(!t||!confirm(`למחוק את ${tripLabel(t)}?`))return;sh.trips=normalizedTrips(sh).filter(x=>x.id!==tripId);sh.reports=normalizedReports(sh).map(r=>r.tripId===tripId?{...r,tripId:''}:r);localStorage.setItem(KEY_SHIFTS,JSON.stringify(shifts));renderTodayDashboard();renderShifts();openShiftDetails(shiftId)}
+function tripsHtmlForShift(sh){const a=normalizedTrips(sh).slice().sort((x,y)=>String(x.startTime||'').localeCompare(String(y.startTime||'')));if(!a.length)return `<p class="note" style="margin:8px 0 0">אין חצאי סיבוב מתועדים למשמרת הזו.</p>`;return `<div class="trip-list">${a.map((t,i)=>`<div class="trip-card"><div class="trip-card-title">חצי סיבוב ${i+1} · ${escapeHtml(t.startPoint||'')}</div><div class="trip-card-meta">${escapeHtml(t.startTime||'—')}–${escapeHtml(t.endTime||'—')} · ${escapeHtml(t.rb||'ללא RB')}</div><div class="trip-actions"><button class="secondary" onclick="openTripModal('${sh.id}','${t.id}')">ערוך</button><button class="danger" onclick="deleteTrip('${sh.id}','${t.id}')">מחק</button></div></div>`).join('')}</div>`}
+window.openTripModal=openTripModal;window.deleteTrip=deleteTrip;
 
 let approvalShiftId=null;
 let editingApprovalId=null;
@@ -2259,6 +2285,12 @@ function openShiftDetails(id){
 
     <div class="detail-actions" style="margin-top:14px">
       <button type="button" class="secondary" onclick="editShiftFromDetails('${sh.id}')">✏️ עריכת משמרת</button>
+    </div>
+
+    <div class="shift-details-section">
+      <div class="shift-head" style="margin-bottom:8px"><h3 style="margin:0">נסיעות / חצאי סיבוב</h3><span class="filter-count">${normalizedTrips(sh).length} נסיעות</span></div>
+      ${tripsHtmlForShift(sh)}
+      <div class="detail-actions" style="margin-top:12px"><button type="button" class="primary" onclick="openTripModal('${sh.id}')">➕ הוסף חצי סיבוב</button></div>
     </div>
 
     <div class="shift-details-section">
@@ -3274,6 +3306,10 @@ $('saveReportBtn')?.addEventListener('click',saveDriverReport);
 $('closeApprovalModal')?.addEventListener('click',closeApprovalModal);
 $('approvalModalBackdrop')?.addEventListener('click',closeApprovalModal);
 $('saveApprovalBtn')?.addEventListener('click',saveShiftApproval);
+$('closeTripModal')?.addEventListener('click',closeTripModal);
+$('tripModalBackdrop')?.addEventListener('click',closeTripModal);
+$('saveTripBtn')?.addEventListener('click',saveTrip);
+$('tripStartTime')?.addEventListener('change',()=>{if(!editingTripId)$('tripEndTime').value=hmAddMinutes($('tripStartTime').value,68);});
 
 
 $('saveHomeLayout').onclick=()=>{ saveHomeLayout(); alert('תצוגת מסך הבית נשמרה.'); };
@@ -4193,6 +4229,11 @@ function renderTodayDashboard(){
           <div class="today-chip"><span>שכר צפוי</span><strong>${currency(c.pay)}</strong></div>
         </div>
         <div class="today-status">${escapeHtml(shiftStatusText(sh))}${todays.length>1?` · קיימות ${todays.length} משמרות היום`:''}</div>
+      </div>
+
+      <div class="today-reports-separator">
+        <div class="today-reports-header"><strong>נסיעות / חצאי סיבוב</strong><button type="button" class="primary" onclick="openTripModal('${sh.id}')">➕ הוסף חצי סיבוב</button></div>
+        ${normalizedTrips(sh).length?`<div class="today-report-preview">${normalizedTrips(sh).slice().sort((a,b)=>String(a.startTime||'').localeCompare(String(b.startTime||''))).map((t,i)=>`<span class="today-trip-pill">חצי ${i+1} · ${escapeHtml(t.startPoint||'')} · ${escapeHtml(t.rb||'')} · ${escapeHtml(t.startTime||'—')}–${escapeHtml(t.endTime||'—')}</span>`).join('')}</div>`:`<div class="today-status">אין עדיין חצאי סיבוב מתועדים.</div>`}
       </div>
 
       <div class="today-reports-separator">
