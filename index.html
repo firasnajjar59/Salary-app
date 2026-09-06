@@ -469,6 +469,36 @@
     .report-type-chip button{border:0;background:transparent;color:var(--danger);padding:0 2px;font-size:18px;line-height:1}
     .report-created-box{padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--soft);font-size:13px}
 
+    .shift-detail-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px}
+    .shift-detail-card{border:1px solid var(--line);border-radius:18px;padding:15px;background:var(--card);box-shadow:0 2px 8px rgba(0,0,0,.04)}
+    .shift-detail-card-title{font-size:12px;color:var(--muted);font-weight:750;margin-bottom:6px}
+    .shift-detail-card-main{font-size:22px;font-weight:900;line-height:1.2}
+    .shift-detail-card-sub{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.5}
+    .shift-detail-mini{display:flex;justify-content:space-between;gap:8px;font-size:12px;padding-top:7px;margin-top:7px;border-top:1px solid var(--line)}
+    .shift-detail-mini strong{font-weight:800}
+    .shift-details-section{margin-top:16px;padding-top:15px;border-top:1px solid var(--line)}
+    .report-accordion{border:1px solid var(--line);border-radius:15px;background:var(--card);overflow:hidden}
+    .report-accordion+.report-accordion{margin-top:9px}
+    .report-accordion summary{cursor:pointer;list-style:none;padding:12px 14px;display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:9px}
+    .report-accordion summary::-webkit-details-marker{display:none}
+    .report-accordion summary::after{content:"⌄";font-size:18px;color:var(--muted)}
+    .report-accordion[open] summary::after{transform:rotate(180deg)}
+    .report-accordion-type{font-weight:850}
+    .report-accordion-time{font-size:12px;color:var(--muted);font-weight:700}
+    .report-accordion-body{padding:0 14px 14px;border-top:1px solid var(--line)}
+    .report-accordion-created{font-size:11px;color:var(--muted);padding-top:10px}
+    .today-shift-open{position:relative;z-index:1;border:1px solid rgba(255,255,255,.18);border-radius:16px;padding:12px;background:rgba(255,255,255,.08);cursor:pointer}
+    .today-shift-open:active{transform:scale(.995)}
+    .today-shift-open-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:9px}
+    .today-shift-open-title{font-weight:900;font-size:15px}
+    .today-open-hint{font-size:11px;opacity:.75}
+    .today-reports-separator{position:relative;z-index:1;margin-top:14px;padding-top:13px;border-top:1px solid rgba(255,255,255,.18)}
+    .today-reports-header{display:flex;justify-content:space-between;align-items:center;gap:10px}
+    .today-reports-header strong{font-size:14px}
+    .today-report-preview{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
+    .today-report-pill{font-size:11px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);padding:5px 8px;border-radius:999px}
+    @media(max-width:460px){.shift-detail-cards{grid-template-columns:1fr 1fr}.shift-detail-card{padding:12px}.shift-detail-card-main{font-size:19px}}
+
   </style>
 </head>
 <body>
@@ -831,7 +861,7 @@
         <button class="secondary" id="updateDdFromServer" type="button">עדכן טבלת DD מהשרת</button>
         <button class="secondary" id="editLocalDd" type="button">ערוך DD מקומי</button>
       </div>
-      <div id="ddStatus" class="note" style="margin-top:10px"></div><div class="note" style="margin-top:6px">גרסת אפליקציה: <strong>54</strong></div>
+      <div id="ddStatus" class="note" style="margin-top:10px"></div><div class="note" style="margin-top:6px">גרסת אפליקציה: <strong>55</strong></div>
     </div>
 
     <div class="card settings-accordion">
@@ -1251,7 +1281,7 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=54;
+const APP_VERSION=55;
 const VERSION_URL='./version.json';
 const GOOGLE_CLIENT_ID='671607022405-ctegk4jl7koo9elm30odvsb1binp49cb.apps.googleusercontent.com';
 const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.appdata';
@@ -1617,19 +1647,20 @@ function reportsHtmlForShift(sh){
   });
   if(!reports.length) return `<p class="note" style="margin:8px 0 0">אין דוחות מקושרים למשמרת הזו.</p>`;
   return `<div class="report-list">${reports.map(r=>`
-    <div class="report-card">
-      <div class="report-card-head">
-        <div>
-          <div class="report-type">${escapeHtml(r.type||'ללא סוג')}</div>
-          <div class="report-meta">זמן אירוע: ${escapeHtml(r.eventTime||'—')} · נוצר: ${escapeHtml(formatDateTimeHe(r.createdAt)||'—')}</div>
+    <details class="report-accordion">
+      <summary>
+        <span class="report-accordion-type">${escapeHtml(r.type||'ללא סוג')}</span>
+        <span class="report-accordion-time">${escapeHtml(r.eventTime||'—')}</span>
+      </summary>
+      <div class="report-accordion-body">
+        <div class="report-accordion-created">נוצר: ${escapeHtml(formatDateTimeHe(r.createdAt)||'—')}</div>
+        <div class="report-text">${escapeHtml(r.description||'')}</div>
+        <div class="report-actions">
+          <button type="button" class="secondary" onclick="openReportModal('${sh.id}','${r.id}')">ערוך</button>
+          <button type="button" class="danger" onclick="deleteDriverReport('${sh.id}','${r.id}')">מחק</button>
         </div>
       </div>
-      <div class="report-text">${escapeHtml(r.description||'')}</div>
-      <div class="report-actions">
-        <button type="button" class="secondary" onclick="openReportModal('${sh.id}','${r.id}')">ערוך</button>
-        <button type="button" class="danger" onclick="deleteDriverReport('${sh.id}','${r.id}')">מחק</button>
-      </div>
-    </div>`).join('')}</div>`;
+    </details>`).join('')}</div>`;
 }
 window.openReportModal=openReportModal;
 window.deleteDriverReport=deleteDriverReport;
@@ -2035,57 +2066,63 @@ function openShiftDetails(id){
   if(!sh) return;
   const c=calcShift(sh);
   const dayLabel={regular:'רגיל',friday:'שישי',saturday:'שבת',holiday:'חג'}[c.type]||'';
-  const isSaturday = c.type==='saturday';
-  const regularPay = isSaturday ? 0 : (c.regPay||0);
-  const saturdayMin = isSaturday ? c.grossMinutes : 0;
-  const saturdayPay = isSaturday ? (c.regPay||0) : 0;
-  const ot125Pay = c.ot1Pay||0;
-  const ot150Pay = c.ot2Pay||0;
-  const extraText = specialDescription(sh) || '';
-  const ddText = (sh.ddType && sh.ddNumber!=='') ? `${escapeHtml(displayDdNumber(sh.ddType,sh.ddNumber))}` : '';
+  const isSaturday=c.type==='saturday';
+  const ddText=(sh.ddType && sh.ddNumber!=='')?displayDdNumber(sh.ddType,sh.ddNumber):'ללא DD';
+  const hourParts=[];
+  if(!isSaturday && c.regMin>0) hourParts.push(`רגיל ${fmtMin(c.regMin)}`);
+  if(isSaturday && c.grossMinutes>0) hourParts.push(`שבת 225% ${fmtMin(c.grossMinutes)}`);
+  if(c.ot1Min>0) hourParts.push(`125% ${fmtMin(c.ot1Min)}`);
+  if(c.ot2Min>0) hourParts.push(`150% ${fmtMin(c.ot2Min)}`);
+  if(c.nightMin>0) hourParts.push(`לילה ${fmtMin(c.nightMin)}`);
 
-  $('shiftDetailsTitle').textContent=`פירוט משמרת ${formatDateHe(sh.date)}`;
+  const payParts=[];
+  if(!isSaturday && (c.regPay||0)>0) payParts.push(`רגיל ${detailMoney(c.regPay)}`);
+  if(isSaturday && (c.regPay||0)>0) payParts.push(`שבת ${detailMoney(c.regPay)}`);
+  if((c.ot1Pay||0)>0) payParts.push(`125% ${detailMoney(c.ot1Pay)}`);
+  if((c.ot2Pay||0)>0) payParts.push(`150% ${detailMoney(c.ot2Pay)}`);
+  if((c.nightExtra||0)>0) payParts.push(`לילה ${detailMoney(c.nightExtra)}`);
+
+  $('shiftDetailsTitle').textContent=`פרטי משמרת ${formatDateHe(sh.date)}`;
   $('shiftDetailsContent').innerHTML=`
-    <div class="detail-grid">
-      <div class="detail-row"><span>תאריך</span><strong>${escapeHtml(formatDateHe(sh.date))}</strong></div>
-      <div class="detail-row"><span>סוג יום</span><strong>${escapeHtml(dayLabel)}</strong></div>
-      <div class="detail-row"><span>שעות משמרת</span><strong>${escapeHtml(sh.start)}–${escapeHtml(sh.end)}</strong></div>
-      <div class="detail-row"><span>סה"כ שעות</span><strong>${fmtMin(c.grossMinutes)}</strong></div>
+    <div class="shift-detail-cards">
+      <div class="shift-detail-card">
+        <div class="shift-detail-card-title">שעות</div>
+        <div class="shift-detail-card-main">${escapeHtml(sh.start)}–${escapeHtml(sh.end)}</div>
+        <div class="shift-detail-card-sub">${fmtMin(c.grossMinutes)} · ${escapeHtml(dayLabel)} · ${escapeHtml(ddText)}</div>
+        ${hourParts.length?`<div class="shift-detail-card-sub">${hourParts.map(escapeHtml).join(' · ')}</div>`:''}
+      </div>
 
-      ${ddText?`<div class="detail-row"><span>DD / DDR</span><strong>${escapeHtml(ddText)}</strong></div>`:''}
-      ${sh.notes?`<div class="detail-row"><span>הערות</span><strong>${escapeHtml(sh.notes)}</strong></div>`:''}
-
-      ${!isSaturday && c.regMin>0?`<div class="detail-row"><span>שעות רגילות</span><strong>${fmtMin(c.regMin)}</strong></div>`:''}
-      ${isSaturday && saturdayMin>0?`<div class="detail-row"><span>שעות שבת 225%</span><strong>${fmtMin(saturdayMin)}</strong></div>`:''}
-      ${c.ot1Min>0?`<div class="detail-row"><span>שעות 125%</span><strong>${fmtMin(c.ot1Min)}</strong></div>`:''}
-      ${c.ot2Min>0?`<div class="detail-row"><span>שעות 150%</span><strong>${fmtMin(c.ot2Min)}</strong></div>`:''}
-      ${c.nightMin>0?`<div class="detail-row"><span>שעות לילה</span><strong>${fmtMin(c.nightMin)}</strong></div>`:''}
-
-      ${regularPay>0?`<div class="detail-row"><span>שכר שעות רגילות</span><strong>${detailMoney(regularPay)}</strong></div>`:''}
-      ${saturdayPay>0?`<div class="detail-row"><span>שכר שבת 225%</span><strong>${detailMoney(saturdayPay)}</strong></div>`:''}
-      ${ot125Pay>0?`<div class="detail-row"><span>שכר שעות 125%</span><strong>${detailMoney(ot125Pay)}</strong></div>`:''}
-      ${ot150Pay>0?`<div class="detail-row"><span>שכר שעות 150%</span><strong>${detailMoney(ot150Pay)}</strong></div>`:''}
-      ${c.nightExtra>0?`<div class="detail-row"><span>תוספת לילה</span><strong>${detailMoney(c.nightExtra)}</strong></div>`:''}
-
-      ${c.travel>0?`<div class="detail-row"><span>נסיעות</span><strong>${detailMoney(c.travel)}</strong></div>`:''}
-      ${c.perDiem>0?`<div class="detail-row"><span>אש"ל</span><strong>${detailMoney(c.perDiem)}</strong></div>`:''}
-      ${c.specialPay>0?`<div class="detail-row"><span>תוספות מיוחדות</span><strong>${detailMoney(c.specialPay)}</strong></div>`:''}
-      ${c.specialPay>0 && extraText?`<div class="detail-row"><span>פירוט תוספות</span><strong>${escapeHtml(extraText)}</strong></div>`:''}
-      ${c.bonus>0?`<div class="detail-row"><span>תוספת ידנית</span><strong>${detailMoney(c.bonus)}</strong></div>`:''}
+      <div class="shift-detail-card">
+        <div class="shift-detail-card-title">שכר</div>
+        <div class="shift-detail-card-main">${detailMoney(c.pay||0)}</div>
+        <div class="shift-detail-card-sub">שכר צפוי למשמרת</div>
+        ${payParts.length?`<div class="shift-detail-card-sub">${payParts.map(escapeHtml).join(' · ')}</div>`:''}
+        ${(c.travel||0)>0?`<div class="shift-detail-mini"><span>נסיעות</span><strong>${detailMoney(c.travel)}</strong></div>`:''}
+        ${(c.perDiem||0)>0?`<div class="shift-detail-mini"><span>אש"ל</span><strong>${detailMoney(c.perDiem)}</strong></div>`:''}
+        ${(c.specialPay||0)>0?`<div class="shift-detail-mini"><span>תוספות</span><strong>${detailMoney(c.specialPay)}</strong></div>`:''}
+        ${(c.bonus||0)>0?`<div class="shift-detail-mini"><span>ידני</span><strong>${detailMoney(c.bonus)}</strong></div>`:''}
+      </div>
     </div>
-    <div class="detail-total">
-      <span>סה"כ שכר למשמרת</span>
-      <strong>${detailMoney(c.pay||0)}</strong>
-    </div>
-    <div style="height:14px"></div>
-    <div class="shift-head" style="margin-bottom:6px">
-      <h3 style="margin:0">דוחות נהג</h3>
-      <span class="filter-count">${normalizedReports(sh).length} דוחות</span>
-    </div>
-    ${reportsHtmlForShift(sh)}
-    <div class="detail-actions" style="margin-top:12px">
-      <button type="button" class="primary" onclick="openReportModal('${sh.id}')">📝 הוסף דוח</button>
+
+    ${sh.notes?`
+      <div class="shift-details-section">
+        <div class="shift-detail-card-title">הערות משמרת</div>
+        <div class="report-text">${escapeHtml(sh.notes)}</div>
+      </div>`:''}
+
+    <div class="detail-actions" style="margin-top:14px">
       <button type="button" class="secondary" onclick="editShiftFromDetails('${sh.id}')">✏️ עריכת משמרת</button>
+    </div>
+
+    <div class="shift-details-section">
+      <div class="shift-head" style="margin-bottom:8px">
+        <h3 style="margin:0">דוחות נהג</h3>
+        <span class="filter-count">${normalizedReports(sh).length} דוחות</span>
+      </div>
+      ${reportsHtmlForShift(sh)}
+      <div class="detail-actions" style="margin-top:12px">
+        <button type="button" class="primary" onclick="openReportModal('${sh.id}')">📝 הוסף דוח</button>
+      </div>
     </div>
   `;
 
@@ -2093,7 +2130,6 @@ function openShiftDetails(id){
   $('shiftDetailsModal').setAttribute('aria-hidden','false');
   document.body.classList.add('modal-open');
 }
-
 function closeShiftDetails(){
   $('shiftDetailsModal').classList.add('hidden');
   $('shiftDetailsModal').setAttribute('aria-hidden','true');
@@ -3953,17 +3989,30 @@ function renderTodayDashboard(){
   }else{
     const sh=todays[0], c=calcShift(sh);
     const dd=(sh.ddType && sh.ddNumber!=='')?displayDdNumber(sh.ddType,sh.ddNumber):'ללא DD';
+    const todayReports=normalizedReports(sh).slice().sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
     $('todayShiftContent').innerHTML=`
-      <div class="today-shift-grid">
-        <div class="today-chip"><span>DD / משמרת</span><strong>${escapeHtml(dd)}</strong></div>
-        <div class="today-chip"><span>שעות</span><strong>${escapeHtml(sh.start)}–${escapeHtml(sh.end)}</strong></div>
-        <div class="today-chip"><span>משך</span><strong>${fmtMin(c.grossMinutes)}</strong></div>
-        <div class="today-chip"><span>שכר צפוי למשמרת</span><strong>${currency(c.pay)}</strong></div>
+      <div class="today-shift-open" onclick="openShiftDetails('${sh.id}')">
+        <div class="today-shift-open-head">
+          <span class="today-shift-open-title">המשמרת שלי</span>
+          <span class="today-open-hint">לחץ לפרטים ›</span>
+        </div>
+        <div class="today-shift-grid">
+          <div class="today-chip"><span>DD / משמרת</span><strong>${escapeHtml(dd)}</strong></div>
+          <div class="today-chip"><span>שעות</span><strong>${escapeHtml(sh.start)}–${escapeHtml(sh.end)}</strong></div>
+          <div class="today-chip"><span>משך</span><strong>${fmtMin(c.grossMinutes)}</strong></div>
+          <div class="today-chip"><span>שכר צפוי</span><strong>${currency(c.pay)}</strong></div>
+        </div>
+        <div class="today-status">${escapeHtml(shiftStatusText(sh))}${todays.length>1?` · קיימות ${todays.length} משמרות היום`:''}</div>
       </div>
-      <div class="today-status">${escapeHtml(shiftStatusText(sh))}${todays.length>1?` · קיימות ${todays.length} משמרות היום`:''}</div>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px;position:relative;z-index:1">
-        <button type="button" class="primary" onclick="openReportModal('${sh.id}')">📝 הוסף דוח</button>
-        <span class="filter-count">${normalizedReports(sh).length} דוחות במשמרת</span>
+
+      <div class="today-reports-separator">
+        <div class="today-reports-header">
+          <strong>דוחות למשמרת</strong>
+          <button type="button" class="primary" onclick="openReportModal('${sh.id}')">📝 הוסף דוח</button>
+        </div>
+        ${todayReports.length
+          ? `<div class="today-report-preview">${todayReports.slice(0,3).map(r=>`<span class="today-report-pill">${escapeHtml(r.eventTime||'—')} · ${escapeHtml(r.type||'ללא סוג')}</span>`).join('')}${todayReports.length>3?`<span class="today-report-pill">+${todayReports.length-3} נוספים</span>`:''}</div>`
+          : `<div class="today-status">אין עדיין דוחות למשמרת הזו.</div>`}
       </div>`;
   }
 
