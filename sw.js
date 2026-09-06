@@ -19,7 +19,7 @@ messaging.onBackgroundMessage((payload) => {
   const data = payload?.data || {};
   const title = data.title || "Salary App";
   const body = data.body || "";
-  const targetUrl = data.url || data.deepLink || "https://firasnajjar59.github.io/salary-app/";
+  const targetUrl = data.url || data.deepLink || "";
 
   self.registration.showNotification(title, {
     body,
@@ -31,7 +31,7 @@ messaging.onBackgroundMessage((payload) => {
   });
 });
 
-const CACHE_NAME = 'salary-app-v52';
+const CACHE_NAME = 'salary-app-v53';
 const APP_FILES = [
   './',
   './index.html',
