@@ -772,7 +772,7 @@
         <summary>אודות</summary>
         <div class="settings-accordion-body">
           <div style="font-size:17px;font-weight:850">נוצר ע״י פראס נג׳אר</div>
-          <div class="note" style="margin-top:5px">גרסה <strong>57</strong></div>
+          <div class="note" style="margin-top:5px">גרסה <strong>58</strong></div>
           <div style="height:12px"></div>
           <button class="secondary" id="manualUpdateCheckBtn" type="button">בדיקת עדכונים</button>
           <div id="manualUpdateStatus" class="note" style="margin-top:8px"></div>
@@ -1333,7 +1333,7 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=57;
+const APP_VERSION=58;
 const VERSION_URL='./version.json';
 const GOOGLE_CLIENT_ID='671607022405-ctegk4jl7koo9elm30odvsb1binp49cb.apps.googleusercontent.com';
 const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.appdata';
@@ -4289,14 +4289,28 @@ setInterval(()=>{ if(!$('todayDashboard').classList.contains('hidden') || !$('ma
 $('exportPdfBtn').onclick=exportMonthlyPdf;
 
 
+const ACTIVE_TAB_SESSION_KEY='salaryApp.activeTab.v1';
+const APP_TABS=['mainDashboard','todayDashboard','shifts','summary','payslip','settings'];
+
+function showAppTab(tabId,{remember=true}={}){
+  if(!APP_TABS.includes(tabId)) return;
+  document.querySelectorAll('.tab').forEach(btn=>{
+    btn.classList.toggle('active',btn.dataset.tab===tabId);
+  });
+  APP_TABS.forEach(id=>$(id).classList.add('hidden'));
+  $(tabId).classList.remove('hidden');
+
+  if(tabId==='todayDashboard' || tabId==='mainDashboard') renderTodayDashboard();
+  if(tabId==='summary') renderSummary();
+  if(tabId==='payslip') renderPayslipComparison();
+
+  if(remember){
+    try{ sessionStorage.setItem(ACTIVE_TAB_SESSION_KEY,tabId); }catch(e){}
+  }
+}
+
 document.querySelectorAll('.tab').forEach(btn=>btn.onclick=()=>{
-  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  ['mainDashboard','todayDashboard','shifts','summary','payslip','settings'].forEach(id=>$(id).classList.add('hidden'));
-  $(btn.dataset.tab).classList.remove('hidden');
-  if(btn.dataset.tab==='todayDashboard' || btn.dataset.tab==='mainDashboard') renderTodayDashboard();
-  if(btn.dataset.tab==='summary') renderSummary();
-  if(btn.dataset.tab==='payslip') renderPayslipComparison();
+  showAppTab(btn.dataset.tab);
 });
 
 loadSettings();
@@ -4321,6 +4335,20 @@ setTimeout(openDeepLinkFromUrl,0);
 $('savePayslip').addEventListener('click',savePayslipData);
 
 renderShifts(); renderSummary(); renderPayslipComparison(); renderTodayDashboard();
+
+/*
+  ניווט התחלתי:
+  - ברענון נשארים בעמוד שהיה פתוח באותה הפעלה.
+  - בפתיחה חדשה: אם יש משמרת היום -> "היום", אחרת -> "ראשי".
+*/
+let initialTab='';
+try{ initialTab=sessionStorage.getItem(ACTIVE_TAB_SESSION_KEY)||''; }catch(e){}
+if(!APP_TABS.includes(initialTab)){
+  const hasShiftToday=shifts.some(sh=>sh.date===currentDate);
+  initialTab=hasShiftToday?'todayDashboard':'mainDashboard';
+}
+showAppTab(initialTab,{remember:false});
+
 initBiometricLock();
 
 
