@@ -819,7 +819,7 @@
         <button class="secondary" id="updateDdFromServer" type="button">עדכן טבלת DD מהשרת</button>
         <button class="secondary" id="editLocalDd" type="button">ערוך DD מקומי</button>
       </div>
-      <div id="ddStatus" class="note" style="margin-top:10px"></div><div class="note" style="margin-top:6px">גרסת אפליקציה: <strong>49</strong></div>
+      <div id="ddStatus" class="note" style="margin-top:10px"></div><div class="note" style="margin-top:6px">גרסת אפליקציה: <strong>50</strong></div>
     </div>
 
     <div class="card settings-accordion">
@@ -1182,7 +1182,7 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=49;
+const APP_VERSION=50;
 const VERSION_URL='./version.json';
 const GOOGLE_CLIENT_ID='671607022405-ctegk4jl7koo9elm30odvsb1binp49cb.apps.googleusercontent.com';
 const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.appdata';
@@ -3959,6 +3959,7 @@ setInterval(checkDdServerUpdate,6*60*60*1000);
       createdAt:new Date().toISOString()
     };
     savePushDevice(device);
+    localStorage.removeItem(PUSH_SYNC_CACHE_KEY);
     return device;
   }
 
@@ -4047,6 +4048,58 @@ setInterval(checkDdServerUpdate,6*60*60*1000);
   }
 
 
+
+  const PUSH_SYNC_CACHE_KEY = "salaryApp.pushReminderSync.v1";
+
+  function loadReminderSyncCache(){
+    try{ return JSON.parse(localStorage.getItem(PUSH_SYNC_CACHE_KEY)||"{}")||{}; }
+    catch(e){ return {}; }
+  }
+
+  function saveReminderSyncCache(cache){
+    localStorage.setItem(PUSH_SYNC_CACHE_KEY,JSON.stringify(cache||{}));
+  }
+
+  function stableFingerprint(payload){
+    const raw = JSON.stringify({
+      type:payload.type||"",
+      referenceId:payload.referenceId||"",
+      title:payload.title||"",
+      body:payload.body||"",
+      sendAt:payload.sendAt||"",
+      deepLink:payload.deepLink||""
+    });
+    let h=2166136261;
+    for(let i=0;i<raw.length;i++){
+      h^=raw.charCodeAt(i);
+      h=Math.imul(h,16777619);
+    }
+    return (h>>>0).toString(16);
+  }
+
+  async function createServerReminderIfChanged(device,payload){
+    const cache=loadReminderSyncCache();
+    const key=`${payload.type}|${payload.referenceId||""}`;
+    const fp=stableFingerprint(payload);
+    if(cache[key]===fp) return {ok:true,skipped:true};
+
+    const result=await createServerReminder(device,payload);
+    if(result?.ok){
+      cache[key]=fp;
+      saveReminderSyncCache(cache);
+    }
+    return result;
+  }
+
+  function clearReminderSyncCacheEntry(type,referenceId){
+    const cache=loadReminderSyncCache();
+    const key=`${type}|${referenceId||""}`;
+    if(Object.prototype.hasOwnProperty.call(cache,key)){
+      delete cache[key];
+      saveReminderSyncCache(cache);
+    }
+  }
+
   function pushPrefs(){
     try{
       const s=JSON.parse(localStorage.getItem("salaryApp.settings.v1")||"{}");
@@ -4114,9 +4167,11 @@ setInterval(checkDdServerUpdate,6*60*60*1000);
   }
 
   async function cancelServerReminder(device,type,referenceId){
-    return postPush(PUSH_ENDPOINTS.cancelReminder,{
+    const result=await postPush(PUSH_ENDPOINTS.cancelReminder,{
       deviceId:device.deviceId,type,referenceId
     },device);
+    if(result?.ok) clearReminderSyncCacheEntry(type,referenceId);
+    return result;
   }
 
 
@@ -4152,7 +4207,7 @@ setInterval(checkDdServerUpdate,6*60*60*1000);
     const dd=shiftDdLabel(sh);
     const leadText=lead<60?`${lead} דקות`:lead===60?"שעה":lead%60===0?`${lead/60} שעות`:`${lead} דקות`;
 
-    await createServerReminder(device,{
+    await createServerReminderIfChanged(device,{
       type:"shift",
       referenceId:ref,
       title:"תזכורת למשמרת",
@@ -4190,7 +4245,7 @@ setInterval(checkDdServerUpdate,6*60*60*1000);
         const ref=shiftRef(sh);
         const dd=shiftDdLabel(sh);
         const body=`המשמרת שלך מתחילה בעוד ${lead<60?lead+" דקות":lead===60?"שעה":lead%60===0?(lead/60)+" שעות":lead+" דקות"}${dd?" · "+dd:""} · ${sh.start}`;
-        await createServerReminder(device,{
+        await createServerReminderIfChanged(device,{
           type:"shift",
           referenceId:ref,
           title:"תזכורת למשמרת",
@@ -4208,7 +4263,7 @@ setInterval(checkDdServerUpdate,6*60*60*1000);
     if(p.monthly?.enabled){
       const sendAt=nextMonthlyOccurrence(p.monthly.day||1,p.monthly.time||"14:00");
       const monthKey=previousMonthKey(sendAt);
-      await createServerReminder(device,{
+      await createServerReminderIfChanged(device,{
         type:"monthly_summary",
         referenceId:"monthly-summary",
         title:"סיכום חודשי",
@@ -4223,7 +4278,7 @@ setInterval(checkDdServerUpdate,6*60*60*1000);
     // WEEKLY SUMMARY
     if(p.weekly?.enabled){
       const sendAt=nextWeeklyOccurrence(p.weekly.day??0,p.weekly.time||"18:00");
-      await createServerReminder(device,{
+      await createServerReminderIfChanged(device,{
         type:"weekly_summary",
         referenceId:"weekly-summary",
         title:"סיכום שבועי",
