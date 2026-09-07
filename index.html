@@ -627,7 +627,7 @@
       font-size:11px;
     }
 
-    #splitShiftFields.hidden{display:none!important}
+    #splitShiftFields.hidden{display:none!important;visibility:hidden!important}
     .split-shift-box{margin-top:12px;border:1px solid var(--line);background:var(--soft);border-radius:16px;padding:13px}
     .split-shift-title{font-weight:900;margin-bottom:10px}
     .split-gap-info{margin-top:9px;padding:9px 10px;border-radius:11px;font-size:12px;display:none}
@@ -1719,6 +1719,17 @@ html[data-theme=dark] .calendar-day.has-event:not(.has-shift){
   #personalEventModal .personal-event-time-row{grid-template-columns:1fr}
   #personalEventModal .personal-event-actions{grid-template-columns:1fr}
 }
+
+    /* v88 — Pixel-style checkbox */
+    .pixel-check-row{display:flex;align-items:center;gap:12px;min-height:48px;padding:6px 2px;cursor:pointer;user-select:none;color:var(--text);font-weight:700}
+    .pixel-check-row input{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+    .pixel-check-box{width:24px;height:24px;flex:0 0 24px;border:2px solid var(--muted);border-radius:7px;background:var(--surface);display:grid;place-items:center;transition:.16s ease}
+    .pixel-check-box svg{width:17px;height:17px;fill:none;stroke:#fff;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;opacity:0;transform:scale(.65);transition:.12s ease}
+    .pixel-check-row input:checked + .pixel-check-box{background:var(--primary);border-color:var(--primary)}
+    .pixel-check-row input:checked + .pixel-check-box svg{opacity:1;transform:scale(1)}
+    .pixel-check-row input:focus-visible + .pixel-check-box{box-shadow:0 0 0 4px color-mix(in srgb,var(--primary) 20%,transparent)}
+    .pixel-check-row:active .pixel-check-box{transform:scale(.94)}
+
 </style>
 </head>
 <body>
@@ -2019,7 +2030,7 @@ html[data-theme=dark] .calendar-day.has-event:not(.has-shift){
         <summary>אודות</summary>
         <div class="settings-accordion-body">
           <div style="font-size:17px;font-weight:850">נוצר ע״י פראס נג׳אר</div>
-          <div class="note" style="margin-top:5px">גרסה <strong>87</strong></div>
+          <div class="note" style="margin-top:5px">גרסה <strong>88</strong></div>
           <div style="height:12px"></div>
           <button class="secondary" id="manualUpdateCheckBtn" type="button">בדיקת עדכונים</button>
           <div id="manualUpdateStatus" class="note" style="margin-top:8px"></div>
@@ -2352,8 +2363,11 @@ html[data-theme=dark] .calendar-day.has-event:not(.has-shift){
           <div><label>כניסה 2</label><input id="splitStart2" type="time"></div>
           <div><label>יציאה 2</label><input id="splitEnd2" type="time"></div>
         </div>
-        <label class="check" style="margin-top:10px">
+        <label class="pixel-check-row" style="margin-top:10px">
           <input id="splitDidNotReturn" type="checkbox">
+          <span class="pixel-check-box" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M5 12.5l4.2 4.2L19 7"/></svg>
+          </span>
           <span>בפועל לא חזרתי לחלק השני</span>
         </label>
         <div id="splitGapInfo" class="split-gap-info"></div>
@@ -2763,7 +2777,7 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=87;
+const APP_VERSION=88;
 
 const CALENDAR_PREFS_KEY='salaryApp.calendarPrefs.v1';
 function getCalendarPrefs(){
@@ -3994,13 +4008,22 @@ function splitGapText(info){
 }
 function updateSplitShiftUi(){
   const isSplit=$('dayType')?.value==='split';
-  $('splitShiftFields')?.classList.toggle('hidden',!isSplit);
+  const splitBox=$('splitShiftFields');
+  splitBox?.classList.toggle('hidden',!isSplit);
+  if(splitBox) splitBox.setAttribute('aria-hidden',isSplit?'false':'true');
   if($('startLabel')) $('startLabel').textContent=isSplit?'כניסה 1 / תחילת DD':'שעת התחלה';
   if($('endLabel')) $('endLabel').textContent=isSplit?'יציאה 1 / סוף DD זמני':'שעת סיום';
 
   const info=$('splitGapInfo');
   if(!info) return;
-  if(!isSplit){ info.className='split-gap-info'; info.textContent=''; return; }
+  if(!isSplit){
+    info.className='split-gap-info';
+    info.textContent='';
+    if($('splitStart2')) $('splitStart2').value='';
+    if($('splitEnd2')) $('splitEnd2').value='';
+    if($('splitDidNotReturn')) $('splitDidNotReturn').checked=false;
+    return;
+  }
 
   const didNotReturn=!!$('splitDidNotReturn')?.checked;
   const end1=$('end')?.value||'', start2=$('splitStart2')?.value||'', end2=$('splitEnd2')?.value||'';
