@@ -635,7 +635,375 @@
     .split-gap-info.warn{display:block;background:rgba(210,45,45,.10);border:1px solid rgba(210,45,45,.35);color:#b42318;font-weight:800}
     .split-detail-warning{margin-top:8px;padding:8px 10px;border-radius:10px;background:rgba(210,45,45,.10);border:1px solid rgba(210,45,45,.35);color:#b42318;font-size:12px;font-weight:800}
 
-  </style>
+  
+    /* v74 — Bright Pixel / Material You visual refresh. Visual only. */
+    :root{
+      --bg:#f7f8ff;
+      --card:#ffffff;
+      --text:#1b1b1f;
+      --muted:#74747d;
+      --line:#e2e3ed;
+      --accent:#4658c7;
+      --accent-soft:#e7e9ff;
+      --accent-softer:#f0f1ff;
+      --surface:#f1f2f9;
+      --surface-2:#eceef7;
+      --ok:#247a55;
+      --danger:#b3261e;
+      --warning:#8a5a00;
+    }
+
+    body{
+      background:var(--bg);
+      color:var(--text);
+      font-family:"Google Sans","Google Sans Text",Roboto,system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+      letter-spacing:.01em;
+    }
+
+    header{
+      background:rgba(247,248,255,.94);
+      color:var(--text);
+      border-bottom:1px solid rgba(226,227,237,.9);
+      box-shadow:none;
+      backdrop-filter:blur(18px);
+      -webkit-backdrop-filter:blur(18px);
+      padding:15px 18px 13px;
+    }
+    header h1{
+      font-size:21px;
+      font-weight:760;
+      letter-spacing:-.02em;
+      margin-bottom:3px;
+    }
+    header p{color:var(--muted);opacity:1}
+    .header-settings-btn{
+      width:44px;
+      height:44px;
+      left:12px;
+      border:0;
+      border-radius:22px;
+      background:var(--accent-soft);
+      color:var(--accent);
+      box-shadow:none;
+    }
+
+    main{
+      max-width:780px;
+      padding:16px 14px calc(100px + env(safe-area-inset-bottom));
+    }
+
+    .card{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:24px;
+      padding:16px;
+      margin-bottom:14px;
+      box-shadow:none;
+    }
+
+    h2{font-size:18px;font-weight:760;letter-spacing:-.01em}
+    h3{font-size:15px;font-weight:750}
+    label{color:var(--muted);font-weight:650}
+
+    input,select,textarea{
+      background:#fff;
+      border:1px solid #d6d8e3;
+      border-radius:16px;
+      color:var(--text);
+      min-height:48px;
+      padding:12px 14px;
+      box-shadow:none;
+      transition:border-color .15s ease,background .15s ease,box-shadow .15s ease;
+    }
+    input:focus,select:focus,textarea:focus{
+      outline:none;
+      border-color:var(--accent);
+      box-shadow:0 0 0 3px rgba(70,88,199,.12);
+    }
+
+    button{
+      font-family:inherit;
+      transition:transform .1s ease,filter .12s ease,background .12s ease;
+    }
+    button:active{transform:scale(.98)}
+    button.primary{
+      border:0;
+      border-radius:22px;
+      min-height:48px;
+      padding:12px 18px;
+      background:var(--accent);
+      color:white;
+      font-weight:760;
+      font-size:15px;
+      box-shadow:none;
+    }
+    button.secondary{
+      border:0;
+      background:var(--accent-soft);
+      color:#27358d;
+      border-radius:22px;
+      min-height:44px;
+      padding:10px 16px;
+      font-weight:740;
+    }
+    button.danger{
+      border:0;
+      background:#ffdad6;
+      color:#8c1d18;
+      border-radius:22px;
+      min-height:44px;
+      padding:10px 16px;
+      font-weight:740;
+    }
+
+    .tabs{
+      left:10px;
+      right:10px;
+      bottom:8px;
+      border:1px solid rgba(226,227,237,.95);
+      border-radius:28px;
+      padding:7px 8px calc(7px + env(safe-area-inset-bottom));
+      background:rgba(255,255,255,.96);
+      box-shadow:0 8px 30px rgba(42,44,58,.10);
+      gap:2px;
+    }
+    .tab{
+      min-height:56px;
+      border-radius:22px;
+      color:#6f7078;
+      font-weight:700;
+      font-size:11px;
+      gap:4px;
+    }
+    .tab-icon{font-size:21px}
+    .tab.active{
+      background:var(--accent-soft);
+      color:#27358d;
+    }
+    .nav-add-inner{
+      width:56px;
+      height:56px;
+      border-radius:20px;
+      background:var(--accent);
+      color:white;
+      box-shadow:0 8px 20px rgba(70,88,199,.24);
+      transform:translateY(-5px);
+      font-weight:400;
+    }
+
+    .summary{gap:10px}
+    .stat{
+      background:var(--surface);
+      border:0;
+      border-radius:20px;
+      padding:14px;
+    }
+    .stat strong{font-size:21px;font-weight:760}
+    .stat span{color:var(--muted)}
+
+    .pill,.filter-count{
+      background:var(--accent-soft);
+      color:#34439a;
+      border-radius:999px;
+      font-weight:720;
+      border:0;
+    }
+
+    .shift{
+      border-top:1px solid var(--line);
+      padding:14px 0;
+    }
+    .shift-date-link{font-size:20px;font-weight:780}
+
+    .detail-row,.detail-total,.compare-summary-box,.bulk-row,.live-stat,.ops-metric,.trip-card,.today-info-card{
+      background:var(--surface);
+      border:0;
+      border-radius:18px;
+      box-shadow:none;
+    }
+    .detail-total{background:var(--accent-softer)}
+    .compare-table th,.compare-table td{border-color:var(--line)}
+
+    .modal-backdrop{background:rgba(32,33,42,.35)}
+    .modal-sheet{
+      background:var(--bg);
+      border-radius:30px 30px 0 0;
+      box-shadow:0 -12px 36px rgba(35,36,46,.14);
+    }
+    .modal-header{
+      background:rgba(255,255,255,.96);
+      border-bottom:1px solid var(--line);
+      padding:15px 18px;
+      backdrop-filter:blur(16px);
+      -webkit-backdrop-filter:blur(16px);
+    }
+    .modal-close{
+      width:42px;
+      height:42px;
+      border:0;
+      background:var(--surface);
+      color:var(--text);
+      font-size:23px;
+    }
+
+    .today-hero{
+      background:#eef0ff !important;
+      color:var(--text) !important;
+      border:1px solid #dfe2f6;
+      border-radius:28px;
+      box-shadow:none;
+      overflow:hidden;
+    }
+    .today-hero::after{
+      width:180px;
+      height:180px;
+      background:#e1e5ff;
+      opacity:.7;
+      left:-55px;
+      top:-85px;
+    }
+    .today-date{color:var(--muted);opacity:1}
+    .today-title{font-weight:780;letter-spacing:-.025em}
+    .today-chip{
+      background:rgba(255,255,255,.72);
+      color:var(--text);
+      border:0;
+      border-radius:20px;
+      padding:12px;
+    }
+    .today-chip span{color:var(--muted);opacity:1}
+    .today-status{color:var(--muted)}
+
+    .today-shift-open{
+      background:#fff !important;
+      color:var(--text) !important;
+      border:0 !important;
+      border-radius:20px !important;
+      box-shadow:none !important;
+    }
+
+    .shift-quick-actions{
+      gap:8px;
+      padding:4px 0 2px;
+    }
+    .shift-quick-actions button{
+      background:var(--accent-soft) !important;
+      color:#2f3d94 !important;
+      border:0 !important;
+      border-radius:20px !important;
+      min-height:44px;
+      font-weight:740;
+    }
+
+    .live-shift-panel{
+      margin:12px 0;
+      padding:14px;
+      border:0;
+      border-radius:24px;
+      background:#fff;
+      color:var(--text);
+      box-shadow:none;
+    }
+    .live-shift-head{color:var(--text);margin-bottom:12px}
+    .live-dot{background:#34a853}
+    .live-stat{
+      background:var(--surface);
+      border-radius:18px;
+      padding:12px;
+    }
+    .live-stat strong{font-size:17px;color:var(--text);font-weight:760}
+    .active-trip-card{
+      background:var(--accent-softer);
+      border:0;
+      border-radius:20px;
+      padding:12px;
+    }
+    .active-trip-title{color:var(--text)}
+    .active-trip-meta{color:var(--muted)}
+    .trip-active-badge{
+      background:#dff5e7;
+      color:#1f6f4a;
+      border-radius:999px;
+    }
+
+    .ops-metrics{gap:8px}
+    .ops-metric{background:var(--surface);border-radius:18px}
+
+    .today-info-card{
+      background:#fff !important;
+      border:1px solid var(--line) !important;
+      border-radius:24px !important;
+      box-shadow:none !important;
+    }
+
+    .trip-card{
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:22px;
+      padding:13px;
+    }
+    .today-trip-pill{
+      background:var(--surface) !important;
+      border:0 !important;
+      border-radius:18px !important;
+      color:var(--text) !important;
+    }
+
+    .timeline{
+      border-radius:20px;
+      background:transparent;
+    }
+    .timeline-item::before{
+      background:var(--accent) !important;
+      border-color:#fff !important;
+      box-shadow:0 0 0 3px var(--accent-soft);
+    }
+    .timeline-item::after{background:#d9dcf0 !important}
+    .timeline-card{
+      background:var(--surface) !important;
+      border:0 !important;
+      border-radius:18px !important;
+    }
+
+    .break-summary{
+      background:var(--accent-softer) !important;
+      border:0 !important;
+      border-radius:18px !important;
+    }
+
+    details{
+      background:#fff;
+      border:1px solid var(--line) !important;
+      border-radius:20px !important;
+      overflow:hidden;
+    }
+    details>summary{
+      background:#fff !important;
+      color:var(--text) !important;
+      padding:14px 16px !important;
+    }
+
+    .bulk-delete-bar{
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:24px;
+      box-shadow:0 12px 30px rgba(42,44,58,.12);
+    }
+
+    .bulk-actions{
+      background:linear-gradient(to top,var(--bg) 78%,rgba(247,248,255,0));
+    }
+
+    .diff-more,.bulk-existing{color:#3150b9}
+    .diff-ok{color:var(--ok)}
+    .diff-bad{color:var(--danger)}
+
+    @media (hover:hover) and (pointer:fine){
+      button.primary:hover{filter:brightness(.97)}
+      button.secondary:hover,.tab:hover{filter:brightness(.985)}
+    }
+
+</style>
 </head>
 <body>
 <header>
@@ -903,7 +1271,7 @@
         <summary>אודות</summary>
         <div class="settings-accordion-body">
           <div style="font-size:17px;font-weight:850">נוצר ע״י פראס נג׳אר</div>
-          <div class="note" style="margin-top:5px">גרסה <strong>73</strong></div>
+          <div class="note" style="margin-top:5px">גרסה <strong>74</strong></div>
           <div style="height:12px"></div>
           <button class="secondary" id="manualUpdateCheckBtn" type="button">בדיקת עדכונים</button>
           <div id="manualUpdateStatus" class="note" style="margin-top:8px"></div>
@@ -1552,7 +1920,7 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=73;
+const APP_VERSION=74;
 const VERSION_URL='./version.json';
 const GOOGLE_CLIENT_ID='671607022405-ctegk4jl7koo9elm30odvsb1binp49cb.apps.googleusercontent.com';
 const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.appdata';
