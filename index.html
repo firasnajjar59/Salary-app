@@ -1122,7 +1122,28 @@ html[data-theme=dark] .stat,html[data-theme=dark] .live-stat,html[data-theme=dar
 .theme-choice-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:8px 0 16px}.theme-choice{border:0;border-radius:18px;background:var(--surface);color:var(--text);min-height:46px;font-weight:720}.theme-choice.selected{background:var(--app-soft);color:var(--app-accent-text);outline:2px solid var(--app-accent)}
 .pixel-color-row{display:flex;gap:13px;flex-wrap:wrap;margin:10px 0}.pixel-color{width:45px;height:45px;min-height:45px;border:0;border-radius:50%}.pixel-color.blue{background:#6375df}.pixel-color.green{background:#4f8064}.pixel-color.pink{background:#bd6388}.pixel-color.purple{background:#8d6ba8}.pixel-color.orange{background:#aa7330}.pixel-color.selected{outline:3px solid var(--text);outline-offset:3px}
 @media(max-width:390px){.theme-choice-row{grid-template-columns:1fr}}
-/* v77 refined dark */html[data-theme=dark]{--bg:#1b1b1f;--card:#242328;--text:#e6e1e5;--muted:#cac4d0;--line:#49454f;--surface:#2d2b31;--surface-2:#37343c}html[data-theme=dark] body{background:#1b1b1f!important}html[data-theme=dark] header{background:#202024!important;border-color:#3b3940!important}html[data-theme=dark] .card,html[data-theme=dark] .today-info-card,html[data-theme=dark] .live-shift-panel,html[data-theme=dark] .trip-card,html[data-theme=dark] details,html[data-theme=dark] details>summary,html[data-theme=dark] .modal-header,html[data-theme=dark] .tabs,html[data-theme=dark] .today-shift-open{background:#242328!important;color:#e6e1e5!important;border-color:#49454f!important}html[data-theme=dark] .modal-sheet{background:#1b1b1f!important}html[data-theme=dark] .today-hero{background:#292a38!important;border-color:#45485e!important}html[data-theme=dark] .today-hero::after{background:var(--app-accent)!important;opacity:.12}html[data-theme=dark] input,html[data-theme=dark] select,html[data-theme=dark] textarea{background:#2d2b31!important;color:#e6e1e5!important;border-color:#605c66!important;color-scheme:dark}html[data-theme=dark] .stat,html[data-theme=dark] .live-stat,html[data-theme=dark] .ops-metric,html[data-theme=dark] .timeline-card,html[data-theme=dark] .today-trip-pill,html[data-theme=dark] .modal-close,html[data-theme=dark] .theme-choice{background:#2d2b31!important;color:#e6e1e5!important}html[data-theme=dark] .today-chip{background:#302e35!important;color:#e6e1e5!important}html[data-theme=dark] .active-trip-card,html[data-theme=dark] .detail-total,html[data-theme=dark] .break-summary{background:#31313e!important}html[data-theme=dark] button.secondary,html[data-theme=dark] .tab.active,html[data-theme=dark] .shift-quick-actions button,html[data-theme=dark] .theme-choice.selected{background:#3a3d57!important;color:#e5e7ff!important}html[data-theme=dark] .today-date,html[data-theme=dark] .today-status,html[data-theme=dark] .active-trip-meta,html[data-theme=dark] .stat span,html[data-theme=dark] label{color:#cac4d0!important}</style>
+/* v77 refined dark */html[data-theme=dark]{--bg:#1b1b1f;--card:#242328;--text:#e6e1e5;--muted:#cac4d0;--line:#49454f;--surface:#2d2b31;--surface-2:#37343c}html[data-theme=dark] body{background:#1b1b1f!important}html[data-theme=dark] header{background:#202024!important;border-color:#3b3940!important}html[data-theme=dark] .card,html[data-theme=dark] .today-info-card,html[data-theme=dark] .live-shift-panel,html[data-theme=dark] .trip-card,html[data-theme=dark] details,html[data-theme=dark] details>summary,html[data-theme=dark] .modal-header,html[data-theme=dark] .tabs,html[data-theme=dark] .today-shift-open{background:#242328!important;color:#e6e1e5!important;border-color:#49454f!important}html[data-theme=dark] .modal-sheet{background:#1b1b1f!important}html[data-theme=dark] .today-hero{background:#292a38!important;border-color:#45485e!important}html[data-theme=dark] .today-hero::after{background:var(--app-accent)!important;opacity:.12}html[data-theme=dark] input,html[data-theme=dark] select,html[data-theme=dark] textarea{background:#2d2b31!important;color:#e6e1e5!important;border-color:#605c66!important;color-scheme:dark}html[data-theme=dark] .stat,html[data-theme=dark] .live-stat,html[data-theme=dark] .ops-metric,html[data-theme=dark] .timeline-card,html[data-theme=dark] .today-trip-pill,html[data-theme=dark] .modal-close,html[data-theme=dark] .theme-choice{background:#2d2b31!important;color:#e6e1e5!important}html[data-theme=dark] .today-chip{background:#302e35!important;color:#e6e1e5!important}html[data-theme=dark] .active-trip-card,html[data-theme=dark] .detail-total,html[data-theme=dark] .break-summary{background:#31313e!important}html[data-theme=dark] button.secondary,html[data-theme=dark] .tab.active,html[data-theme=dark] .shift-quick-actions button,html[data-theme=dark] .theme-choice.selected{background:#3a3d57!important;color:#e5e7ff!important}html[data-theme=dark] .today-date,html[data-theme=dark] .today-status,html[data-theme=dark] .active-trip-meta,html[data-theme=dark] .stat span,html[data-theme=dark] label{color:#cac4d0!important}
+/* v78 — modern Pixel / Material symbols */
+.modern-icon,.tab-icon{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:22px;height:22px;flex:0 0 22px;
+}
+.modern-icon svg,.tab-icon svg,.nav-add-inner svg{
+  width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.9;
+  stroke-linecap:round;stroke-linejoin:round;
+}
+.tab-icon{width:23px;height:23px;flex-basis:23px}
+.tab.active .tab-icon svg{stroke-width:2.15}
+.nav-add-inner svg{width:29px;height:29px}
+.shift-quick-actions button{
+  display:flex;align-items:center;justify-content:center;gap:7px;
+}
+.shift-quick-actions .modern-icon{width:20px;height:20px;flex-basis:20px}
+.today-info-card button.primary,.today-info-card button.secondary{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+}
+.today-info-card button .modern-icon{width:21px;height:21px}
+</style>
 </head>
 <body>
 <header>
@@ -1403,7 +1424,7 @@ html[data-theme=dark] .stat,html[data-theme=dark] .live-stat,html[data-theme=dar
         <summary>אודות</summary>
         <div class="settings-accordion-body">
           <div style="font-size:17px;font-weight:850">נוצר ע״י פראס נג׳אר</div>
-          <div class="note" style="margin-top:5px">גרסה <strong>77</strong></div>
+          <div class="note" style="margin-top:5px">גרסה <strong>78</strong></div>
           <div style="height:12px"></div>
           <button class="secondary" id="manualUpdateCheckBtn" type="button">בדיקת עדכונים</button>
           <div id="manualUpdateStatus" class="note" style="margin-top:8px"></div>
@@ -2052,7 +2073,30 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=77;
+const APP_VERSION=78;
+const MATERIAL_ICONS={
+  home:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 10.8 12 3.8l8.5 7v9.4H14.8v-5.7H9.2v5.7H3.5z"/></svg>',
+  today:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5.5" width="16" height="14" rx="3"/><path d="M8 3.5v4M16 3.5v4M4 9.5h16"/><circle cx="12" cy="14.2" r="2.3"/></svg>',
+  shifts:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3.5" width="14" height="17" rx="2.5"/><path d="M8.5 8h7M8.5 12h7M8.5 16h5"/></svg>',
+  summary:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19V11M12 19V5M19 19v-8"/><path d="M3.5 19.5h17"/></svg>',
+  add:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
+  trip:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 16.5h14M7 16.5l1-7.2c.15-1.1 1.1-1.9 2.2-1.9h3.6c1.1 0 2.05.8 2.2 1.9l1 7.2"/><circle cx="8" cy="18.5" r="1.4"/><circle cx="16" cy="18.5" r="1.4"/><path d="M8.2 12h7.6"/></svg>',
+  report:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h8l4 4v13H6z"/><path d="M14 3.5v4h4M9 12h6M9 16h4"/></svg>',
+  approval:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="m8.2 12.2 2.4 2.4 5.2-5.4"/></svg>'
+};
+function materialIcon(name,cls='modern-icon'){return `<span class="${cls}">${MATERIAL_ICONS[name]||''}</span>`}
+function upgradeModernIcons(){
+  const navMap={mainDashboard:'home',todayDashboard:'today',shifts:'shifts',summary:'summary'};
+  document.querySelectorAll('.tab[data-tab]').forEach(btn=>{
+    const name=navMap[btn.dataset.tab];
+    const el=btn.querySelector('.tab-icon');
+    if(name&&el) el.innerHTML=MATERIAL_ICONS[name];
+  });
+  const add=document.querySelector('.nav-add-inner');
+  if(add) add.innerHTML=MATERIAL_ICONS.add;
+}
+document.addEventListener('DOMContentLoaded',upgradeModernIcons);
+
 const APP_THEME_KEY='salaryApp.theme.v1';
 function getAppThemePrefs(){try{return Object.assign({mode:'light',color:'blue'},JSON.parse(localStorage.getItem(APP_THEME_KEY)||'{}'))}catch(_){return {mode:'light',color:'blue'}}}
 function resolvedAppTheme(m){return m==='system'&&window.matchMedia? (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):m}
@@ -3450,9 +3494,9 @@ function liveShiftPanelHtml(sh){
 
 function quickActionsHtml(sh){
   return `<div class="shift-quick-actions">
-    <button type="button" class="primary" onclick="openTripModal('${sh.id}')">➕ סיבוב</button>
-    <button type="button" class="primary" onclick="openReportModal('${sh.id}')">📝 דוח</button>
-    <button type="button" class="secondary" onclick="openApprovalModal('${sh.id}')">✓ אישור / שינוי</button>
+    <button type="button" class="primary" onclick="openTripModal('${sh.id}')">${materialIcon("trip")}<span>סיבוב</span></button>
+    <button type="button" class="primary" onclick="openReportModal('${sh.id}')">${materialIcon("report")}<span>דוח</span></button>
+    <button type="button" class="secondary" onclick="openApprovalModal('${sh.id}')">${materialIcon("approval")}<span>אישור / שינוי</span></button>
   </div>`;
 }
 function shiftTimelineHtml(sh){
@@ -3582,7 +3626,7 @@ function openShiftDetails(id){
     <div class="shift-details-section">
       <div class="shift-head" style="margin-bottom:8px"><h3 style="margin:0">נסיעות / חצאי סיבוב</h3><span class="filter-count">${normalizedTrips(sh).length} נסיעות</span></div>
       ${tripsHtmlForShift(sh)}
-      <div class="detail-actions" style="margin-top:12px"><button type="button" class="primary" onclick="openTripModal('${sh.id}')">➕ הוסף חצי סיבוב</button></div>
+      <div class="detail-actions" style="margin-top:12px"><button type="button" class="primary" onclick="openTripModal('${sh.id}')">${materialIcon("add")}<span>הוסף חצי סיבוב</span></button></div>
     </div>
 
     <div class="shift-details-section">
@@ -3592,7 +3636,7 @@ function openShiftDetails(id){
       </div>
       ${approvalsHtmlForShift(sh)}
       <div class="detail-actions" style="margin-top:12px">
-        <button type="button" class="secondary" onclick="openApprovalModal('${sh.id}')">➕ הוסף אישור / שינוי</button>
+        <button type="button" class="secondary" onclick="openApprovalModal('${sh.id}')">${materialIcon("add")}<span>הוסף</span> אישור / שינוי</button>
       </div>
     </div>
 
@@ -3603,7 +3647,7 @@ function openShiftDetails(id){
       </div>
       ${reportsHtmlForShift(sh)}
       <div class="detail-actions" style="margin-top:12px">
-        <button type="button" class="primary" onclick="openReportModal('${sh.id}')">📝 הוסף דוח</button>
+        <button type="button" class="primary" onclick="openReportModal('${sh.id}')">${materialIcon("report")}<span>הוסף דוח</span></button>
       </div>
     </div>
   `;
@@ -5665,7 +5709,7 @@ function renderTodayDashboard(){
         <div class="today-info-card">
           <div class="today-reports-header">
             <strong>נסיעות / חצאי סיבוב</strong>
-            <button type="button" class="primary" onclick="openTripModal('${sh.id}')">➕ הוסף חצי סיבוב</button>
+            <button type="button" class="primary" onclick="openTripModal('${sh.id}')">${materialIcon("add")}<span>הוסף חצי סיבוב</span></button>
           </div>
           ${normalizedTrips(sh).length
             ? `<div class="today-report-preview">${normalizedTrips(sh).slice().sort((a,b)=>String(a.startTime||'').localeCompare(String(b.startTime||''))).map((t,i)=>{
@@ -5679,7 +5723,7 @@ function renderTodayDashboard(){
         <div class="today-info-card">
           <div class="today-reports-header">
             <strong>אישורים ושינויים</strong>
-            <button type="button" class="secondary" onclick="openApprovalModal('${sh.id}')">➕ הוסף</button>
+            <button type="button" class="secondary" onclick="openApprovalModal('${sh.id}')">${materialIcon("add")}<span>הוסף</span></button>
           </div>
           ${normalizedApprovals(sh).length
             ? `<div class="today-report-preview">${normalizedApprovals(sh).slice(-3).reverse().map(a=>`<span class="today-approval-pill">${escapeHtml(a.what||'')} · ${escapeHtml(a.approvedBy||'')}</span>`).join('')}</div>`
@@ -5689,7 +5733,7 @@ function renderTodayDashboard(){
         <div class="today-info-card">
           <div class="today-reports-header">
             <strong>דוחות למשמרת</strong>
-            <button type="button" class="primary" onclick="openReportModal('${sh.id}')">📝 הוסף דוח</button>
+            <button type="button" class="primary" onclick="openReportModal('${sh.id}')">${materialIcon("report")}<span>הוסף דוח</span></button>
           </div>
           ${todayReports.length
             ? `<div class="today-report-preview">${todayReports.slice(0,3).map(r=>`<span class="today-report-pill">${escapeHtml(r.eventTime||'—')} · ${escapeHtml(r.type||'ללא סוג')}</span>`).join('')}${todayReports.length>3?`<span class="today-report-pill">+${todayReports.length-3} נוספים</span>`:''}</div>`
