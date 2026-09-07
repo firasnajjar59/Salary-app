@@ -510,6 +510,16 @@
 
     .trip-list{display:flex;flex-direction:column;gap:9px;margin-top:10px}.trip-card{border:1px solid var(--line);border-radius:15px;background:var(--card);padding:12px}.trip-card-title{font-weight:900}.trip-card-meta{font-size:12px;color:var(--muted);margin-top:4px}.trip-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.today-trip-pill{font-size:11px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);padding:5px 8px;border-radius:999px}
 
+    .today-sections-stack{display:flex;flex-direction:column;gap:12px;margin-top:12px}
+    .today-info-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;box-shadow:0 2px 8px rgba(0,0,0,.04);color:var(--text)}
+    .today-info-card .today-reports-header{margin-bottom:8px}
+    .today-info-card .today-reports-header strong{font-size:15px;color:var(--text)}
+    .today-info-card .today-status{color:var(--muted);margin-top:8px}
+    .today-info-card .today-report-preview{margin-top:8px}
+    .today-info-card .today-trip-pill,
+    .today-info-card .today-approval-pill,
+    .today-info-card .today-report-pill{background:var(--soft);border:1px solid var(--line);color:var(--text)}
+
   </style>
 </head>
 <body>
@@ -774,7 +784,7 @@
         <summary>אודות</summary>
         <div class="settings-accordion-body">
           <div style="font-size:17px;font-weight:850">נוצר ע״י פראס נג׳אר</div>
-          <div class="note" style="margin-top:5px">גרסה <strong>59</strong></div>
+          <div class="note" style="margin-top:5px">גרסה <strong>60</strong></div>
           <div style="height:12px"></div>
           <button class="secondary" id="manualUpdateCheckBtn" type="button">בדיקת עדכונים</button>
           <div id="manualUpdateStatus" class="note" style="margin-top:8px"></div>
@@ -1342,7 +1352,7 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=59;
+const APP_VERSION=60;
 const VERSION_URL='./version.json';
 const GOOGLE_CLIENT_ID='671607022405-ctegk4jl7koo9elm30odvsb1binp49cb.apps.googleusercontent.com';
 const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.appdata';
@@ -4231,29 +4241,36 @@ function renderTodayDashboard(){
         <div class="today-status">${escapeHtml(shiftStatusText(sh))}${todays.length>1?` · קיימות ${todays.length} משמרות היום`:''}</div>
       </div>
 
-      <div class="today-reports-separator">
-        <div class="today-reports-header"><strong>נסיעות / חצאי סיבוב</strong><button type="button" class="primary" onclick="openTripModal('${sh.id}')">➕ הוסף חצי סיבוב</button></div>
-        ${normalizedTrips(sh).length?`<div class="today-report-preview">${normalizedTrips(sh).slice().sort((a,b)=>String(a.startTime||'').localeCompare(String(b.startTime||''))).map((t,i)=>`<span class="today-trip-pill">חצי ${i+1} · ${escapeHtml(t.startPoint||'')} · ${escapeHtml(t.rb||'')} · ${escapeHtml(t.startTime||'—')}–${escapeHtml(t.endTime||'—')}</span>`).join('')}</div>`:`<div class="today-status">אין עדיין חצאי סיבוב מתועדים.</div>`}
-      </div>
-
-      <div class="today-reports-separator">
-        <div class="today-reports-header">
-          <strong>אישורים ושינויים</strong>
-          <button type="button" class="secondary" onclick="openApprovalModal('${sh.id}')">➕ הוסף</button>
+      <div class="today-sections-stack">
+        <div class="today-info-card">
+          <div class="today-reports-header">
+            <strong>נסיעות / חצאי סיבוב</strong>
+            <button type="button" class="primary" onclick="openTripModal('${sh.id}')">➕ הוסף חצי סיבוב</button>
+          </div>
+          ${normalizedTrips(sh).length
+            ? `<div class="today-report-preview">${normalizedTrips(sh).slice().sort((a,b)=>String(a.startTime||'').localeCompare(String(b.startTime||''))).map((t,i)=>`<span class="today-trip-pill">חצי ${i+1} · ${escapeHtml(t.startPoint||'')} · ${escapeHtml(t.rb||'')} · ${escapeHtml(t.startTime||'—')}–${escapeHtml(t.endTime||'—')}</span>`).join('')}</div>`
+            : `<div class="today-status">אין עדיין חצאי סיבוב מתועדים.</div>`}
         </div>
-        ${normalizedApprovals(sh).length
-          ? `<div class="today-report-preview">${normalizedApprovals(sh).slice(-3).reverse().map(a=>`<span class="today-approval-pill">${escapeHtml(a.what||'')} · ${escapeHtml(a.approvedBy||'')}</span>`).join('')}</div>`
-          : `<div class="today-status">אין אישורים או שינויים מתועדים.</div>`}
-      </div>
 
-      <div class="today-reports-separator">
-        <div class="today-reports-header">
-          <strong>דוחות למשמרת</strong>
-          <button type="button" class="primary" onclick="openReportModal('${sh.id}')">📝 הוסף דוח</button>
+        <div class="today-info-card">
+          <div class="today-reports-header">
+            <strong>אישורים ושינויים</strong>
+            <button type="button" class="secondary" onclick="openApprovalModal('${sh.id}')">➕ הוסף</button>
+          </div>
+          ${normalizedApprovals(sh).length
+            ? `<div class="today-report-preview">${normalizedApprovals(sh).slice(-3).reverse().map(a=>`<span class="today-approval-pill">${escapeHtml(a.what||'')} · ${escapeHtml(a.approvedBy||'')}</span>`).join('')}</div>`
+            : `<div class="today-status">אין אישורים או שינויים מתועדים.</div>`}
         </div>
-        ${todayReports.length
-          ? `<div class="today-report-preview">${todayReports.slice(0,3).map(r=>`<span class="today-report-pill">${escapeHtml(r.eventTime||'—')} · ${escapeHtml(r.type||'ללא סוג')}</span>`).join('')}${todayReports.length>3?`<span class="today-report-pill">+${todayReports.length-3} נוספים</span>`:''}</div>`
-          : `<div class="today-status">אין עדיין דוחות למשמרת הזו.</div>`}
+
+        <div class="today-info-card">
+          <div class="today-reports-header">
+            <strong>דוחות למשמרת</strong>
+            <button type="button" class="primary" onclick="openReportModal('${sh.id}')">📝 הוסף דוח</button>
+          </div>
+          ${todayReports.length
+            ? `<div class="today-report-preview">${todayReports.slice(0,3).map(r=>`<span class="today-report-pill">${escapeHtml(r.eventTime||'—')} · ${escapeHtml(r.type||'ללא סוג')}</span>`).join('')}${todayReports.length>3?`<span class="today-report-pill">+${todayReports.length-3} נוספים</span>`:''}</div>`
+            : `<div class="today-status">אין עדיין דוחות למשמרת הזו.</div>`}
+        </div>
       </div>`;
   }
 
