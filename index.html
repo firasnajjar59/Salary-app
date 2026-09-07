@@ -1639,6 +1639,70 @@ html[data-theme=dark] .calendar-day.has-event:not(.has-shift){
     font-size:11px!important;
   }
 }
+
+/* v83 settings accordions + personal calendar events */
+.settings-accordion{
+  padding:0!important;
+  overflow:hidden;
+}
+.settings-accordion>summary{
+  list-style:none;
+  cursor:pointer;
+  min-height:56px;
+  display:flex;
+  align-items:center;
+  padding:15px 16px!important;
+  font-size:16px;
+  font-weight:780;
+  background:var(--card)!important;
+  color:var(--text)!important;
+}
+.settings-accordion>summary::-webkit-details-marker{display:none}
+.settings-accordion>summary::after{
+  content:'⌄';
+  margin-right:auto;
+  color:var(--muted);
+  font-size:20px;
+  transition:transform .15s ease;
+}
+.settings-accordion[open]>summary::after{transform:rotate(180deg)}
+.settings-accordion-body{
+  padding:0 16px 16px;
+}
+.settings-accordion-body>h2{display:none}
+.personal-clickable{
+  cursor:pointer;
+}
+.personal-clickable:active{transform:scale(.99)}
+.day-event-card.event-personal .day-event-icon{
+  color:var(--app-accent-text);
+  background:var(--app-soft);
+}
+.calendar-dot.event-personal,.pref-dot.event-personal{
+  background:var(--app-accent);
+}
+#personalEventModal .modal-content{
+  display:grid;
+  gap:12px;
+}
+#personalEventModal .modal-content .row{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+#personalEventModal .modal-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-top:4px;
+}
+#personalEventModal .modal-actions .primary:only-child{
+  grid-column:1/-1;
+}
+@media(max-width:390px){
+  #personalEventModal .modal-content .row{grid-template-columns:1fr}
+  #personalEventModal .modal-actions{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
@@ -1902,7 +1966,9 @@ html[data-theme=dark] .calendar-day.has-event:not(.has-shift){
   </section>
 
   <section id="settings" class="hidden">
-<div class="card calendar-settings-card">
+<details class="card settings-accordion calendar-settings-card">
+<summary>🗓️ לוחות שנה</summary>
+<div class="settings-accordion-body">
   <h2>🗓️ לוחות שנה</h2>
   <div class="small muted" style="margin-bottom:10px">בחר אילו אירועים ביום יוצגו בלוח.</div>
   <div class="calendar-pref-list">
@@ -1913,8 +1979,11 @@ html[data-theme=dark] .calendar-day.has-event:not(.has-shift){
     <label class="calendar-pref-row"><span><i class="pref-dot event-special"></i>אירועים מיוחדים</span><input type="checkbox" data-calendar-pref="special" onchange="setCalendarPref('special',this.checked)"></label>
   </div>
 </div>
+</details>
 
-<div class="card theme-settings-card"><h2>🎨 מראה וצבע</h2>
+<details class="card settings-accordion theme-settings-card">
+<summary>🎨 מראה וצבע</summary>
+<div class="settings-accordion-body"><h2>🎨 מראה וצבע</h2>
 <label>מצב תצוגה</label><div class="theme-choice-row">
 <button type="button" class="theme-choice" data-theme-mode="light" onclick="setAppThemeMode('light')">☀️ בהיר</button>
 <button type="button" class="theme-choice" data-theme-mode="dark" onclick="setAppThemeMode('dark')">🌙 כהה</button>
@@ -1926,13 +1995,14 @@ html[data-theme=dark] .calendar-day.has-event:not(.has-shift){
 <button type="button" class="pixel-color purple" data-app-color="purple" onclick="setAppAccentColor('purple')" aria-label="סגול"></button>
 <button type="button" class="pixel-color orange" data-app-color="orange" onclick="setAppAccentColor('orange')" aria-label="כתום"></button></div>
 <div class="small muted">פלטת צבעים בסגנון Pixel / Material You.</div></div>
+</details>
 
     <div class="card settings-accordion">
       <details open>
         <summary>אודות</summary>
         <div class="settings-accordion-body">
           <div style="font-size:17px;font-weight:850">נוצר ע״י פראס נג׳אר</div>
-          <div class="note" style="margin-top:5px">גרסה <strong>82</strong></div>
+          <div class="note" style="margin-top:5px">גרסה <strong>83</strong></div>
           <div style="height:12px"></div>
           <button class="secondary" id="manualUpdateCheckBtn" type="button">בדיקת עדכונים</button>
           <div id="manualUpdateStatus" class="note" style="margin-top:8px"></div>
@@ -2607,7 +2677,7 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=82;
+const APP_VERSION=83;
 
 const CALENDAR_PREFS_KEY='salaryApp.calendarPrefs.v1';
 function getCalendarPrefs(){
@@ -2711,15 +2781,98 @@ function calendarEventsForDate(date){
   if(p.christian) out.push(...christianEvent(date));
   if(p.national) out.push(...nationalEvent(date));
   if(p.special && SPECIAL_EVENTS[date]) out.push(...SPECIAL_EVENTS[date]);
+  out.push(...personalEventsForDate(date).map(ev=>({
+    date:ev.date,name:ev.title,kind:'personal',personalType:ev.type,
+    note:[ev.startTime&&ev.endTime?`${ev.startTime}–${ev.endTime}`:(ev.startTime?`מ־${ev.startTime}`:(ev.endTime?`עד ${ev.endTime}`:'')),ev.notes].filter(Boolean).join(' · '),
+    personalEventId:ev.id
+  })));
   return out;
 }
 function calendarEventKindLabel(kind){
-  return ({jewish:'חג יהודי',muslim:'חג מוסלמי',christian:'חג נוצרי',national:'יום ממלכתי',special:'אירוע מיוחד'})[kind]||'אירוע';
+  return ({jewish:'חג יהודי',muslim:'חג מוסלמי',christian:'חג נוצרי',national:'יום ממלכתי',special:'אירוע מיוחד',personal:'אירוע אישי'})[kind]||'אירוע';
 }
 function calendarEventIcon(kind){
-  return ({jewish:'✡',muslim:'☾',christian:'✦',national:'◆',special:'●'})[kind]||'•';
+  return ({jewish:'✡',muslim:'☾',christian:'✦',national:'◆',special:'●',personal:'●'})[kind]||'•';
 }
 let currentDayDetailsDate=null;
+const PERSONAL_EVENTS_KEY='salaryApp.personalCalendarEvents.v1';
+function loadPersonalEvents(){
+  try{
+    const a=JSON.parse(localStorage.getItem(PERSONAL_EVENTS_KEY)||'[]');
+    return Array.isArray(a)?a:[];
+  }catch(_){return []}
+}
+function savePersonalEvents(arr){
+  localStorage.setItem(PERSONAL_EVENTS_KEY,JSON.stringify(arr));
+}
+function personalEventsForDate(date){
+  return loadPersonalEvents().filter(x=>x.date===date);
+}
+function personalEventTypeLabel(t){
+  return ({personal:'אישי',sick:'מחלה',exam:'מבחן',vacation:'חופשה',appointment:'תור / פגישה',other:'אחר'})[t]||'אישי';
+}
+function personalEventIcon(t){
+  return ({personal:'●',sick:'✚',exam:'✎',vacation:'☀',appointment:'◷',other:'•'})[t]||'●';
+}
+function openPersonalEventModal(date,id=null){
+  const all=loadPersonalEvents();
+  const ev=id?all.find(x=>x.id===id):null;
+  $('personalEventId').value=ev?.id||'';
+  $('personalEventDate').value=ev?.date||date||localDateIso();
+  $('personalEventType').value=ev?.type||'personal';
+  $('personalEventTitle').value=ev?.title||'';
+  $('personalEventStart').value=ev?.startTime||'';
+  $('personalEventEnd').value=ev?.endTime||'';
+  $('personalEventNotes').value=ev?.notes||'';
+  $('personalEventModalTitle').textContent=ev?'עריכת אירוע אישי':'אירוע אישי חדש';
+  $('deletePersonalEventBtn').classList.toggle('hidden',!ev);
+  $('personalEventModal').classList.remove('hidden');
+  $('personalEventModal').setAttribute('aria-hidden','false');
+  document.body.classList.add('modal-open');
+}
+function closePersonalEventModal(){
+  $('personalEventModal').classList.add('hidden');
+  $('personalEventModal').setAttribute('aria-hidden','true');
+  document.body.classList.remove('modal-open');
+}
+function savePersonalEvent(){
+  const date=$('personalEventDate').value;
+  const title=$('personalEventTitle').value.trim();
+  if(!date){alert('בחר תאריך.');return}
+  if(!title){alert('הזן כותרת לאירוע.');return}
+  const all=loadPersonalEvents();
+  const id=$('personalEventId').value||('pe_'+Date.now()+'_'+Math.random().toString(36).slice(2,7));
+  const old=all.find(x=>x.id===id);
+  const ev={
+    ...(old||{}),id,date,
+    type:$('personalEventType').value||'personal',
+    title,
+    startTime:$('personalEventStart').value||'',
+    endTime:$('personalEventEnd').value||'',
+    notes:$('personalEventNotes').value.trim(),
+    updatedAt:new Date().toISOString(),
+    createdAt:old?.createdAt||new Date().toISOString()
+  };
+  const next=old?all.map(x=>x.id===id?ev:x):[...all,ev];
+  savePersonalEvents(next);
+  closePersonalEventModal();
+  renderDashboardCalendar();
+  if(currentDayDetailsDate===date) openDayDetails(date,{historyMode:'pop'});
+}
+function deletePersonalEventFromModal(){
+  const id=$('personalEventId').value;
+  if(!id) return;
+  const all=loadPersonalEvents();
+  const ev=all.find(x=>x.id===id);
+  if(!ev) return;
+  if(!confirm(`בטוח למחוק את האירוע "${ev.title}"?`)) return;
+  savePersonalEvents(all.filter(x=>x.id!==id));
+  const date=ev.date;
+  closePersonalEventModal();
+  renderDashboardCalendar();
+  if(currentDayDetailsDate===date) openDayDetails(date,{historyMode:'pop'});
+}
+
 
 
 function dayShiftSummary(sh){
@@ -2730,7 +2883,7 @@ function dayShiftSummary(sh){
       <strong>${escapeHtml(dd)}</strong>
       <span>${escapeHtml(sh.start||'—')}–${escapeHtml(sh.end||'—')}</span>
     </div>
-    <div class="day-shift-pay">${currency(calcShift(sh).total)}</div>
+    <div class="day-shift-pay">${currency(calcShift(sh).totalPay)}</div>
     <span class="day-shift-chevron">‹</span>
   </button>`;
 }
@@ -2745,11 +2898,11 @@ function openDayDetails(date,{historyMode='push'}={}){
   const dayShifts=shifts.filter(s=>s.date===date).sort((a,b)=>(a.start||'').localeCompare(b.start||''));
 
   const eventsHtml=events.length
-    ? events.map(ev=>`<div class="day-event-card event-${ev.kind}">
-        <div class="day-event-icon">${calendarEventIcon(ev.kind)}</div>
+    ? events.map(ev=>`<div class="day-event-card event-${ev.kind}${ev.personalEventId?' personal-clickable':''}" ${ev.personalEventId?`role="button" tabindex="0" onclick="openPersonalEventModal('${date}','${ev.personalEventId}')"`:''}>
+        <div class="day-event-icon">${ev.kind==='personal'?personalEventIcon(ev.personalType):calendarEventIcon(ev.kind)}</div>
         <div class="day-event-copy">
           <strong>${escapeHtml(ev.name)}</strong>
-          <span>${calendarEventKindLabel(ev.kind)}</span>
+          <span>${ev.kind==='personal'?personalEventTypeLabel(ev.personalType):calendarEventKindLabel(ev.kind)}</span>
           ${ev.note?`<small>${escapeHtml(ev.note)}</small>`:''}
         </div>
       </div>`).join('')
@@ -2769,7 +2922,10 @@ function openDayDetails(date,{historyMode='push'}={}){
     </div>
 
     <section class="day-section">
-      <div class="day-section-head"><h3>אירועים ביום</h3></div>
+      <div class="day-section-head">
+  <h3>אירועים ביום</h3>
+  <button type="button" class="secondary compact-day-add" onclick="openPersonalEventModal('${date}')">${materialIcon('add')}<span>אירוע</span></button>
+</div>
       <div class="day-events-list">${eventsHtml}</div>
     </section>
 
@@ -4400,7 +4556,51 @@ function exportShiftPdf(id){
   <div class="section"><h2>נסיעות / חצאי סיבוב (${trips.length})</h2>${trips.length?trips.map((t,i)=>`<div class="row"><b>חצי סיבוב ${i+1} · ${escapeHtml(t.startPoint||'')}</b><div class="muted">${escapeHtml(t.startTime||'—')}–${escapeHtml(t.endTime||'—')}${t.rb?` · RB ${escapeHtml(t.rb)}`:''}${t.trainNumber?` · רכבת ${escapeHtml(t.trainNumber)}`:''} · ${escapeHtml(tripTimingText(t))}</div></div>`).join(''):'<div class="muted">אין סיבובים מתועדים.</div>'}</div>
   <div class="section"><h2>אישורים ושינויים (${approvals.length})</h2>${approvals.length?approvals.map(a=>`<div class="row"><b>${escapeHtml(a.what||'')}</b><div class="muted">${a.approvedBy?`באישור ${escapeHtml(a.approvedBy)}`:''}${a.note?` · ${escapeHtml(a.note)}`:''}</div></div>`).join(''):'<div class="muted">אין רישומים.</div>'}</div>
   <div class="section"><h2>דוחות נהג (${reports.length})</h2>${reports.length?reports.map(r=>`<div class="row"><b>${escapeHtml(r.eventTime||'—')} · ${escapeHtml(r.type||'דוח')}</b><div>${escapeHtml(r.description||'')}</div></div>`).join(''):'<div class="muted">אין דוחות.</div>'}</div>
-  ${sh.notes?`<div class="section"><h2>הערות</h2>${escapeHtml(sh.notes)}</div>`:''}<script>window.onload=()=>setTimeout(()=>window.print(),250);<\/script></body></html>`;
+  ${sh.notes?`<div class="section"><h2>הערות</h2>${escapeHtml(sh.notes)}</div>`:''}<script>window.onload=()=>setTimeout(()=>window.print(),250);<\/script>
+<div id="personalEventModal" class="modal-backdrop hidden" aria-hidden="true">
+  <div class="modal-sheet">
+    <div class="modal-header">
+      <strong id="personalEventModalTitle">אירוע אישי</strong>
+      <button type="button" class="modal-close" onclick="closePersonalEventModal()" aria-label="סגירה">×</button>
+    </div>
+    <div class="modal-content">
+      <input type="hidden" id="personalEventId">
+      <label>תאריך
+        <input id="personalEventDate" type="date">
+      </label>
+      <label>סוג אירוע
+        <select id="personalEventType">
+          <option value="personal">אישי</option>
+          <option value="sick">מחלה</option>
+          <option value="exam">מבחן</option>
+          <option value="vacation">חופשה</option>
+          <option value="appointment">תור / פגישה</option>
+          <option value="other">אחר</option>
+        </select>
+      </label>
+      <label>כותרת
+        <input id="personalEventTitle" type="text" placeholder="למשל: מבחן, מחלה, תור">
+      </label>
+      <div class="row">
+        <label>משעה
+          <input id="personalEventStart" type="time">
+        </label>
+        <label>עד שעה
+          <input id="personalEventEnd" type="time">
+        </label>
+      </div>
+      <label>הערות
+        <textarea id="personalEventNotes" rows="3" placeholder="פרטים נוספים"></textarea>
+      </label>
+      <div class="modal-actions">
+        <button type="button" class="primary" onclick="savePersonalEvent()">שמור אירוע</button>
+        <button type="button" class="danger hidden" id="deletePersonalEventBtn" onclick="deletePersonalEventFromModal()">מחק אירוע</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body></html>`;
   const w=window.open('','_blank'); if(!w){alert('הדפדפן חסם את חלון ה-PDF. יש לאפשר חלונות קופצים ולנסות שוב.');return;} w.document.open();w.document.write(html);w.document.close();
 }
 window.exportShiftPdf=exportShiftPdf;
