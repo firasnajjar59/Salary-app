@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="שעות ושכר">
-  <title>מחשבון שעות ושכר</title>
+  <title>נהג+ — שעות, שכר ותיעוד</title>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -1786,13 +1786,83 @@ html[data-theme=dark] .line-point-remove{background:#2d2b31}
   .settings-floating-save{height:42px;font-size:13px}
 }
 
+
+/* v91 — modern settings icons + cleaner action buttons */
+.settings-summary-label{
+  display:inline-flex;
+  align-items:center;
+  gap:12px;
+  min-width:0;
+}
+.settings-summary-icon{
+  width:24px;
+  height:24px;
+  flex:0 0 24px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--app-accent);
+}
+.settings-summary-icon svg{
+  width:22px;
+  height:22px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.9;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.settings-accordion summary{
+  min-height:62px;
+}
+.line-point-add{
+  display:inline-flex!important;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  border-radius:18px!important;
+  padding:9px 14px!important;
+  font-weight:760!important;
+}
+.line-point-add::before{
+  content:"+";
+  width:22px;
+  height:22px;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  background:color-mix(in srgb,var(--app-accent) 14%,transparent);
+  color:var(--app-accent);
+  font-size:20px;
+  line-height:1;
+}
+.shift-quick-actions button,
+#saveTripBtn{
+  border-radius:20px!important;
+}
+#saveTripBtn{
+  min-height:50px;
+  font-weight:780;
+}
+#saveTripBtn::before{
+  content:"";
+  display:inline-block;
+  width:19px;
+  height:19px;
+  margin-left:7px;
+  vertical-align:-4px;
+  background:currentColor;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M12 5v14M5 12h14'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M12 5v14M5 12h14'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+
 </style>
 </head>
 <body>
 <header>
   <button id="openSettingsGear" class="header-settings-btn" type="button" aria-label="הגדרות" title="הגדרות" onclick="showAppTab('settings')">⚙</button>
-  <h1>מחשבון שעות ושכר</h1>
-  <p>עובד מקומית במכשיר ושומר את הנתונים בדפדפן</p>
+  <h1>נהג+ — שעות, שכר ותיעוד</h1>
+  <p>שעות, שכר ותיעוד משמרות — נשמר מקומית במכשיר</p>
 </header>
 <div id="updateBanner" class="card hidden" style="margin:10px auto;max-width:780px">
   <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap">
@@ -2058,7 +2128,7 @@ html[data-theme=dark] .line-point-remove{background:#2d2b31}
     </button>
 <div class="settings-group-label">התאמה אישית</div>
 <details class="card settings-accordion calendar-settings-card">
-<summary>🗓️ לוחות שנה</summary>
+<summary><span class="settings-summary-label"><span class="settings-summary-icon"><svg viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="14" rx="3"/><path d="M8 3.5v4M16 3.5v4M4 9.5h16"/></svg></span><span>לוחות שנה</span></span></summary>
 <div class="settings-accordion-body">
   <h2>🗓️ לוחות שנה</h2>
   <div class="small muted" style="margin-bottom:10px">בחר אילו אירועים ביום יוצגו בלוח.</div>
@@ -2073,7 +2143,7 @@ html[data-theme=dark] .line-point-remove{background:#2d2b31}
 </details>
 
 <details class="card settings-accordion theme-settings-card">
-<summary>🎨 מראה וצבע</summary>
+<summary><span class="settings-summary-label"><span class="settings-summary-icon"><svg viewBox="0 0 24 24"><path d="M12 3.5c-5 0-9 3.5-9 8 0 3.7 3 6.5 6.5 6.5h1.2c.9 0 1.5-.8 1.2-1.6l-.4-1c-.3-.8.3-1.6 1.2-1.6H15c3.3 0 6-2.2 6-5.1 0-3-3.8-5.2-9-5.2z"/><circle cx="7.5" cy="10" r="1"/><circle cx="10.5" cy="7.5" r="1"/><circle cx="14" cy="7" r="1"/><circle cx="17" cy="9" r="1"/></svg></span><span>מראה וצבע</span></span></summary>
 <div class="settings-accordion-body"><h2>🎨 מראה וצבע</h2>
 <label>מצב תצוגה</label><div class="theme-choice-row">
 <button type="button" class="theme-choice" data-theme-mode="light" onclick="setAppThemeMode('light')">☀️ בהיר</button>
@@ -2090,10 +2160,10 @@ html[data-theme=dark] .line-point-remove{background:#2d2b31}
 
     <div class="card settings-accordion">
       <details open>
-        <summary>אודות</summary>
+        <summary><span class="settings-summary-label"><span class="settings-summary-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 10.5v6M12 7.5h.01"/></svg></span><span>אודות</span></span></summary>
         <div class="settings-accordion-body">
           <div style="font-size:17px;font-weight:850">נוצר ע״י פראס נג׳אר</div>
-          <div class="note" style="margin-top:5px">גרסה <strong>90</strong></div>
+          <div class="note" style="margin-top:5px">גרסה <strong>91</strong></div>
           <div style="height:12px"></div>
           <button class="secondary" id="manualUpdateCheckBtn" type="button">בדיקת עדכונים</button>
           <div id="manualUpdateStatus" class="note" style="margin-top:8px"></div>
@@ -2102,7 +2172,7 @@ html[data-theme=dark] .line-point-remove{background:#2d2b31}
     </div>
     <div class="card settings-accordion">
       <details>
-        <summary>מסך ראשי</summary>
+        <summary><span class="settings-summary-label"><span class="settings-summary-icon"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/></svg></span><span>מסך ראשי</span></span></summary>
         <div class="settings-accordion-body">
           <p class="note">בחר אילו חלקים יוצגו במסך הבית ובאיזה סדר. אפשר לשנות את הסדר בכל זמן, וגם רכיבים שיתווספו בעתיד יוכלו להשתלב כאן.</p>
           <div id="homeLayoutList" class="home-layout-list"></div>
@@ -2120,7 +2190,7 @@ html[data-theme=dark] .line-point-remove{background:#2d2b31}
 
     <div class="card settings-accordion">
       <details>
-        <summary>🚋 הגדרות קווים</summary>
+        <summary><span class="settings-summary-label"><span class="settings-summary-icon"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="13" rx="3"/><path d="M8 8h8M8 12h8M7 17l-2 3M17 17l2 3"/><circle cx="9" cy="15" r=".8"/><circle cx="15" cy="15" r=".8"/></svg></span><span>הגדרות קווים</span></span></summary>
         <div class="settings-accordion-body">
           <p class="note">הגדר לכל קו משך חצי סיבוב, טווח הגעה בזמן ונקודות קצה. נקודת התחלה בסיבוב אינה חובה ואפשר לעדכן אותה לאחר תחילת הנסיעה.</p>
           <div id="lineOperationalSettingsList"></div>
@@ -2130,7 +2200,7 @@ html[data-theme=dark] .line-point-remove{background:#2d2b31}
     <div class="settings-group-label">עבודה ושכר</div>
     <div class="card settings-accordion">
       <details>
-        <summary>💰 שכר ותעריפים</summary>
+        <summary><span class="settings-summary-label"><span class="settings-summary-icon"><svg viewBox="0 0 24 24"><path d="M4 7h14a2 2 0 0 1 2 2v9H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h11v3"/><path d="M16 11h4v4h-4a2 2 0 0 1 0-4z"/></svg></span><span>שכר ותעריפים</span></span></summary>
         <div class="settings-accordion-body settings-group-body"><h2>תעריפים</h2>
       <div class="grid">
         <div><label>שכר בסיס לשעה ₪</label><input id="baseRate" type="number" step="0.01" value="50"></div>
@@ -2162,7 +2232,7 @@ html[data-theme=dark] .line-point-remove{background:#2d2b31}
     </div>
     <div class="card settings-accordion">
       <details>
-        <summary>🧾 מסים והערכת נטו</summary>
+        <summary><span class="settings-summary-label"><span class="settings-summary-icon"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-2-1.5L14 21l-2-1.5L10 21l-2-1.5L6 21z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg></span><span>מסים והערכת נטו</span></span></summary>
         <div class="settings-accordion-body settings-group-body"><h2>מס הכנסה</h2>
       <p class="note">אפשר להזין מדרגות מותאמות לשנת המס. אם השדות ריקים או לא תקינים, האפליקציה משתמשת אוטומטית בברירת המחדל של 2026: 7,010 · 10,060 · 19,000 · 25,100 · 46,690 · 60,130 ₪. מעל התקרה האחרונה מחושב 50%.</p>
       <div class="grid">
@@ -2200,7 +2270,7 @@ html[data-theme=dark] .line-point-remove{background:#2d2b31}
     </div>
     <div class="card settings-accordion">
       <details>
-        <summary>🗂️ טבלאות DD</summary>
+        <summary><span class="settings-summary-label"><span class="settings-summary-icon"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M4 10h16M9 5v14"/></svg></span><span>טבלאות DD</span></span></summary>
         <div class="settings-accordion-body settings-group-body"><h2>טבלאות DD לפי קו</h2>
       <p class="note">הקובץ <strong>dd.json</strong> בשרת הוא המקור לטבלאות הקווים. משיכה מהשרת שומרת עותק מקומי במכשיר לעבודה גם בלי אינטרנט. משמרות שכבר נשמרו אינן משתנות.</p>
       <div class="grid">
@@ -2230,7 +2300,7 @@ html[data-theme=dark] .line-point-remove{background:#2d2b31}
     <div class="settings-group-label">מערכת, פרטיות וגיבוי</div>
     <div class="card settings-accordion">
       <details>
-        <summary>🔒 נעילת האפליקציה</summary>
+        <summary><span class="settings-summary-label"><span class="settings-summary-icon"><svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span><span>נעילת האפליקציה</span></span></summary>
         <div class="settings-accordion-body">
           <p class="note">אפשר לנעול את האפליקציה באמצעות האימות של המכשיר — טביעת אצבע, זיהוי פנים או קוד נעילת המכשיר, בהתאם למה שהטלפון והדפדפן תומכים בו.</p>
           <div class="grid">
@@ -2245,7 +2315,7 @@ html[data-theme=dark] .line-point-remove{background:#2d2b31}
 
     <div class="card settings-accordion">
       <details>
-        <summary>התראות</summary>
+        <summary><span class="settings-summary-label"><span class="settings-summary-icon"><svg viewBox="0 0 24 24"><path d="M6 16h12l-1.5-2V10a4.5 4.5 0 0 0-9 0v4z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg></span><span>התראות</span></span></summary>
         <div class="settings-accordion-body">
           <p class="note">התראות Push פועלות דרך Firebase גם כשהאפליקציה סגורה. אין צורך בחשבון או בכניסה. לכל סוג התראה אפשר לבחור בנפרד אם לקבל אותה ומתי.</p>
 
@@ -2341,7 +2411,7 @@ html[data-theme=dark] .line-point-remove{background:#2d2b31}
 
     <div class="card settings-accordion">
       <details>
-        <summary>סוגי דוחות נהג</summary>
+        <summary><span class="settings-summary-label"><span class="settings-summary-icon"><svg viewBox="0 0 24 24"><path d="M6 3.5h8l4 4v13H6z"/><path d="M14 3.5v4h4M9 12h6M9 16h4"/></svg></span><span>סוגי דוחות נהג</span></span></summary>
         <div class="settings-accordion-body">
           <p class="note">הסוגים משמשים כרשימת בחירה בדוח, כדי שבהמשך יהיה אפשר לבצע חיפוש וסינון לפי סוג אירוע. אפשר להוסיף סוגים משלך. מחיקת סוג מהרשימה לא מוחקת דוחות שכבר נוצרו.</p>
           <div class="grid">
@@ -2738,7 +2808,7 @@ html[data-theme=dark] .line-point-remove{background:#2d2b31}
   <div class="modal-backdrop" id="tripModalBackdrop"></div>
   <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="tripModalTitle">
     <div class="modal-header">
-      <h2 id="tripModalTitle" style="margin:0">הוספת חצי סיבוב</h2>
+      <h2 id="tripModalTitle" style="margin:0">הוספת סיבוב</h2>
       <button type="button" class="modal-close" id="closeTripModal" aria-label="סגור">×</button>
     </div>
     <div class="modal-body">
@@ -2859,7 +2929,7 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=90;
+const APP_VERSION=91;
 let settingsDirty=false;
 function markSettingsDirty(){
   settingsDirty=true;
@@ -3736,7 +3806,7 @@ function openTripModal(shiftId,tripId=''){
   const start=t?.startTime||localTimeHm();
   const inferred=inferTripTiming(t,sh);
 
-  $('tripModalTitle').textContent=t?'עריכת חצי סיבוב':'הוספת חצי סיבוב';
+  $('tripModalTitle').textContent=t?'עריכת חצי סיבוב':'הוספת סיבוב';
   $('tripShiftInfo').textContent=`משמרת ${formatDateHe(sh.date)} · ${sh.start}–${sh.end}`;
   populateTripStartPoints(sh,t?.startPoint||'');
   $('tripStartPoint').value=t?.startPoint||'';
@@ -3748,7 +3818,7 @@ function openTripModal(shiftId,tripId=''){
   $('tripEndTime').value=t?.endTime||'';
   $('tripPostDriveFields')?.classList.toggle('hidden',!t);
   $('tripQuickHint')?.classList.toggle('hidden',!!t);
-  $('saveTripBtn').textContent=t?'שמור שינויים':'התחל חצי סיבוב';
+  $('saveTripBtn').textContent=t?'שמור שינויים':'התחל סיבוב';
   updateTripDurationUi();
 
   $('tripModal').classList.remove('hidden');
@@ -4021,7 +4091,7 @@ function renderLineOperationalSettings(){
       </div>
       <div class="line-points-head">
         <div><strong>נקודות קצה / תחילת סיבוב</strong><div class="note">הנהג יכול לבחור אחת מהן בתחילת סיבוב, או להשאיר ריק ולעדכן אחר כך.</div></div>
-        <button type="button" class="secondary line-point-add" data-add-line-point>＋ נקודה</button>
+        <button type="button" class="secondary line-point-add" data-add-line-point>הוסף נקודה</button>
       </div>
       <div class="line-points-list" data-line-points-list>${points.map(linePointRow).join('')}</div>
       <div class="note" style="margin-top:8px">לדוגמה: ±1 אומר שסטייה של עד דקה מוקדם או מאוחר עדיין נחשבת בזמן.</div>
@@ -4827,7 +4897,7 @@ function openShiftDetails(id,{historyMode='push'}={}){
     <div class="shift-details-section">
       <div class="shift-head" style="margin-bottom:8px"><h3 style="margin:0">נסיעות / חצאי סיבוב</h3><span class="filter-count">${normalizedTrips(sh).length} נסיעות</span></div>
       ${tripsHtmlForShift(sh)}
-      <div class="detail-actions" style="margin-top:12px"><button type="button" class="primary" onclick="openTripModal('${sh.id}')">${materialIcon("add")}<span>הוסף חצי סיבוב</span></button></div>
+      <div class="detail-actions" style="margin-top:12px"><button type="button" class="primary" onclick="openTripModal('${sh.id}')">${materialIcon("add")}<span>התחל סיבוב</span></button></div>
     </div>
 
     <div class="shift-details-section">
@@ -7090,7 +7160,7 @@ function renderTodayDashboard(){
         <div class="today-info-card">
           <div class="today-reports-header">
             <strong>נסיעות / חצאי סיבוב</strong>
-            <button type="button" class="primary" onclick="openTripModal('${sh.id}')">${materialIcon("add")}<span>הוסף חצי סיבוב</span></button>
+            <button type="button" class="primary" onclick="openTripModal('${sh.id}')">${materialIcon("add")}<span>התחל סיבוב</span></button>
           </div>
           ${normalizedTrips(sh).length
             ? `<div class="today-report-preview">${normalizedTrips(sh).slice().sort((a,b)=>String(a.startTime||'').localeCompare(String(b.startTime||''))).map((t,i)=>{
