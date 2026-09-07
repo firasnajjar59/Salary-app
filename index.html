@@ -1122,7 +1122,7 @@ html[data-theme=dark] .stat,html[data-theme=dark] .live-stat,html[data-theme=dar
 .theme-choice-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:8px 0 16px}.theme-choice{border:0;border-radius:18px;background:var(--surface);color:var(--text);min-height:46px;font-weight:720}.theme-choice.selected{background:var(--app-soft);color:var(--app-accent-text);outline:2px solid var(--app-accent)}
 .pixel-color-row{display:flex;gap:13px;flex-wrap:wrap;margin:10px 0}.pixel-color{width:45px;height:45px;min-height:45px;border:0;border-radius:50%}.pixel-color.blue{background:#6375df}.pixel-color.green{background:#4f8064}.pixel-color.pink{background:#bd6388}.pixel-color.purple{background:#8d6ba8}.pixel-color.orange{background:#aa7330}.pixel-color.selected{outline:3px solid var(--text);outline-offset:3px}
 @media(max-width:390px){.theme-choice-row{grid-template-columns:1fr}}
-</style>
+/* v77 refined dark */html[data-theme=dark]{--bg:#1b1b1f;--card:#242328;--text:#e6e1e5;--muted:#cac4d0;--line:#49454f;--surface:#2d2b31;--surface-2:#37343c}html[data-theme=dark] body{background:#1b1b1f!important}html[data-theme=dark] header{background:#202024!important;border-color:#3b3940!important}html[data-theme=dark] .card,html[data-theme=dark] .today-info-card,html[data-theme=dark] .live-shift-panel,html[data-theme=dark] .trip-card,html[data-theme=dark] details,html[data-theme=dark] details>summary,html[data-theme=dark] .modal-header,html[data-theme=dark] .tabs,html[data-theme=dark] .today-shift-open{background:#242328!important;color:#e6e1e5!important;border-color:#49454f!important}html[data-theme=dark] .modal-sheet{background:#1b1b1f!important}html[data-theme=dark] .today-hero{background:#292a38!important;border-color:#45485e!important}html[data-theme=dark] .today-hero::after{background:var(--app-accent)!important;opacity:.12}html[data-theme=dark] input,html[data-theme=dark] select,html[data-theme=dark] textarea{background:#2d2b31!important;color:#e6e1e5!important;border-color:#605c66!important;color-scheme:dark}html[data-theme=dark] .stat,html[data-theme=dark] .live-stat,html[data-theme=dark] .ops-metric,html[data-theme=dark] .timeline-card,html[data-theme=dark] .today-trip-pill,html[data-theme=dark] .modal-close,html[data-theme=dark] .theme-choice{background:#2d2b31!important;color:#e6e1e5!important}html[data-theme=dark] .today-chip{background:#302e35!important;color:#e6e1e5!important}html[data-theme=dark] .active-trip-card,html[data-theme=dark] .detail-total,html[data-theme=dark] .break-summary{background:#31313e!important}html[data-theme=dark] button.secondary,html[data-theme=dark] .tab.active,html[data-theme=dark] .shift-quick-actions button,html[data-theme=dark] .theme-choice.selected{background:#3a3d57!important;color:#e5e7ff!important}html[data-theme=dark] .today-date,html[data-theme=dark] .today-status,html[data-theme=dark] .active-trip-meta,html[data-theme=dark] .stat span,html[data-theme=dark] label{color:#cac4d0!important}</style>
 </head>
 <body>
 <header>
@@ -1403,7 +1403,7 @@ html[data-theme=dark] .stat,html[data-theme=dark] .live-stat,html[data-theme=dar
         <summary>אודות</summary>
         <div class="settings-accordion-body">
           <div style="font-size:17px;font-weight:850">נוצר ע״י פראס נג׳אר</div>
-          <div class="note" style="margin-top:5px">גרסה <strong>76</strong></div>
+          <div class="note" style="margin-top:5px">גרסה <strong>77</strong></div>
           <div style="height:12px"></div>
           <button class="secondary" id="manualUpdateCheckBtn" type="button">בדיקת עדכונים</button>
           <div id="manualUpdateStatus" class="note" style="margin-top:8px"></div>
@@ -2052,7 +2052,7 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=76;
+const APP_VERSION=77;
 const APP_THEME_KEY='salaryApp.theme.v1';
 function getAppThemePrefs(){try{return Object.assign({mode:'light',color:'blue'},JSON.parse(localStorage.getItem(APP_THEME_KEY)||'{}'))}catch(_){return {mode:'light',color:'blue'}}}
 function resolvedAppTheme(m){return m==='system'&&window.matchMedia? (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):m}
@@ -5775,9 +5775,24 @@ $('exportPdfBtn').onclick=exportMonthlyPdf;
 const ACTIVE_TAB_SESSION_KEY='salaryApp.activeTab.v1';
 const APP_TABS=['mainDashboard','todayDashboard','shifts','summary','payslip','settings'];
 
-function showAppTab(tabId,{remember=true}={}){
+function showAppTab(tabId,{remember=true,historyMode='push'}={}){
+  if(historyMode==='push' && history.state?.salaryAppTab!==tabId){ try{ history.pushState({salaryAppTab:tabId},'',location.href); }catch(e){} }
   if(!APP_TABS.includes(tabId)) return;
-  document.querySelectorAll('.tab').forEach(btn=>{
+  
+function setupPwaBackNavigation(){
+  const current=(sessionStorage.getItem(ACTIVE_TAB_SESSION_KEY)||'mainDashboard');
+  try{
+    history.replaceState({salaryAppTab:'mainDashboard'},'',location.href);
+    if(current!=='mainDashboard') history.pushState({salaryAppTab:current},'',location.href);
+  }catch(e){}
+}
+window.addEventListener('popstate',e=>{
+  const tab=e.state?.salaryAppTab;
+  if(tab && APP_TABS.includes(tab)) showAppTab(tab,{remember:true,historyMode:'pop'});
+});
+setTimeout(setupPwaBackNavigation,0);
+
+document.querySelectorAll('.tab').forEach(btn=>{
     btn.classList.toggle('active',btn.dataset.tab===tabId);
   });
   APP_TABS.forEach(id=>$(id).classList.add('hidden'));
