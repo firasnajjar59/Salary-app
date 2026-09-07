@@ -1105,6 +1105,23 @@
       main{width:min(100%,780px)}
     }
 
+
+/* v76 themes */
+:root{--app-accent:#4658c7;--app-soft:#e7e9ff;--app-softer:#f0f1ff;--app-accent-text:#27358d}
+html[data-app-color=green]{--app-accent:#356a4f;--app-soft:#d9f2e2;--app-softer:#edf8f1;--app-accent-text:#24513b}
+html[data-app-color=pink]{--app-accent:#9a456b;--app-soft:#ffd9e7;--app-softer:#fff0f5;--app-accent-text:#76334f}
+html[data-app-color=purple]{--app-accent:#73558f;--app-soft:#f0dbff;--app-softer:#f8efff;--app-accent-text:#593d72}
+html[data-app-color=orange]{--app-accent:#8b5b18;--app-soft:#ffddb0;--app-softer:#fff3df;--app-accent-text:#69420b}
+:root{--accent:var(--app-accent);--accent-soft:var(--app-soft);--accent-softer:var(--app-softer)}
+button.primary,.nav-add-inner{background:var(--app-accent)!important}.tab.active,.shift-quick-actions button,button.secondary{background:var(--app-soft)!important;color:var(--app-accent-text)!important}.today-hero{background:var(--app-softer)!important;border-color:var(--app-soft)!important}.active-trip-card,.detail-total,.break-summary{background:var(--app-softer)!important}
+html[data-theme=dark]{--bg:#111318;--card:#1b1b20;--text:#e5e1e9;--muted:#c8c5ce;--line:#45464f;--surface:#24252b;--surface-2:#2c2d34}
+html[data-theme=dark] body,html[data-theme=dark] header{background:#111318;color:var(--text)}
+html[data-theme=dark] .card,html[data-theme=dark] .today-info-card,html[data-theme=dark] .live-shift-panel,html[data-theme=dark] .trip-card,html[data-theme=dark] details,html[data-theme=dark] details>summary,html[data-theme=dark] .modal-header,html[data-theme=dark] .tabs,html[data-theme=dark] .today-shift-open{background:#1b1b20!important;color:var(--text)!important;border-color:#3b3c44!important}
+html[data-theme=dark] .modal-sheet{background:#111318}html[data-theme=dark] input,html[data-theme=dark] select,html[data-theme=dark] textarea{background:#24252b;color:var(--text);border-color:#4b4c55;color-scheme:dark}
+html[data-theme=dark] .stat,html[data-theme=dark] .live-stat,html[data-theme=dark] .ops-metric,html[data-theme=dark] .timeline-card,html[data-theme=dark] .today-trip-pill,html[data-theme=dark] .modal-close{background:#24252b!important;color:var(--text)!important}html[data-theme=dark] .today-chip{background:#24252b;color:var(--text)}
+.theme-choice-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:8px 0 16px}.theme-choice{border:0;border-radius:18px;background:var(--surface);color:var(--text);min-height:46px;font-weight:720}.theme-choice.selected{background:var(--app-soft);color:var(--app-accent-text);outline:2px solid var(--app-accent)}
+.pixel-color-row{display:flex;gap:13px;flex-wrap:wrap;margin:10px 0}.pixel-color{width:45px;height:45px;min-height:45px;border:0;border-radius:50%}.pixel-color.blue{background:#6375df}.pixel-color.green{background:#4f8064}.pixel-color.pink{background:#bd6388}.pixel-color.purple{background:#8d6ba8}.pixel-color.orange{background:#aa7330}.pixel-color.selected{outline:3px solid var(--text);outline-offset:3px}
+@media(max-width:390px){.theme-choice-row{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -1368,12 +1385,25 @@
   </section>
 
   <section id="settings" class="hidden">
+<div class="card theme-settings-card"><h2>🎨 מראה וצבע</h2>
+<label>מצב תצוגה</label><div class="theme-choice-row">
+<button type="button" class="theme-choice" data-theme-mode="light" onclick="setAppThemeMode('light')">☀️ בהיר</button>
+<button type="button" class="theme-choice" data-theme-mode="dark" onclick="setAppThemeMode('dark')">🌙 כהה</button>
+<button type="button" class="theme-choice" data-theme-mode="system" onclick="setAppThemeMode('system')">📱 לפי המכשיר</button></div>
+<label style="margin-top:16px">צבע האפליקציה</label><div class="pixel-color-row">
+<button type="button" class="pixel-color blue" data-app-color="blue" onclick="setAppAccentColor('blue')" aria-label="כחול"></button>
+<button type="button" class="pixel-color green" data-app-color="green" onclick="setAppAccentColor('green')" aria-label="ירוק"></button>
+<button type="button" class="pixel-color pink" data-app-color="pink" onclick="setAppAccentColor('pink')" aria-label="ורוד"></button>
+<button type="button" class="pixel-color purple" data-app-color="purple" onclick="setAppAccentColor('purple')" aria-label="סגול"></button>
+<button type="button" class="pixel-color orange" data-app-color="orange" onclick="setAppAccentColor('orange')" aria-label="כתום"></button></div>
+<div class="small muted">פלטת צבעים בסגנון Pixel / Material You.</div></div>
+
     <div class="card settings-accordion">
       <details open>
         <summary>אודות</summary>
         <div class="settings-accordion-body">
           <div style="font-size:17px;font-weight:850">נוצר ע״י פראס נג׳אר</div>
-          <div class="note" style="margin-top:5px">גרסה <strong>75</strong></div>
+          <div class="note" style="margin-top:5px">גרסה <strong>76</strong></div>
           <div style="height:12px"></div>
           <button class="secondary" id="manualUpdateCheckBtn" type="button">בדיקת עדכונים</button>
           <div id="manualUpdateStatus" class="note" style="margin-top:8px"></div>
@@ -2022,7 +2052,16 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=75;
+const APP_VERSION=76;
+const APP_THEME_KEY='salaryApp.theme.v1';
+function getAppThemePrefs(){try{return Object.assign({mode:'light',color:'blue'},JSON.parse(localStorage.getItem(APP_THEME_KEY)||'{}'))}catch(_){return {mode:'light',color:'blue'}}}
+function resolvedAppTheme(m){return m==='system'&&window.matchMedia? (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):m}
+function applyAppTheme(){const p=getAppThemePrefs();document.documentElement.dataset.theme=resolvedAppTheme(p.mode);document.documentElement.dataset.appColor=p.color;document.querySelectorAll('[data-theme-mode]').forEach(b=>b.classList.toggle('selected',b.dataset.themeMode===p.mode));document.querySelectorAll('[data-app-color]').forEach(b=>b.classList.toggle('selected',b.dataset.appColor===p.color))}
+function setAppThemeMode(mode){const p=getAppThemePrefs();p.mode=mode;localStorage.setItem(APP_THEME_KEY,JSON.stringify(p));applyAppTheme()}
+function setAppAccentColor(color){const p=getAppThemePrefs();p.color=color;localStorage.setItem(APP_THEME_KEY,JSON.stringify(p));applyAppTheme()}
+if(window.matchMedia){const mq=matchMedia('(prefers-color-scheme: dark)');const f=()=>{if(getAppThemePrefs().mode==='system')applyAppTheme()};mq.addEventListener?mq.addEventListener('change',f):mq.addListener(f)}
+document.addEventListener('DOMContentLoaded',applyAppTheme);applyAppTheme();
+
 const VERSION_URL='./version.json';
 const GOOGLE_CLIENT_ID='671607022405-ctegk4jl7koo9elm30odvsb1binp49cb.apps.googleusercontent.com';
 const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.appdata';
