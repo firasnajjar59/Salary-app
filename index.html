@@ -1730,6 +1730,7 @@ html[data-theme=dark] .calendar-day.has-event:not(.has-shift){
     .pixel-check-row input:focus-visible + .pixel-check-box{box-shadow:0 0 0 4px color-mix(in srgb,var(--primary) 20%,transparent)}
     .pixel-check-row:active .pixel-check-box{transform:scale(.94)}
 
+.line-op-card{border:1px solid var(--line);border-radius:18px;padding:14px;background:var(--surface);margin-top:10px}.line-op-title{font-size:17px;font-weight:850;margin-bottom:10px}.line-op-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:430px){.line-op-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -2030,7 +2031,7 @@ html[data-theme=dark] .calendar-day.has-event:not(.has-shift){
         <summary>אודות</summary>
         <div class="settings-accordion-body">
           <div style="font-size:17px;font-weight:850">נוצר ע״י פראס נג׳אר</div>
-          <div class="note" style="margin-top:5px">גרסה <strong>88</strong></div>
+          <div class="note" style="margin-top:5px">גרסה <strong>89</strong></div>
           <div style="height:12px"></div>
           <button class="secondary" id="manualUpdateCheckBtn" type="button">בדיקת עדכונים</button>
           <div id="manualUpdateStatus" class="note" style="margin-top:8px"></div>
@@ -2051,6 +2052,16 @@ html[data-theme=dark] .calendar-day.has-event:not(.has-shift){
           <div id="analyticsChartLayoutList" class="analytics-chart-controls"></div>
           <div style="height:10px"></div>
           <button class="secondary" id="saveAnalyticsCharts" type="button">שמור תצוגת גרפים</button>
+        </div>
+      </details>
+    </div>
+
+    <div class="card settings-accordion">
+      <details>
+        <summary>🚋 הגדרות קווים</summary>
+        <div class="settings-accordion-body">
+          <p class="note">הגדר לכל קו את משך חצי הסיבוב המתוכנן ואת טווח ההגעה שנחשב בזמן. ההגדרה משפיעה על סיבובים חדשים וקיימים לפי הקו של המשמרת.</p>
+          <div id="lineOperationalSettingsList"></div>
         </div>
       </details>
     </div>
@@ -2777,7 +2788,7 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=88;
+const APP_VERSION=89;
 
 const CALENDAR_PREFS_KEY='salaryApp.calendarPrefs.v1';
 function getCalendarPrefs(){
@@ -3320,6 +3331,7 @@ function saveReportTypes(types){
   if(!current.reportTypes.length) current.reportTypes=[...DEFAULT_REPORT_TYPES];
   localStorage.setItem(KEY_SETTINGS,JSON.stringify(current));
   renderReportTypesSettings();
+  renderLineOperationalSettings();
 }
 function renderReportTypesSettings(){
   const list=$('reportTypesList');
@@ -3482,7 +3494,6 @@ window.deleteDriverReport=deleteDriverReport;
 
 
 let tripShiftId=null,editingTripId=null;
-const TRIP_PLANNED_MINUTES=68;
 
 function normalizedTrips(sh){return Array.isArray(sh?.trips)?sh.trips:[]}
 function tripById(sh,id){return normalizedTrips(sh).find(t=>t.id===id)}
@@ -3506,24 +3517,25 @@ function hmAddMinutes(hm,mins){
   if(x<0)x+=1440;
   return `${String(Math.floor(x/60)).padStart(2,'0')}:${String(x%60).padStart(2,'0')}`;
 }
-function tripTimingFromDuration(startTime,endTime){
+function tripTimingFromDuration(startTime,endTime,line='red'){
   const actual=durationBetweenHm(startTime,endTime);
-  if(!endTime || !actual) return {status:'active',minutes:0,actual:0};
-  const diff=actual-TRIP_PLANNED_MINUTES;
-  if(Math.abs(diff)<=1) return {status:'on_time',minutes:0,actual};
-  if(diff>1) return {status:'late',minutes:diff,actual};
-  return {status:'early',minutes:Math.abs(diff),actual};
+  const cfg=lineOperationalConfig(line);
+  if(!endTime || !actual) return {status:'active',minutes:0,actual:0,planned:cfg.plannedTripMinutes,tolerance:cfg.onTimeToleranceMinutes};
+  const diff=actual-cfg.plannedTripMinutes;
+  if(Math.abs(diff)<=cfg.onTimeToleranceMinutes) return {status:'on_time',minutes:0,actual,planned:cfg.plannedTripMinutes,tolerance:cfg.onTimeToleranceMinutes};
+  if(diff>cfg.onTimeToleranceMinutes) return {status:'late',minutes:diff,actual,planned:cfg.plannedTripMinutes,tolerance:cfg.onTimeToleranceMinutes};
+  return {status:'early',minutes:Math.abs(diff),actual,planned:cfg.plannedTripMinutes,tolerance:cfg.onTimeToleranceMinutes};
 }
-function tripTimingText(t){
+function tripTimingText(t,sh=null){
   if(t?.active && !t?.endTime) return 'בנסיעה';
-  const x=tripTimingFromDuration(t?.startTime,t?.endTime);
+  const x=tripTimingFromDuration(t?.startTime,t?.endTime,shiftLine(sh));
   if(x.status==='late') return `איחור ${x.minutes} דק׳`;
   if(x.status==='early') return `הקדמה ${x.minutes} דק׳`;
   return 'בזמן';
 }
-function inferTripTiming(t){
+function inferTripTiming(t,sh=null){
   if(t?.endTime){
-    const x=tripTimingFromDuration(t.startTime,t.endTime);
+    const x=tripTimingFromDuration(t.startTime,t.endTime,shiftLine(sh));
     return {status:x.status==='active'?'on_time':x.status,minutes:x.minutes||0};
   }
   if(t?.timingStatus && t.timingStatus!=='active') return {status:t.timingStatus,minutes:Math.max(0,Number(t.varianceMinutes||0))};
@@ -3538,7 +3550,8 @@ function updateTripDurationUi({syncEnd=false}={}){
   let variance=Math.max(0,Number($('tripTimingMinutes')?.value||0));
   if(status==='on_time') variance=0;
 
-  const plannedEnd=hmAddMinutes(start,TRIP_PLANNED_MINUTES);
+  const cfg=lineOperationalConfig(shiftLine(shifts.find(x=>x.id===tripShiftId)));
+  const plannedEnd=hmAddMinutes(start,cfg.plannedTripMinutes);
   if($('tripPlannedEndTime')) $('tripPlannedEndTime').value=plannedEnd;
 
   if($('tripTimingMinutes')){
@@ -3547,7 +3560,7 @@ function updateTripDurationUi({syncEnd=false}={}){
   }
 
   if(syncEnd && start){
-    const actualMinutes=TRIP_PLANNED_MINUTES + (status==='late'?variance:status==='early'?-variance:0);
+    const actualMinutes=cfg.plannedTripMinutes + (status==='late'?variance:status==='early'?-variance:0);
     $('tripEndTime').value=hmAddMinutes(start,Math.max(0,actualMinutes));
   }
 
@@ -3555,7 +3568,7 @@ function updateTripDurationUi({syncEnd=false}={}){
   const summary=$('tripDurationSummary');
   if(summary){
     summary.innerHTML=`
-      <div class="trip-duration-box"><span>זמן מתוכנן</span><strong>${fmtMin(TRIP_PLANNED_MINUTES)}</strong></div>
+      <div class="trip-duration-box"><span>זמן מתוכנן</span><strong>${fmtMin(cfg.plannedTripMinutes)}</strong></div>
       <div class="trip-duration-box"><span>זמן נהיגה בפועל</span><strong>${actualDuration?fmtMin(actualDuration):'—'}</strong></div>`;
   }
 }
@@ -3563,7 +3576,7 @@ function syncTimingFromActualEnd(){
   const start=$('tripStartTime')?.value||'';
   const end=$('tripEndTime')?.value||'';
   if(!end){ updateTripDurationUi(); return; }
-  const x=tripTimingFromDuration(start,end);
+  const x=tripTimingFromDuration(start,end,shiftLine(shifts.find(x=>x.id===tripShiftId)));
   if(x.status==='late'){
     $('tripTimingStatus').value='late';
     $('tripTimingMinutes').value=String(x.minutes);
@@ -3600,7 +3613,7 @@ function finishActiveTripNow(shiftId,tripId){
   const t=tripById(sh,tripId); if(!t) return;
   if(!t.active || t.endTime){ openTripModal(shiftId,tripId); return; }
   const endTime=localTimeHm();
-  const timing=tripTimingFromDuration(t.startTime,endTime);
+  const timing=tripTimingFromDuration(t.startTime,endTime,shiftLine(sh));
   t.endTime=endTime;
   t.active=false;
   t.timingStatus=timing.status==='active'?'on_time':timing.status;
@@ -3617,7 +3630,7 @@ function openTripModal(shiftId,tripId=''){
   tripShiftId=shiftId;editingTripId=tripId||null;
   const t=editingTripId?tripById(sh,editingTripId):null;
   const start=t?.startTime||localTimeHm();
-  const inferred=inferTripTiming(t);
+  const inferred=inferTripTiming(t,sh);
 
   $('tripModalTitle').textContent=t?'עריכת חצי סיבוב':'הוספת חצי סיבוב';
   $('tripShiftInfo').textContent=`משמרת ${formatDateHe(sh.date)} · ${sh.start}–${sh.end}`;
@@ -3659,7 +3672,7 @@ function saveTrip(){
     const i=a.findIndex(t=>t.id===editingTripId);if(i<0)return;
     let timingStatus='on_time',varianceMinutes=0,active=!endTime;
     if(endTime){
-      const timing=tripTimingFromDuration(startTime,endTime);
+      const timing=tripTimingFromDuration(startTime,endTime,shiftLine(sh));
       timingStatus=timing.status==='active'?'on_time':timing.status;
       varianceMinutes=timing.minutes||0;
       active=false;
@@ -3670,7 +3683,7 @@ function saveTrip(){
         return;
       }
     }
-    a[i]={...a[i],startPoint,rb,trainNumber,startTime,endTime,active,timingStatus,varianceMinutes,plannedMinutes:TRIP_PLANNED_MINUTES,updatedAt:new Date().toISOString()};
+    a[i]={...a[i],startPoint,rb,trainNumber,startTime,endTime,active,timingStatus,varianceMinutes,plannedMinutes:lineOperationalConfig(shiftLine(sh)).plannedTripMinutes,updatedAt:new Date().toISOString()};
   }else{
     const current=activeTripRecord();
     if(current){
@@ -3682,7 +3695,7 @@ function saveTrip(){
       createdAt:new Date().toISOString(),
       startPoint,rb,trainNumber,startTime,endTime:'',
       active:true,timingStatus:'on_time',varianceMinutes:0,
-      plannedMinutes:TRIP_PLANNED_MINUTES
+      plannedMinutes:lineOperationalConfig(shiftLine(sh)).plannedTripMinutes
     });
   }
 
@@ -3712,7 +3725,7 @@ function tripsHtmlForShift(sh){
     return `<div class="trip-card">
       <div class="trip-card-title">חצי סיבוב ${i+1} · ${escapeHtml(t.startPoint||'')} ${active?'<span class="trip-active-badge">● בנסיעה</span>':''}</div>
       <div class="trip-card-meta">${escapeHtml(t.startTime||'—')}–${active?'עכשיו':escapeHtml(t.endTime||'—')}${t.rb?` · ${escapeHtml(t.rb)}`:''}${t.trainNumber?` · רכבת ${escapeHtml(t.trainNumber)}`:''}</div>
-      <div class="trip-card-meta">מתוכנן ${fmtMin(TRIP_PLANNED_MINUTES)} · ${active?'זמן שחלף':'בפועל'} ${actual?fmtMin(actual):'—'} · ${escapeHtml(tripTimingText(t))}</div>
+      <div class="trip-card-meta">מתוכנן ${fmtMin(lineOperationalConfig(shiftLine(sh)).plannedTripMinutes)} · ${active?'זמן שחלף':'בפועל'} ${actual?fmtMin(actual):'—'} · ${escapeHtml(tripTimingText(t,sh))}</div>
       <div class="trip-actions">
         ${active?`<button class="primary" onclick="finishActiveTripNow('${sh.id}','${t.id}')">⏹ סיום עכשיו</button>`:''}
         <button class="secondary" onclick="openTripModal('${sh.id}','${t.id}')">ערוך</button>
@@ -3832,7 +3845,31 @@ function getSettings(){
     const el=$(id);
     s[id]=el.type==='checkbox'?el.checked:el.value;
   });
+  const current=readStoredSettings();
+  const lineOperationalSettings={...(current.lineOperationalSettings||{})};
+  document.querySelectorAll('[data-line-op-key]').forEach(card=>{
+    const key=card.dataset.lineOpKey;
+    const planned=Math.max(1,Math.round(Number(card.querySelector('[data-line-op-planned]')?.value||68)));
+    const tolerance=Math.max(0,Math.round(Number(card.querySelector('[data-line-op-tolerance]')?.value||1)));
+    lineOperationalSettings[key]={plannedTripMinutes:planned,onTimeToleranceMinutes:tolerance};
+  });
+  s.lineOperationalSettings=lineOperationalSettings;
   return s;
+}
+function lineOperationalConfig(line='red'){
+  const s=readStoredSettings();
+  const x=s.lineOperationalSettings?.[line]||{};
+  return {plannedTripMinutes:Math.max(1,Math.round(Number(x.plannedTripMinutes||68))),onTimeToleranceMinutes:Math.max(0,Math.round(Number(x.onTimeToleranceMinutes??1)))};
+}
+function renderLineOperationalSettings(){
+  const host=$('lineOperationalSettingsList'); if(!host)return;
+  const s=readStoredSettings();
+  host.innerHTML=availableLines().map(({key,label})=>{
+    const x=s.lineOperationalSettings?.[key]||{};
+    const planned=Math.max(1,Math.round(Number(x.plannedTripMinutes||68)));
+    const tolerance=Math.max(0,Math.round(Number(x.onTimeToleranceMinutes??1)));
+    return `<div class="line-op-card" data-line-op-key="${escapeHtml(key)}"><div class="line-op-title">קו ${escapeHtml(label)}</div><div class="line-op-grid"><div><label>אורך חצי סיבוב מתוכנן (דקות)</label><input data-line-op-planned type="number" min="1" step="1" value="${planned}"></div><div><label>טווח שנחשב בזמן ± (דקות)</label><input data-line-op-tolerance type="number" min="0" step="1" value="${tolerance}"></div></div><div class="note" style="margin-top:8px">לדוגמה: ±1 אומר שסטייה של עד דקה מוקדם או מאוחר עדיין נחשבת בזמן.</div></div>`;
+  }).join('');
 }
 function saveSettings(){
   const current=readStoredSettings();
@@ -3854,6 +3891,7 @@ function loadSettings(){
   renderHomeLayoutEditor();
   renderAnalyticsChartLayoutEditor();
   renderReportTypesSettings();
+  renderLineOperationalSettings();
 }
 
 const DEFAULT_NOTIFICATION_PREFERENCES={
@@ -4520,7 +4558,7 @@ function shiftTimelineHtml(sh){
 
   normalizedTrips(sh).forEach((t,i)=>{
     const active=!!(t.active&&!t.endTime);
-    const meta=[t.startPoint,t.rb||'',t.trainNumber?`רכבת ${t.trainNumber}`:'',active?'בנסיעה עכשיו':(t.endTime?`עד ${t.endTime}`:''),tripTimingText(t)].filter(Boolean).join(' · ');
+    const meta=[t.startPoint,t.rb||'',t.trainNumber?`רכבת ${t.trainNumber}`:'',active?'בנסיעה עכשיו':(t.endTime?`עד ${t.endTime}`:''),tripTimingText(t,sh)].filter(Boolean).join(' · ');
     push(t.startTime,`חצי סיבוב ${i+1}${active?' · פעיל':''}`,meta,'trip',`openTripModal('${sh.id}','${t.id}')`);
   });
   const breakInfo=shiftBreakInfo(sh);
@@ -4671,7 +4709,7 @@ function exportShiftPdf(id){
   </style></head><body><h1>דוח משמרת</h1><div class="sub">${escapeHtml(formatDateHe(sh.date))} · ${escapeHtml(dayNameHe(sh.date))} · ${escapeHtml(dd)} · ${escapeHtml(dayLabel)}</div>
   <div class="grid"><div class="box"><b>שעות</b><div class="big">${intervals}</div><div>עבודה/לתשלום: ${fmtMin(c.workedMinutes??c.grossMinutes)} / ${fmtMin(c.grossMinutes)}</div><div>נהיגה מתועדת: <b>${fmtMin(om.driving)}</b></div><div>הפסקות בין סיבובים: <b>${bi.known?fmtMin(bi.minutes):'לא ידוע'}</b></div><div>זמן לא מתועד: <b>${om.undocumented===null?'לא ידוע':fmtMin(om.undocumented)}</b></div>${c.splitBonusMinutes?`<div>תוספת שעת פיצול: +1:00</div>`:''}</div><div class="box"><b>שכר צפוי</b><div class="big">${detailMoney(c.pay)}</div><div>נסיעות ${detailMoney(c.travel)} · אש״ל ${detailMoney(c.perDiem)}</div></div></div>
   <div class="section"><h2>ציר זמן המשמרת</h2>${timeline}</div>
-  <div class="section"><h2>נסיעות / חצאי סיבוב (${trips.length})</h2>${trips.length?trips.map((t,i)=>`<div class="row"><b>חצי סיבוב ${i+1} · ${escapeHtml(t.startPoint||'')}</b><div class="muted">${escapeHtml(t.startTime||'—')}–${escapeHtml(t.endTime||'—')}${t.rb?` · RB ${escapeHtml(t.rb)}`:''}${t.trainNumber?` · רכבת ${escapeHtml(t.trainNumber)}`:''} · ${escapeHtml(tripTimingText(t))}</div></div>`).join(''):'<div class="muted">אין סיבובים מתועדים.</div>'}</div>
+  <div class="section"><h2>נסיעות / חצאי סיבוב (${trips.length})</h2>${trips.length?trips.map((t,i)=>`<div class="row"><b>חצי סיבוב ${i+1} · ${escapeHtml(t.startPoint||'')}</b><div class="muted">${escapeHtml(t.startTime||'—')}–${escapeHtml(t.endTime||'—')}${t.rb?` · RB ${escapeHtml(t.rb)}`:''}${t.trainNumber?` · רכבת ${escapeHtml(t.trainNumber)}`:''} · ${escapeHtml(tripTimingText(t,sh))}</div></div>`).join(''):'<div class="muted">אין סיבובים מתועדים.</div>'}</div>
   <div class="section"><h2>אישורים ושינויים (${approvals.length})</h2>${approvals.length?approvals.map(a=>`<div class="row"><b>${escapeHtml(a.what||'')}</b><div class="muted">${a.approvedBy?`באישור ${escapeHtml(a.approvedBy)}`:''}${a.note?` · ${escapeHtml(a.note)}`:''}</div></div>`).join(''):'<div class="muted">אין רישומים.</div>'}</div>
   <div class="section"><h2>דוחות נהג (${reports.length})</h2>${reports.length?reports.map(r=>`<div class="row"><b>${escapeHtml(r.eventTime||'—')} · ${escapeHtml(r.type||'דוח')}</b><div>${escapeHtml(r.description||'')}</div></div>`).join(''):'<div class="muted">אין דוחות.</div>'}</div>
   ${sh.notes?`<div class="section"><h2>הערות</h2>${escapeHtml(sh.notes)}</div>`:''}<script>window.onload=()=>setTimeout(()=>window.print(),250);<\/script>
@@ -5282,6 +5320,7 @@ function saveDdTables(t){
   populateLineSelects();
   refreshDdStatus();
   refreshDdPresetOptions();
+  if(typeof renderLineOperationalSettings==='function') renderLineOperationalSettings();
 }
 function displayDdNumber(type,number){
   if(number===undefined || number===null || String(number)==='') return '';
@@ -6889,7 +6928,7 @@ function renderTodayDashboard(){
             ? `<div class="today-report-preview">${normalizedTrips(sh).slice().sort((a,b)=>String(a.startTime||'').localeCompare(String(b.startTime||''))).map((t,i)=>{
                 const active=!!(t.active&&!t.endTime);
                 const actual=active?tripElapsedMinutes(sh,t):durationBetweenHm(t.startTime,t.endTime);
-                return `<div class="today-trip-pill" style="display:block"><button type="button" class="today-trip-link" style="width:100%;border:0;background:transparent;text-align:right;padding:0" onclick="openTripModal('${sh.id}','${t.id}')"><strong>חצי סיבוב ${i+1} · ${escapeHtml(t.startPoint||'')} ${active?'· פעיל':''}</strong>${t.rb?` · ${escapeHtml(t.rb)}`:''}${t.trainNumber?` · רכבת ${escapeHtml(t.trainNumber)}`:''}<small>${escapeHtml(t.startTime||'—')}–${active?'עכשיו':escapeHtml(t.endTime||'—')} · ${active?'זמן שחלף':'בפועל'} ${actual?fmtMin(actual):'—'} · ${escapeHtml(tripTimingText(t))}</small></button>${active?`<button type="button" class="primary" style="width:100%;margin-top:7px" onclick="finishActiveTripNow('${sh.id}','${t.id}')">⏹ סיום סיבוב עכשיו</button>`:''}</div>`;
+                return `<div class="today-trip-pill" style="display:block"><button type="button" class="today-trip-link" style="width:100%;border:0;background:transparent;text-align:right;padding:0" onclick="openTripModal('${sh.id}','${t.id}')"><strong>חצי סיבוב ${i+1} · ${escapeHtml(t.startPoint||'')} ${active?'· פעיל':''}</strong>${t.rb?` · ${escapeHtml(t.rb)}`:''}${t.trainNumber?` · רכבת ${escapeHtml(t.trainNumber)}`:''}<small>${escapeHtml(t.startTime||'—')}–${active?'עכשיו':escapeHtml(t.endTime||'—')} · ${active?'זמן שחלף':'בפועל'} ${actual?fmtMin(actual):'—'} · ${escapeHtml(tripTimingText(t,sh))}</small></button>${active?`<button type="button" class="primary" style="width:100%;margin-top:7px" onclick="finishActiveTripNow('${sh.id}','${t.id}')">⏹ סיום סיבוב עכשיו</button>`:''}</div>`;
               }).join('')}</div>`
             : `<div class="today-status">אין עדיין חצאי סיבוב מתועדים.</div>`}
         </div>
