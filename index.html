@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#111827"/>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1003,6 +1003,108 @@
       button.secondary:hover,.tab:hover{filter:brightness(.985)}
     }
 
+
+    /* v75 — iPhone / large-phone responsive pass */
+    html{
+      -webkit-text-size-adjust:100%;
+      text-size-adjust:100%;
+      width:100%;
+      overflow-x:hidden;
+    }
+    body{
+      width:100%;
+      max-width:100%;
+      overflow-x:hidden;
+      -webkit-font-smoothing:antialiased;
+    }
+    *,*::before,*::after{box-sizing:border-box}
+    img,svg,canvas{max-width:100%;height:auto}
+    main,.page,.card,.today-hero,.today-info-card,.live-shift-panel,.modal-sheet{
+      max-width:100%;
+      min-width:0;
+    }
+    input,select,textarea,button{max-width:100%;min-width:0}
+    input,select,textarea{font-size:16px} /* prevents iOS Safari auto-zoom */
+
+    @supports (padding:max(0px)){
+      header{
+        padding-top:max(15px,env(safe-area-inset-top));
+        padding-left:max(18px,env(safe-area-inset-left));
+        padding-right:max(18px,env(safe-area-inset-right));
+      }
+      main{
+        padding-left:max(14px,env(safe-area-inset-left));
+        padding-right:max(14px,env(safe-area-inset-right));
+      }
+      .tabs{
+        left:max(10px,env(safe-area-inset-left));
+        right:max(10px,env(safe-area-inset-right));
+        bottom:max(8px,env(safe-area-inset-bottom));
+        padding-bottom:7px;
+      }
+      .modal-sheet{
+        padding-bottom:env(safe-area-inset-bottom);
+      }
+    }
+
+    @media (max-width:600px){
+      header{padding-bottom:11px}
+      header h1{font-size:19px}
+      main{padding-top:12px}
+      .card{border-radius:22px;padding:14px}
+      .summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .stat{min-width:0;padding:12px}
+      .stat strong{font-size:19px;overflow-wrap:anywhere}
+      .today-hero{padding:15px;border-radius:24px}
+      .today-title{font-size:22px}
+      .today-grid,.live-shift-grid,.ops-metrics{
+        grid-template-columns:repeat(2,minmax(0,1fr));
+      }
+      .today-chip,.live-stat,.ops-metric{min-width:0}
+      .today-chip strong,.live-stat strong,.ops-metric strong{
+        overflow-wrap:anywhere;
+      }
+      .shift-quick-actions{
+        display:grid;
+        grid-template-columns:repeat(3,minmax(0,1fr));
+      }
+      .shift-quick-actions button{
+        width:100%;
+        padding:9px 6px;
+        font-size:13px;
+        white-space:normal;
+        line-height:1.15;
+      }
+      .active-trip-actions{
+        display:grid;
+        grid-template-columns:minmax(0,1fr) auto;
+        gap:8px;
+      }
+      .active-trip-actions button{min-width:0}
+      .row,.form-row,.settings-grid,.detail-grid{
+        min-width:0;
+      }
+      .tabs{border-radius:25px}
+      .tab{min-width:0;padding:5px 2px}
+      .tab-icon{font-size:20px}
+      .nav-add-inner{width:52px;height:52px}
+      .modal-sheet{width:100%;max-width:100vw}
+    }
+
+    @media (max-width:390px){
+      main{padding-left:10px;padding-right:10px}
+      .card{padding:12px;border-radius:20px}
+      .today-hero{padding:13px}
+      .today-grid,.live-shift-grid,.ops-metrics{gap:7px}
+      .today-chip,.live-stat,.ops-metric{padding:10px}
+      .shift-quick-actions button{font-size:12px}
+      .tab{font-size:10px}
+    }
+
+    @media (min-width:601px){
+      main{width:min(100%,780px)}
+    }
+
 </style>
 </head>
 <body>
@@ -1271,7 +1373,7 @@
         <summary>אודות</summary>
         <div class="settings-accordion-body">
           <div style="font-size:17px;font-weight:850">נוצר ע״י פראס נג׳אר</div>
-          <div class="note" style="margin-top:5px">גרסה <strong>74</strong></div>
+          <div class="note" style="margin-top:5px">גרסה <strong>75</strong></div>
           <div style="height:12px"></div>
           <button class="secondary" id="manualUpdateCheckBtn" type="button">בדיקת עדכונים</button>
           <div id="manualUpdateStatus" class="note" style="margin-top:8px"></div>
@@ -1920,7 +2022,7 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=74;
+const APP_VERSION=75;
 const VERSION_URL='./version.json';
 const GOOGLE_CLIENT_ID='671607022405-ctegk4jl7koo9elm30odvsb1binp49cb.apps.googleusercontent.com';
 const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.appdata';
