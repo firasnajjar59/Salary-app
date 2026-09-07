@@ -1731,6 +1731,61 @@ html[data-theme=dark] .calendar-day.has-event:not(.has-shift){
     .pixel-check-row:active .pixel-check-box{transform:scale(.94)}
 
 .line-op-card{border:1px solid var(--line);border-radius:18px;padding:14px;background:var(--surface);margin-top:10px}.line-op-title{font-size:17px;font-weight:850;margin-bottom:10px}.line-op-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:430px){.line-op-grid{grid-template-columns:1fr}}
+
+/* v90 — settings organization, line points, floating save */
+.settings-group-label{
+  margin:22px 4px 8px;
+  color:var(--muted);
+  font-size:12px;
+  font-weight:850;
+  letter-spacing:.02em;
+}
+.settings-group-body>h2{font-size:16px;margin-top:18px}
+.settings-group-body>h2:first-child{margin-top:0}
+.settings-group-body>.grid+ .note{margin-bottom:14px}
+
+.line-points-head{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
+  margin-top:16px;padding-top:14px;border-top:1px solid var(--line);
+}
+.line-point-add{width:auto!important;min-height:40px!important;white-space:nowrap}
+.line-points-list{display:grid;gap:8px;margin-top:10px}
+.line-point-row{display:grid;grid-template-columns:minmax(0,1fr) 42px;gap:8px;align-items:center}
+.line-point-row input{min-height:44px}
+.line-point-remove{
+  width:42px;height:42px;min-height:42px;border:0;border-radius:50%;
+  background:var(--surface);color:var(--danger);font-size:23px;line-height:1;
+}
+.settings-floating-save{
+  position:fixed;
+  top:max(12px,env(safe-area-inset-top));
+  left:max(12px,env(safe-area-inset-left));
+  z-index:950;
+  height:44px;
+  padding:0 13px 0 10px;
+  border:0;
+  border-radius:22px;
+  display:flex;
+  align-items:center;
+  gap:7px;
+  background:var(--app-accent);
+  color:#fff;
+  font-weight:800;
+  box-shadow:0 8px 24px rgba(0,0,0,.18);
+}
+.settings-floating-save.hidden{display:none!important}
+.settings-save-icon{
+  width:28px;height:28px;border-radius:50%;display:grid;place-items:center;
+  background:rgba(255,255,255,.16)
+}
+.settings-save-icon svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+html[data-theme=dark] .line-point-remove{background:#2d2b31}
+@media(max-width:390px){
+  .line-points-head{flex-direction:column}
+  .line-point-add{width:100%!important}
+  .settings-floating-save{height:42px;font-size:13px}
+}
+
 </style>
 </head>
 <body>
@@ -1995,6 +2050,13 @@ html[data-theme=dark] .calendar-day.has-event:not(.has-shift){
   </section>
 
   <section id="settings" class="hidden">
+    <button id="floatingSaveSettings" class="settings-floating-save hidden" type="button" aria-label="שמור הגדרות">
+      <span class="settings-save-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v6h8V4M8 20v-6h8v6"/></svg>
+      </span>
+      <span>שמור</span>
+    </button>
+<div class="settings-group-label">התאמה אישית</div>
 <details class="card settings-accordion calendar-settings-card">
 <summary>🗓️ לוחות שנה</summary>
 <div class="settings-accordion-body">
@@ -2031,7 +2093,7 @@ html[data-theme=dark] .calendar-day.has-event:not(.has-shift){
         <summary>אודות</summary>
         <div class="settings-accordion-body">
           <div style="font-size:17px;font-weight:850">נוצר ע״י פראס נג׳אר</div>
-          <div class="note" style="margin-top:5px">גרסה <strong>89</strong></div>
+          <div class="note" style="margin-top:5px">גרסה <strong>90</strong></div>
           <div style="height:12px"></div>
           <button class="secondary" id="manualUpdateCheckBtn" type="button">בדיקת עדכונים</button>
           <div id="manualUpdateStatus" class="note" style="margin-top:8px"></div>
@@ -2060,14 +2122,16 @@ html[data-theme=dark] .calendar-day.has-event:not(.has-shift){
       <details>
         <summary>🚋 הגדרות קווים</summary>
         <div class="settings-accordion-body">
-          <p class="note">הגדר לכל קו את משך חצי הסיבוב המתוכנן ואת טווח ההגעה שנחשב בזמן. ההגדרה משפיעה על סיבובים חדשים וקיימים לפי הקו של המשמרת.</p>
+          <p class="note">הגדר לכל קו משך חצי סיבוב, טווח הגעה בזמן ונקודות קצה. נקודת התחלה בסיבוב אינה חובה ואפשר לעדכן אותה לאחר תחילת הנסיעה.</p>
           <div id="lineOperationalSettingsList"></div>
         </div>
       </details>
     </div>
-
-    <div class="card">
-      <h2>תעריפים</h2>
+    <div class="settings-group-label">עבודה ושכר</div>
+    <div class="card settings-accordion">
+      <details>
+        <summary>💰 שכר ותעריפים</summary>
+        <div class="settings-accordion-body settings-group-body"><h2>תעריפים</h2>
       <div class="grid">
         <div><label>שכר בסיס לשעה ₪</label><input id="baseRate" type="number" step="0.01" value="50"></div>
         <div><label>נסיעות ליום ₪</label><input id="travelPerDay" type="number" step="0.01" value="16"></div>
@@ -2077,10 +2141,7 @@ html[data-theme=dark] .calendar-day.has-event:not(.has-shift){
         <div><label>תעריף חג %</label><input id="holidayPct" type="number" step="1" value="150"></div>
       </div>
       <p class="note"><strong>נסיעות:</strong> מחושבות לפי מספר ימי העבודה בחודש, עד לתקרה החודשית שהוגדרה. <strong>שישי:</strong> שעתיים ראשונות 125%, וכל שעה נוספת באותו יום 150%. <strong>שבת:</strong> 225% סופי כולל כל התוספות.</p>
-    </div>
-
-    <div class="card">
-      <h2>לילה ושעות נוספות</h2>
+<h2>לילה ושעות נוספות</h2>
       <div class="grid">
         <div><label>לילה מתחיל</label><input id="nightStart" type="time" value="22:00"></div>
         <div><label>לילה מסתיים</label><input id="nightEnd" type="time" value="06:00"></div>
@@ -2088,10 +2149,7 @@ html[data-theme=dark] .calendar-day.has-event:not(.has-shift){
         <div><label>מדרגת 125% - מספר שעות</label><input id="ot125Hours" type="number" step="0.25" value="2"></div>
       </div>
       <p class="note">אחרי מכסת השעות הרגילות: מספר השעות שהוגדר במדרגה הראשונה ישולם ב־125%, וכל היתר ב־150%.</p>
-    </div>
-
-    <div class="card">
-      <h2>תוספות מיוחדות</h2>
+<h2>תוספות מיוחדות</h2>
       <div class="grid">
         <div><label>חצי סיבוב ₪</label><input id="halfLoopAmount" type="number" step="0.01" value="0"></div>
         <div><label>סיבוב מלא ₪</label><input id="fullLoopAmount" type="number" step="0.01" value="0"></div>
@@ -2099,11 +2157,13 @@ html[data-theme=dark] .calendar-day.has-event:not(.has-shift){
         <div><label>קווי לילה עד 03:00 ₪</label><input id="nightLine3Amount" type="number" step="0.01" value="0"></div>
         <div><label>קווי לילה מעל 03:00 ₪</label><input id="nightLineOver3Amount" type="number" step="0.01" value="0"></div>
       </div>
-      <p class="note">התוספות אינן נקבעות לפי שעת הסיום. המשתמש בוחר אותן ידנית בכל משמרת שבה הן מגיעות.</p>
+      <p class="note">התוספות אינן נקבעות לפי שעת הסיום. המשתמש בוחר אותן ידנית בכל משמרת שבה הן מגיעות.</p></div>
+      </details>
     </div>
-
-    <div class="card">
-      <h2>מס הכנסה</h2>
+    <div class="card settings-accordion">
+      <details>
+        <summary>🧾 מסים והערכת נטו</summary>
+        <div class="settings-accordion-body settings-group-body"><h2>מס הכנסה</h2>
       <p class="note">אפשר להזין מדרגות מותאמות לשנת המס. אם השדות ריקים או לא תקינים, האפליקציה משתמשת אוטומטית בברירת המחדל של 2026: 7,010 · 10,060 · 19,000 · 25,100 · 46,690 · 60,130 ₪. מעל התקרה האחרונה מחושב 50%.</p>
       <div class="grid">
         <div><label>10% — עד ₪</label><input id="tax10UpTo" type="number" min="0" step="1" placeholder="7010"></div>
@@ -2115,10 +2175,7 @@ html[data-theme=dark] .calendar-day.has-event:not(.has-shift){
         <div><label>50%</label><input type="text" value="מעל תקרת 47%" disabled></div>
       </div>
       <p class="note">מדרגות שהוזנו ידנית ישמשו רק אם כל שש התקרות תקינות ובסדר עולה. אחרת יופעלו מדרגות ברירת המחדל של 2026.</p>
-    </div>
-
-    <div class="card">
-      <h2>ביטוח לאומי ובריאות</h2>
+<h2>ביטוח לאומי ובריאות</h2>
       <p class="note">אפשר להתאים את המדרגה והשיעורים לשנה חדשה. אם אחד מהשדות ריק או לא תקין, האפליקציה משתמשת בברירת המחדל של 2026 לעובד שכיר תושב ישראל בגיל העבודה.</p>
       <div class="grid">
         <div><label>מדרגה מופחתת — עד ₪</label><input id="niReducedUpTo" type="number" min="0" step="1" placeholder="7703"></div>
@@ -2129,10 +2186,7 @@ html[data-theme=dark] .calendar-day.has-event:not(.has-shift){
         <div><label>ביטוח בריאות — שיעור מלא %</label><input id="healthHighPct" type="number" min="0" step="0.01" placeholder="5.17"></div>
       </div>
       <p class="note">ברירת מחדל 2026: עד 7,703 ₪ — לאומי 1.04% ובריאות 3.23%; מעל 7,703 ₪ ועד 51,910 ₪ — לאומי 7% ובריאות 5.17%.</p>
-    </div>
-
-    <div class="card">
-      <h2>ניכויים להערכת נטו</h2>
+<h2>ניכויים להערכת נטו</h2>
       <div class="grid">
         <div><label>נקודות זיכוי</label><input id="creditPoints" type="number" step="0.25" value="2.25"></div>
         <div><label>שווי נקודת זיכוי ₪</label><input id="creditPointValue" type="number" min="0" step="1" placeholder="242"></div>
@@ -2141,23 +2195,42 @@ html[data-theme=dark] .calendar-day.has-event:not(.has-shift){
       </div>
       <p class="note">נקודות הזיכוי מופחתות אוטומטית ממס ההכנסה. אם שווי נקודת הזיכוי ריק, ברירת המחדל היא 242 ₪ לחודש (2026).</p>
       <div style="height:10px"></div>
-      <button class="primary" id="saveSettings">שמור הגדרות</button>
+      <button class="primary" id="saveSettings">שמור הגדרות</button></div>
+      </details>
     </div>
-
-    <div class="card">
-      <h2>טבלאות DD לפי קו</h2>
+    <div class="card settings-accordion">
+      <details>
+        <summary>🗂️ טבלאות DD</summary>
+        <div class="settings-accordion-body settings-group-body"><h2>טבלאות DD לפי קו</h2>
       <p class="note">הקובץ <strong>dd.json</strong> בשרת הוא המקור לטבלאות הקווים. משיכה מהשרת שומרת עותק מקומי במכשיר לעבודה גם בלי אינטרנט. משמרות שכבר נשמרו אינן משתנות.</p>
       <div class="grid">
         <button class="primary" id="updateDdFromServer" type="button">משוך טבלאות מהשרת</button>
         <button class="secondary" id="downloadDdCopy" type="button">הורד עותק JSON</button>
         <button class="secondary" id="editLocalDd" type="button">ערוך עותק מקומי</button>
       </div>
-      <div id="ddStatus" class="note" style="margin-top:10px"></div>
+      <div id="ddStatus" class="note" style="margin-top:10px"></div></div>
+      </details>
     </div>
 
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    <div class="settings-group-label">מערכת, פרטיות וגיבוי</div>
     <div class="card settings-accordion">
       <details>
-        <summary>נעילת האפליקציה</summary>
+        <summary>🔒 נעילת האפליקציה</summary>
         <div class="settings-accordion-body">
           <p class="note">אפשר לנעול את האפליקציה באמצעות האימות של המכשיר — טביעת אצבע, זיהוי פנים או קוד נעילת המכשיר, בהתאם למה שהטלפון והדפדפן תומכים בו.</p>
           <div class="grid">
@@ -2675,9 +2748,7 @@ html[data-theme=dark] .calendar-day.has-event:not(.has-shift){
         <div>
           <label>התחלה</label>
           <select id="tripStartPoint">
-            <option value="">בחר התחלה</option>
-            <option value="הדסה עין כרם">הדסה עין כרם</option>
-            <option value="נווה יעקב">נווה יעקב</option>
+            <option value="">לא חובה — אפשר לבחור אחר כך</option>
           </select>
         </div>
         <div>
@@ -2726,7 +2797,7 @@ html[data-theme=dark] .calendar-day.has-event:not(.has-shift){
         <div id="tripDurationSummary" class="trip-duration-summary"></div>
         <div class="note" style="margin-top:8px">זמן מתוכנן לחצי סיבוב הוא שעה ו־8 דקות. שינוי איחור/הקדמה יעדכן אוטומטית את שעת הסיום בפועל, ועדיין אפשר לשנות אותה ידנית.</div>
       </div>
-      <div id="tripQuickHint" class="note" style="margin-top:10px">להתחלת נסיעה מספיק לבחור התחלה ולשמור. השעה כבר הוכנסה אוטומטית.</div>
+      <div id="tripQuickHint" class="note" style="margin-top:10px">להתחלת נסיעה אפשר לשמור גם בלי נקודת התחלה ולעדכן אותה אחר כך. השעה כבר הוכנסה אוטומטית.</div>
       <div style="height:12px"></div>
       <button class="primary" id="saveTripBtn" type="button" style="width:100%">שמור חצי סיבוב</button>
     </div>
@@ -2788,7 +2859,39 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=89;
+const APP_VERSION=90;
+let settingsDirty=false;
+function markSettingsDirty(){
+  settingsDirty=true;
+  $('floatingSaveSettings')?.classList.remove('hidden');
+}
+function clearSettingsDirty(){
+  settingsDirty=false;
+  $('floatingSaveSettings')?.classList.add('hidden');
+}
+function saveAllGeneralSettings(){
+  saveSettings();
+  clearSettingsDirty();
+  renderShifts();
+  renderSummary();
+  renderTodayDashboard();
+}
+function bindSettingsDirtyTracking(){
+  const root=$('settings'); if(!root || root.dataset.dirtyBound==='1') return;
+  root.dataset.dirtyBound='1';
+  root.addEventListener('input',e=>{
+    if(e.target.matches('[data-line-op-planned],[data-line-op-tolerance],[data-line-point],#baseRate,#travelPerDay,#travelMonthlyCap,#perDiemPerDay,#nightPct,#holidayPct,#nightStart,#nightEnd,#regularDailyHours,#ot125Hours,#halfLoopAmount,#fullLoopAmount,#nightLine2Amount,#nightLine3Amount,#nightLineOver3Amount,#tax10UpTo,#tax14UpTo,#tax20UpTo,#tax31UpTo,#tax35UpTo,#tax47UpTo,#niReducedUpTo,#niMaxIncome,#niLowPct,#niHighPct,#healthLowPct,#healthHighPct,#creditPoints,#creditPointValue,#pensionPct,#otherDeductPct')){
+      markSettingsDirty();
+    }
+  });
+  root.addEventListener('change',e=>{
+    if(e.target.matches('[data-line-op-planned],[data-line-op-tolerance],[data-line-point],#baseRate,#travelPerDay,#travelMonthlyCap,#perDiemPerDay,#nightPct,#holidayPct,#nightStart,#nightEnd,#regularDailyHours,#ot125Hours,#halfLoopAmount,#fullLoopAmount,#nightLine2Amount,#nightLine3Amount,#nightLineOver3Amount,#tax10UpTo,#tax14UpTo,#tax20UpTo,#tax31UpTo,#tax35UpTo,#tax47UpTo,#niReducedUpTo,#niMaxIncome,#niLowPct,#niHighPct,#healthLowPct,#healthHighPct,#creditPoints,#creditPointValue,#pensionPct,#otherDeductPct')){
+      markSettingsDirty();
+    }
+  });
+}
+document.addEventListener('DOMContentLoaded',bindSettingsDirtyTracking);
+
 
 const CALENDAR_PREFS_KEY='salaryApp.calendarPrefs.v1';
 function getCalendarPrefs(){
@@ -3332,6 +3435,7 @@ function saveReportTypes(types){
   localStorage.setItem(KEY_SETTINGS,JSON.stringify(current));
   renderReportTypesSettings();
   renderLineOperationalSettings();
+  clearSettingsDirty();
 }
 function renderReportTypesSettings(){
   const list=$('reportTypesList');
@@ -3634,6 +3738,7 @@ function openTripModal(shiftId,tripId=''){
 
   $('tripModalTitle').textContent=t?'עריכת חצי סיבוב':'הוספת חצי סיבוב';
   $('tripShiftInfo').textContent=`משמרת ${formatDateHe(sh.date)} · ${sh.start}–${sh.end}`;
+  populateTripStartPoints(sh,t?.startPoint||'');
   $('tripStartPoint').value=t?.startPoint||'';
   $('tripRb').value=t?.rb||'';
   $('tripTrainNumber').value=t?.trainNumber||'';
@@ -3664,7 +3769,6 @@ function saveTrip(){
   const startTime=$('tripStartTime').value;
   const endTime=$('tripEndTime').value||'';
 
-  if(!startPoint){alert('בחר נקודת התחלה.');return}
   if(!startTime){alert('יש להזין שעת התחלה.');return}
 
   const a=normalizedTrips(sh).map(t=>({...t}));
@@ -3723,7 +3827,7 @@ function tripsHtmlForShift(sh){
     const active=!!(t.active&&!t.endTime);
     const actual=active?tripElapsedMinutes(sh,t):durationBetweenHm(t.startTime,t.endTime);
     return `<div class="trip-card">
-      <div class="trip-card-title">חצי סיבוב ${i+1} · ${escapeHtml(t.startPoint||'')} ${active?'<span class="trip-active-badge">● בנסיעה</span>':''}</div>
+      <div class="trip-card-title">חצי סיבוב ${i+1} · ${escapeHtml(t.startPoint||'נקודת התחלה לא הוזנה')} ${active?'<span class="trip-active-badge">● בנסיעה</span>':''}</div>
       <div class="trip-card-meta">${escapeHtml(t.startTime||'—')}–${active?'עכשיו':escapeHtml(t.endTime||'—')}${t.rb?` · ${escapeHtml(t.rb)}`:''}${t.trainNumber?` · רכבת ${escapeHtml(t.trainNumber)}`:''}</div>
       <div class="trip-card-meta">מתוכנן ${fmtMin(lineOperationalConfig(shiftLine(sh)).plannedTripMinutes)} · ${active?'זמן שחלף':'בפועל'} ${actual?fmtMin(actual):'—'} · ${escapeHtml(tripTimingText(t,sh))}</div>
       <div class="trip-actions">
@@ -3839,6 +3943,15 @@ const settingIds = ['baseRate','travelPerDay','travelMonthlyCap','perDiemPerDay'
 'niReducedUpTo','niMaxIncome','niLowPct','niHighPct','healthLowPct','healthHighPct',
 'creditPoints','creditPointValue','pensionPct','otherDeductPct'];
 
+function defaultLinePoints(line){
+  if(line==='red') return ['נווה יעקב','הדסה עין כרם'];
+  if(line==='yellow') return ['טורים','מלחה'];
+  return [];
+}
+function normalizeLinePoints(points,line=''){
+  const source=Array.isArray(points)?points:defaultLinePoints(line);
+  return [...new Set(source.map(x=>String(x||'').trim()).filter(Boolean))];
+}
 function getSettings(){
   let s={};
   settingIds.forEach(id=>{
@@ -3851,7 +3964,13 @@ function getSettings(){
     const key=card.dataset.lineOpKey;
     const planned=Math.max(1,Math.round(Number(card.querySelector('[data-line-op-planned]')?.value||68)));
     const tolerance=Math.max(0,Math.round(Number(card.querySelector('[data-line-op-tolerance]')?.value||1)));
-    lineOperationalSettings[key]={plannedTripMinutes:planned,onTimeToleranceMinutes:tolerance};
+    const points=[...card.querySelectorAll('[data-line-point]')].map(el=>el.value.trim()).filter(Boolean);
+    lineOperationalSettings[key]={
+      ...(lineOperationalSettings[key]||{}),
+      plannedTripMinutes:planned,
+      onTimeToleranceMinutes:tolerance,
+      points:normalizeLinePoints(points,key)
+    };
   });
   s.lineOperationalSettings=lineOperationalSettings;
   return s;
@@ -3859,7 +3978,32 @@ function getSettings(){
 function lineOperationalConfig(line='red'){
   const s=readStoredSettings();
   const x=s.lineOperationalSettings?.[line]||{};
-  return {plannedTripMinutes:Math.max(1,Math.round(Number(x.plannedTripMinutes||68))),onTimeToleranceMinutes:Math.max(0,Math.round(Number(x.onTimeToleranceMinutes??1)))};
+  return {
+    plannedTripMinutes:Math.max(1,Math.round(Number(x.plannedTripMinutes||68))),
+    onTimeToleranceMinutes:Math.max(0,Math.round(Number(x.onTimeToleranceMinutes??1))),
+    points:normalizeLinePoints(x.points,line)
+  };
+}
+function linePoints(line='red'){ return lineOperationalConfig(line).points; }
+function linePointRow(point=''){
+  return `<div class="line-point-row">
+    <input data-line-point type="text" maxlength="80" value="${escapeHtml(point)}" placeholder="שם נקודת קצה">
+    <button type="button" class="line-point-remove" data-remove-line-point aria-label="הסר נקודה">×</button>
+  </div>`;
+}
+function bindLineOperationalCard(card){
+  card.querySelectorAll('[data-remove-line-point]').forEach(btn=>btn.onclick=()=>{
+    btn.closest('.line-point-row')?.remove();
+    markSettingsDirty();
+  });
+  card.querySelector('[data-add-line-point]')?.addEventListener('click',()=>{
+    const list=card.querySelector('[data-line-points-list]');
+    if(!list) return;
+    list.insertAdjacentHTML('beforeend',linePointRow(''));
+    bindLineOperationalCard(card);
+    list.querySelector('.line-point-row:last-child input')?.focus();
+    markSettingsDirty();
+  },{once:true});
 }
 function renderLineOperationalSettings(){
   const host=$('lineOperationalSettingsList'); if(!host)return;
@@ -3868,8 +4012,31 @@ function renderLineOperationalSettings(){
     const x=s.lineOperationalSettings?.[key]||{};
     const planned=Math.max(1,Math.round(Number(x.plannedTripMinutes||68)));
     const tolerance=Math.max(0,Math.round(Number(x.onTimeToleranceMinutes??1)));
-    return `<div class="line-op-card" data-line-op-key="${escapeHtml(key)}"><div class="line-op-title">קו ${escapeHtml(label)}</div><div class="line-op-grid"><div><label>אורך חצי סיבוב מתוכנן (דקות)</label><input data-line-op-planned type="number" min="1" step="1" value="${planned}"></div><div><label>טווח שנחשב בזמן ± (דקות)</label><input data-line-op-tolerance type="number" min="0" step="1" value="${tolerance}"></div></div><div class="note" style="margin-top:8px">לדוגמה: ±1 אומר שסטייה של עד דקה מוקדם או מאוחר עדיין נחשבת בזמן.</div></div>`;
+    const points=normalizeLinePoints(x.points,key);
+    return `<div class="line-op-card" data-line-op-key="${escapeHtml(key)}">
+      <div class="line-op-title">קו ${escapeHtml(label)}</div>
+      <div class="line-op-grid">
+        <div><label>אורך חצי סיבוב מתוכנן (דקות)</label><input data-line-op-planned type="number" min="1" step="1" value="${planned}"></div>
+        <div><label>טווח שנחשב בזמן ± (דקות)</label><input data-line-op-tolerance type="number" min="0" step="1" value="${tolerance}"></div>
+      </div>
+      <div class="line-points-head">
+        <div><strong>נקודות קצה / תחילת סיבוב</strong><div class="note">הנהג יכול לבחור אחת מהן בתחילת סיבוב, או להשאיר ריק ולעדכן אחר כך.</div></div>
+        <button type="button" class="secondary line-point-add" data-add-line-point>＋ נקודה</button>
+      </div>
+      <div class="line-points-list" data-line-points-list>${points.map(linePointRow).join('')}</div>
+      <div class="note" style="margin-top:8px">לדוגמה: ±1 אומר שסטייה של עד דקה מוקדם או מאוחר עדיין נחשבת בזמן.</div>
+    </div>`;
   }).join('');
+  host.querySelectorAll('[data-line-op-key]').forEach(bindLineOperationalCard);
+}
+function populateTripStartPoints(sh,selected=''){
+  const el=$('tripStartPoint'); if(!el) return;
+  const points=linePoints(shiftLine(sh));
+  const values=[...points];
+  if(selected && !values.includes(selected)) values.push(selected);
+  el.innerHTML=`<option value="">לא חובה — אפשר לבחור אחר כך</option>`+
+    values.map(x=>`<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
+  el.value=selected||'';
 }
 function saveSettings(){
   const current=readStoredSettings();
@@ -5937,7 +6104,8 @@ $('splitStart2')?.addEventListener('change',updateSplitShiftUi);
 $('splitEnd2')?.addEventListener('change',updateSplitShiftUi);
 $('splitDidNotReturn')?.addEventListener('change',updateSplitShiftUi);
 
-$('saveSettings').onclick=()=>{ saveSettings(); renderShifts(); renderSummary(); renderTodayDashboard(); alert('ההגדרות נשמרו.'); };
+$('saveSettings').onclick=saveAllGeneralSettings;
+$('floatingSaveSettings')?.addEventListener('click',saveAllGeneralSettings);
 
 $('manualUpdateCheckBtn')?.addEventListener('click',async()=>{
   const btn=$('manualUpdateCheckBtn'), status=$('manualUpdateStatus');
