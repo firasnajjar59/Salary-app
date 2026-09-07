@@ -868,7 +868,7 @@
         <summary>אודות</summary>
         <div class="settings-accordion-body">
           <div style="font-size:17px;font-weight:850">נוצר ע״י פראס נג׳אר</div>
-          <div class="note" style="margin-top:5px">גרסה <strong>65</strong></div>
+          <div class="note" style="margin-top:5px">גרסה <strong>66</strong></div>
           <div style="height:12px"></div>
           <button class="secondary" id="manualUpdateCheckBtn" type="button">בדיקת עדכונים</button>
           <div id="manualUpdateStatus" class="note" style="margin-top:8px"></div>
@@ -1174,8 +1174,12 @@
           <div><label>כניסה 2</label><input id="splitStart2" type="time"></div>
           <div><label>יציאה 2</label><input id="splitEnd2" type="time"></div>
         </div>
+        <label class="check" style="margin-top:10px">
+          <input id="splitDidNotReturn" type="checkbox">
+          <span>בפועל לא חזרתי לחלק השני</span>
+        </label>
         <div id="splitGapInfo" class="split-gap-info"></div>
-        <div class="note" style="margin-top:8px">אם לא חזרת לחלק השני, השאר את כניסה 2 ויציאה 2 ריקות. במקרה כזה תחושב רק עבודת הבוקר ולא תתווסף שעת הפיצול.</div>
+        <div class="note" style="margin-top:8px">לא חייבים להזין עכשיו את שעות הפיצול. אם המשמרת נוצרה מ־DD מעל 12 שעות, עד לעדכון השעות בפועל החישוב יהיה זמני לפי שעות ה־DD. ביום המשמרת אפשר לעדכן יציאה 1, כניסה 2 ויציאה 2. אם בפועל לא חזרת לחלק השני, אפשר לסמן זאת בעריכה.</div>
       </div>
 
       <div class="grid">
@@ -1513,7 +1517,7 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=65;
+const APP_VERSION=66;
 const VERSION_URL='./version.json';
 const GOOGLE_CLIENT_ID='671607022405-ctegk4jl7koo9elm30odvsb1binp49cb.apps.googleusercontent.com';
 const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.appdata';
@@ -1684,7 +1688,7 @@ function saveHomeLayout(){
 function shiftSignature(sh){
   return [
     sh.date||'', sh.start||'', sh.end||'', String(sh.breakMin||0), String(sh.notes||''),
-    sh.dayType||'auto', sh.splitEnd1||'', sh.splitStart2||'', sh.splitEnd2||'', String(sh.bonus||0),
+    sh.dayType||'auto', sh.splitEnd1||'', sh.splitStart2||'', sh.splitEnd2||'', String(!!sh.splitDidNotReturn), String(sh.bonus||0),
     sh.extraLoopType||'none', sh.nightLineType||'none',
     sh.ddType||'', String(sh.ddNumber||'')
   ].join('|');
@@ -2323,10 +2327,26 @@ function overlap(a1,a2,b1,b2){ return Math.max(0,Math.min(a2,b2)-Math.max(a1,b1)
 
 
 function splitShiftInfo(sh){
-  if(sh?.dayType!=='split') return {isSplit:false,returned:false,gapMinutes:null,gapOk:true,workedMinutes:null,paidMinutes:null};
+  if(sh?.dayType!=='split') return {isSplit:false,returned:false,provisional:false,didNotReturn:false,gapMinutes:null,gapOk:true,workedMinutes:null,paidMinutes:null};
+
   const start1=sh.start||'', end1=sh.splitEnd1||sh.end||'', start2=sh.splitStart2||'', end2=sh.splitEnd2||'';
+  const didNotReturn=!!sh.splitDidNotReturn;
+  const hasSecond=!!(start2&&end2);
+
+  // Planned split imported from DD but real split times are not known yet:
+  // calculate provisionally from the DD start/end, without the +1 split hour.
+  const provisional=!didNotReturn && !hasSecond && !sh.splitEnd1;
+  if(provisional){
+    const ddMinutes=durationBetweenHm(sh.start,sh.end);
+    return {
+      isSplit:true,returned:false,provisional:true,didNotReturn:false,
+      gapMinutes:null,gapOk:true,start1:sh.start,end1:sh.end,start2:'',end2:'',
+      seg1:ddMinutes,seg2:0,workedMinutes:ddMinutes,splitBonusMinutes:0,paidMinutes:ddMinutes
+    };
+  }
+
   const seg1=durationBetweenHm(start1,end1);
-  const returned=!!(start2&&end2);
+  const returned=hasSecond && !didNotReturn;
   const seg2=returned?durationBetweenHm(start2,end2):0;
   let gapMinutes=null;
   if(returned){
@@ -2337,7 +2357,7 @@ function splitShiftInfo(sh){
   const workedMinutes=Math.max(0,seg1+seg2);
   const splitBonusMinutes=returned?60:0;
   return {
-    isSplit:true,returned,gapMinutes,gapOk:!returned||gapMinutes>=180,
+    isSplit:true,returned,provisional:false,didNotReturn,gapMinutes,gapOk:!returned||gapMinutes>=180,
     start1,end1,start2,end2,seg1,seg2,workedMinutes,
     splitBonusMinutes,paidMinutes:workedMinutes+splitBonusMinutes
   };
@@ -2350,22 +2370,29 @@ function splitGapText(info){
 function updateSplitShiftUi(){
   const isSplit=$('dayType')?.value==='split';
   $('splitShiftFields')?.classList.toggle('hidden',!isSplit);
-  if($('startLabel')) $('startLabel').textContent=isSplit?'כניסה 1':'שעת התחלה';
-  if($('endLabel')) $('endLabel').textContent=isSplit?'יציאה 1':'שעת סיום';
+  if($('startLabel')) $('startLabel').textContent=isSplit?'כניסה 1 / תחילת DD':'שעת התחלה';
+  if($('endLabel')) $('endLabel').textContent=isSplit?'יציאה 1 / סוף DD זמני':'שעת סיום';
 
   const info=$('splitGapInfo');
   if(!info) return;
   if(!isSplit){ info.className='split-gap-info'; info.textContent=''; return; }
 
+  const didNotReturn=!!$('splitDidNotReturn')?.checked;
   const end1=$('end')?.value||'', start2=$('splitStart2')?.value||'', end2=$('splitEnd2')?.value||'';
+
+  if(didNotReturn){
+    info.className='split-gap-info ok';
+    info.textContent='סומן שלא חזרת לחלק השני — יחושב רק החלק הראשון וללא תוספת שעת פיצול.';
+    return;
+  }
   if(!start2 && !end2){
     info.className='split-gap-info';
-    info.textContent='';
+    info.textContent='שעות הפיצול עדיין לא עודכנו — החישוב יכול להישאר זמני לפי שעות ה־DD.';
     return;
   }
   if(!start2 || !end2){
     info.className='split-gap-info warn';
-    info.textContent='⚠ יש למלא גם כניסה 2 וגם יציאה 2, או להשאיר את שתיהן ריקות אם לא חוזרים.';
+    info.textContent='הוזן רק חלק מהחלק השני. אפשר לשמור ולעדכן בהמשך.';
     return;
   }
   if(!end1){
@@ -2381,7 +2408,6 @@ function updateSplitShiftUi(){
     ? `⚠ הפיצול הוא ${fmtMin(gap)} בלבד — פחות מ־3 שעות. דבר עם הסדרן כדי לסדר את זה.`
     : `הפסקת פיצול: ${fmtMin(gap)} ✓`;
 }
-
 function determineDayType(dateStr, forced){
   if(forced && forced!=='auto') return forced;
   const d=new Date(dateStr+'T12:00:00');
@@ -2497,7 +2523,7 @@ function calcShift(sh){
 
   return {
     grossMinutes,workedMinutes,splitBonusMinutes,splitReturned:split.returned,
-    splitGapMinutes:split.gapMinutes,splitGapOk:split.gapOk,isSplit:split.isSplit,
+    splitGapMinutes:split.gapMinutes,splitGapOk:split.gapOk,isSplit:split.isSplit,splitProvisional:split.provisional,provisional:split.provisional,didNotReturn:split.didNotReturn,
     regMin,ot1Min,ot2Min,nightMin,type,
     regPay,ot1Pay,ot2Pay,nightExtra,travel,perDiem,bonus,
     extraLoopPay,nightLinePay,specialPay,pay
@@ -2629,7 +2655,7 @@ function renderShifts(){
             <button type="button" class="shift-date-link" onclick="openShiftDetails('${sh.id}')">${sh.date.slice(8,10)}/${sh.date.slice(5,7)} · ${escapeHtml(dayNameHe(sh.date))}</button>
             <div style="margin-top:3px">${sh.start}–${sh.end}</div>
             ${(sh.ddType && sh.ddNumber!=='')?`<div style="margin-top:3px;font-weight:700">${escapeHtml(displayDdNumber(sh.ddType,sh.ddNumber))}</div>`:''}
-            ${sh.dayType==='split'?`<div style="margin-top:4px;font-size:12px">${escapeHtml(sh.start||'—')}–${escapeHtml(sh.splitEnd1||sh.end||'—')}${sh.splitStart2&&sh.splitEnd2?` · ${escapeHtml(sh.splitStart2)}–${escapeHtml(sh.splitEnd2)}`:' · לא חזר לחלק שני'}</div>${c.splitReturned&&!c.splitGapOk?`<div class="split-detail-warning">⚠ פיצול קצר מ־3 שעות — לבדוק מול הסדרן</div>`:''}`:''}
+            ${sh.dayType==='split'?`<div style="margin-top:4px;font-size:12px">${escapeHtml(sh.start||'—')}–${escapeHtml(sh.splitEnd1||sh.end||'—')}${sh.splitStart2&&sh.splitEnd2?` · ${escapeHtml(sh.splitStart2)}–${escapeHtml(sh.splitEnd2)}`:(sh.splitDidNotReturn?' · לא חזר לחלק שני':' · זמני לפי DD')}</div>${c.splitReturned&&!c.splitGapOk?`<div class="split-detail-warning">⚠ פיצול קצר מ־3 שעות — לבדוק מול הסדרן</div>`:''}`:''}
             <div style="margin-top:6px">
             <span class="pill">${label}</span>
             ${c.type==='saturday'?`<span class="pill">225%</span>`:''}
@@ -2693,7 +2719,8 @@ function openShiftDetails(id){
           : `${escapeHtml(sh.start)}–${escapeHtml(sh.end)}`}</div>
         <div class="shift-detail-card-sub">${c.isSplit?`עבודה בפועל ${fmtMin(c.workedMinutes)} · לתשלום ${fmtMin(c.grossMinutes)}`:`${fmtMin(c.grossMinutes)}`} · ${escapeHtml(dayLabel)} · ${escapeHtml(ddText)}</div>
         ${c.splitBonusMinutes?`<div class="shift-detail-card-sub">כולל תוספת שעת פיצול: +1:00</div>`:''}
-        ${c.isSplit&&!c.splitReturned?`<div class="shift-detail-card-sub">לא חזר לחלק השני — ללא תוספת שעה</div>`:''}
+        ${c.isSplit&&c.provisional?`<div class="shift-detail-card-sub">חישוב זמני לפי שעות ה־DD — שעות הפיצול טרם עודכנו</div>`:''}
+        ${c.isSplit&&c.didNotReturn?`<div class="shift-detail-card-sub">לא חזר לחלק השני — ללא תוספת שעה</div>`:''}
         ${c.isSplit&&c.splitReturned?`<div class="${c.splitGapOk?'shift-detail-card-sub':'split-detail-warning'}">הפסקת פיצול ${fmtMin(c.splitGapMinutes)}${c.splitGapOk?' ✓':' · פחות מ־3 שעות — לבדוק מול הסדרן'}</div>`:''}
         ${hourParts.length?`<div class="shift-detail-card-sub">${hourParts.map(escapeHtml).join(' · ')}</div>`:''}
       </div>
@@ -2775,6 +2802,7 @@ window.editShift=id=>{
   $('end').value=sh.dayType==='split'?(sh.splitEnd1||sh.end||''):(sh.end||'');
   $('splitStart2').value=sh.splitStart2||'';
   $('splitEnd2').value=sh.splitEnd2||'';
+  if($('splitDidNotReturn')) $('splitDidNotReturn').checked=!!sh.splitDidNotReturn;
   $('breakMin').value=sh.breakMin||0;
   $('notes').value=sh.notes||'';
   $('dayType').value=sh.dayType||'auto';
@@ -3298,20 +3326,20 @@ function applyDdPreset(key){
   const ddEnd=operationalToClock(tpl.end);
 
   if(ddLooksLikeSplit(tpl)){
-    // DD whose planned envelope is over 12 hours is treated as a split shift automatically.
-    // We know only the first start and final end from the DD table; the middle exit/return
-    // must still be entered by the user so payroll never assumes the long gap was worked.
+    // A DD over 12 hours is recognized as split immediately, but the user may
+    // enter the real split times only on the workday. Until then the DD's own
+    // start/end are kept as a provisional calculation.
     $('dayType').value='split';
     $('start').value=ddStart;
-    $('end').value='';
+    $('end').value=ddEnd;
     $('splitStart2').value='';
-    $('splitEnd2').value=ddEnd;
+    $('splitEnd2').value='';
     updateSplitShiftUi();
 
     const info=$('splitGapInfo');
     if(info){
       info.className='split-gap-info ok';
-      info.textContent='זוהה אוטומטית כפיצול: ה־DD מעל 12 שעות. הזן יציאה 1 וכניסה 2.';
+      info.textContent='זוהה אוטומטית כפיצול. כרגע החישוב זמני לפי שעות ה־DD; ביום המשמרת אפשר לעדכן את שעות הפיצול בפועל.';
     }
   }else{
     // Shorter DDs stay normal unless the user explicitly chose split.
@@ -3667,6 +3695,7 @@ $('openShiftModal').onclick=()=>{
   $('end').value='';
   $('splitStart2').value='';
   $('splitEnd2').value='';
+  if($('splitDidNotReturn')) $('splitDidNotReturn').checked=false;
   $('breakMin').value='0';
   $('notes').value='';
   $('dayType').value='auto';
@@ -3694,43 +3723,62 @@ $('addShift').onclick=()=>{
   const isSplit=$('dayType').value==='split';
   const splitStart2=$('splitStart2').value||'';
   const splitEnd2=$('splitEnd2').value||'';
-  const returned=!!(splitStart2&&splitEnd2);
-
-  if(!$('date').value || !$('start').value || !$('end').value){
-    alert(isSplit?'יש למלא תאריך, כניסה 1 ויציאה 1.':'יש למלא תאריך, התחלה וסיום.');
-    return;
-  }
-  if(isSplit && (!!splitStart2 !== !!splitEnd2)){
-    alert('במשמרת פיצול יש למלא גם כניסה 2 וגם יציאה 2, או להשאיר את שתיהן ריקות אם לא חוזרים לחלק השני.');
-    return;
-  }
-
+  const didNotReturn=isSplit && !!$('splitDidNotReturn')?.checked;
   const selectedDdKey=$('ddPreset').value||'';
+
+  if(!$('date').value){
+    alert('יש למלא תאריך.');
+    return;
+  }
+  // Manual shifts still need basic times. DD shifts can be saved for the month
+  // using the DD's planned hours and updated with actual split times later.
+  if(!selectedDdKey && (!$('start').value || !$('end').value)){
+    alert(isSplit?'במשמרת ידנית יש למלא לפחות כניסה 1 ויציאה 1.':'יש למלא התחלה וסיום.');
+    return;
+  }
+
   const selectedDdMatch=/^(DDR|DD)(.+)$/i.exec(selectedDdKey);
   const selectedDdType=selectedDdMatch?selectedDdMatch[1].toUpperCase():'';
   const selectedDdNumber=selectedDdMatch?selectedDdMatch[2]:'';
 
-  const firstEnd=$('end').value;
+  const oldShift=editingShiftId?shifts.find(x=>x.id===editingShiftId):null;
+
+  // When editing an existing DD shift the selector may not carry the DD key,
+  // so preserve its existing DD metadata and planned times.
+  const ddType=selectedDdType || oldShift?.ddType || '';
+  const ddNumber=selectedDdNumber || oldShift?.ddNumber || '';
+  let startValue=$('start').value||oldShift?.start||'';
+  let firstEnd=$('end').value||oldShift?.splitEnd1||oldShift?.end||'';
+
+  if(selectedDdKey && (!startValue || !firstEnd)){
+    const tpl=resolveDdTemplate($('date').value,selectedDdType,selectedDdNumber);
+    if(tpl){
+      startValue=startValue||operationalToClock(tpl.start);
+      firstEnd=firstEnd||operationalToClock(tpl.end);
+    }
+  }
+
+  const returned=!!(splitStart2&&splitEnd2) && !didNotReturn;
   const overallEnd=isSplit&&returned?splitEnd2:firstEnd;
 
-  const oldShift=editingShiftId?shifts.find(x=>x.id===editingShiftId):null;
   const data = {
     ...(oldShift||{}),
     id: editingShiftId || (crypto.randomUUID?crypto.randomUUID():String(Date.now())),
     date:$('date').value,
-    start:$('start').value,
+    start:startValue,
     end:overallEnd,
-    splitEnd1:isSplit?firstEnd:'',
-    splitStart2:isSplit?splitStart2:'',
-    splitEnd2:isSplit?splitEnd2:'',
+    splitEnd1:isSplit && (returned||didNotReturn)?firstEnd:'',
+    splitStart2:isSplit&&!didNotReturn?splitStart2:'',
+    splitEnd2:isSplit&&!didNotReturn?splitEnd2:'',
+    splitDidNotReturn:didNotReturn,
     breakMin:$('breakMin').value,
     notes:$('notes').value.trim(),
     dayType:$('dayType').value,
     bonus:$('bonus').value,
     extraLoopType:$('extraLoopType').value,
     nightLineType:$('nightLineType').value,
-    ddType:selectedDdType,
-    ddNumber:selectedDdNumber
+    ddType,
+    ddNumber
   };
 
   if(editingShiftId){
@@ -3763,6 +3811,7 @@ $('addShift').onclick=()=>{
   $('end').value='';
   $('splitStart2').value='';
   $('splitEnd2').value='';
+  if($('splitDidNotReturn')) $('splitDidNotReturn').checked=false;
   $('bonus').value='0';
   $('extraLoopType').value='none';
   $('nightLineType').value='none';
@@ -3772,11 +3821,11 @@ $('addShift').onclick=()=>{
   closeShiftModal();
 };
 
-
 $('dayType')?.addEventListener('change',updateSplitShiftUi);
 $('end')?.addEventListener('change',updateSplitShiftUi);
 $('splitStart2')?.addEventListener('change',updateSplitShiftUi);
 $('splitEnd2')?.addEventListener('change',updateSplitShiftUi);
+$('splitDidNotReturn')?.addEventListener('change',updateSplitShiftUi);
 
 $('saveSettings').onclick=()=>{ saveSettings(); renderShifts(); renderSummary(); renderTodayDashboard(); alert('ההגדרות נשמרו.'); };
 
