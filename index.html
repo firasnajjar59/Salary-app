@@ -1681,27 +1681,43 @@ html[data-theme=dark] .calendar-day.has-event:not(.has-shift){
 .calendar-dot.event-personal,.pref-dot.event-personal{
   background:var(--app-accent);
 }
-#personalEventModal .modal-content{
+#personalEventModal .personal-event-body{
   display:grid;
-  gap:12px;
+  gap:13px;
+  padding:16px;
+  padding-bottom:max(18px,env(safe-area-inset-bottom));
 }
-#personalEventModal .modal-content .row{
+#personalEventModal .personal-event-body>label{
+  display:grid;
+  gap:7px;
+  margin:0;
+}
+#personalEventModal .personal-event-time-row{
   display:grid;
   grid-template-columns:repeat(2,minmax(0,1fr));
   gap:10px;
 }
-#personalEventModal .modal-actions{
+#personalEventModal .personal-event-time-row>label{
+  display:grid;
+  gap:7px;
+  margin:0;
+}
+#personalEventModal .personal-event-actions{
   display:grid;
   grid-template-columns:1fr 1fr;
   gap:10px;
-  margin-top:4px;
+  margin-top:3px;
 }
-#personalEventModal .modal-actions .primary:only-child{
+#personalEventModal .personal-event-actions .primary:only-child{
   grid-column:1/-1;
 }
+#personalEventModal textarea{
+  resize:vertical;
+  min-height:96px;
+}
 @media(max-width:390px){
-  #personalEventModal .modal-content .row{grid-template-columns:1fr}
-  #personalEventModal .modal-actions{grid-template-columns:1fr}
+  #personalEventModal .personal-event-time-row{grid-template-columns:1fr}
+  #personalEventModal .personal-event-actions{grid-template-columns:1fr}
 }
 </style>
 </head>
@@ -2002,7 +2018,7 @@ html[data-theme=dark] .calendar-day.has-event:not(.has-shift){
         <summary>אודות</summary>
         <div class="settings-accordion-body">
           <div style="font-size:17px;font-weight:850">נוצר ע״י פראס נג׳אר</div>
-          <div class="note" style="margin-top:5px">גרסה <strong>84</strong></div>
+          <div class="note" style="margin-top:5px">גרסה <strong>85</strong></div>
           <div style="height:12px"></div>
           <button class="secondary" id="manualUpdateCheckBtn" type="button">בדיקת עדכונים</button>
           <div id="manualUpdateStatus" class="note" style="margin-top:8px"></div>
@@ -2671,17 +2687,20 @@ html[data-theme=dark] .calendar-day.has-event:not(.has-shift){
     </div>
   </div>
 </div>
-<div id="personalEventModal" class="modal-backdrop hidden" aria-hidden="true">
-  <div class="modal-sheet">
+<div id="personalEventModal" class="modal hidden" aria-hidden="true">
+  <div class="modal-backdrop" id="personalEventBackdrop"></div>
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="personalEventModalTitle">
     <div class="modal-header">
       <strong id="personalEventModalTitle">אירוע אישי</strong>
       <button type="button" class="modal-close" onclick="closePersonalEventModal()" aria-label="סגירה">×</button>
     </div>
-    <div class="modal-content">
+    <div class="modal-body personal-event-body">
       <input type="hidden" id="personalEventId">
+
       <label>תאריך
         <input id="personalEventDate" type="date">
       </label>
+
       <label>סוג אירוע
         <select id="personalEventType">
           <option value="personal">אישי</option>
@@ -2692,10 +2711,12 @@ html[data-theme=dark] .calendar-day.has-event:not(.has-shift){
           <option value="other">אחר</option>
         </select>
       </label>
+
       <label>כותרת
         <input id="personalEventTitle" type="text" placeholder="למשל: מבחן, מחלה, תור">
       </label>
-      <div class="row">
+
+      <div class="personal-event-time-row">
         <label>משעה
           <input id="personalEventStart" type="time">
         </label>
@@ -2703,10 +2724,12 @@ html[data-theme=dark] .calendar-day.has-event:not(.has-shift){
           <input id="personalEventEnd" type="time">
         </label>
       </div>
+
       <label>הערות
         <textarea id="personalEventNotes" rows="3" placeholder="פרטים נוספים"></textarea>
       </label>
-      <div class="modal-actions">
+
+      <div class="personal-event-actions">
         <button type="button" class="primary" onclick="savePersonalEvent()">שמור אירוע</button>
         <button type="button" class="danger hidden" id="deletePersonalEventBtn" onclick="deletePersonalEventFromModal()">מחק אירוע</button>
       </div>
@@ -2720,7 +2743,7 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=84;
+const APP_VERSION=85;
 
 const CALENDAR_PREFS_KEY='salaryApp.calendarPrefs.v1';
 function getCalendarPrefs(){
@@ -2876,11 +2899,10 @@ function openPersonalEventModal(date,id=null){
 
 function bindPersonalEventModalUi(){
   const modal=$('personalEventModal');
+  const backdrop=$('personalEventBackdrop');
   if(!modal || modal.dataset.bound==='1') return;
   modal.dataset.bound='1';
-  modal.addEventListener('click',e=>{
-    if(e.target===modal) closePersonalEventModal();
-  });
+  if(backdrop) backdrop.addEventListener('click',closePersonalEventModal);
 }
 document.addEventListener('DOMContentLoaded',bindPersonalEventModalUi);
 function closePersonalEventModal(){
