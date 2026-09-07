@@ -1143,6 +1143,112 @@ html[data-theme=dark] .stat,html[data-theme=dark] .live-stat,html[data-theme=dar
   display:inline-flex;align-items:center;justify-content:center;gap:8px;
 }
 .today-info-card button .modern-icon{width:21px;height:21px}
+
+/* v79 — full-page shift details + lighter information hierarchy */
+.shift-details-page{
+  width:100%;
+  max-width:780px;
+  margin:0 auto;
+  padding-bottom:24px;
+}
+.shift-page-topbar{
+  position:sticky;
+  top:0;
+  z-index:25;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin:-16px -14px 14px;
+  padding:14px max(14px,env(safe-area-inset-right)) 12px max(14px,env(safe-area-inset-left));
+  background:color-mix(in srgb,var(--bg) 92%,transparent);
+  border-bottom:1px solid var(--line);
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+}
+.shift-page-back{
+  width:44px;height:44px;min-width:44px;
+  border:0;border-radius:22px;
+  display:inline-flex;align-items:center;justify-content:center;
+  background:var(--surface);color:var(--text);
+}
+.shift-page-back svg{
+  width:24px;height:24px;fill:none;stroke:currentColor;
+  stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;
+}
+.shift-page-heading{min-width:0}
+.shift-page-eyebrow{font-size:12px;color:var(--muted);font-weight:700;margin-bottom:2px}
+.shift-page-heading h2{margin:0;font-size:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.shift-details-page .shift-quick-actions{
+  position:sticky;
+  top:72px;
+  z-index:18;
+  padding:8px;
+  margin:0 0 12px;
+  border:1px solid var(--line);
+  border-radius:22px;
+  background:color-mix(in srgb,var(--card) 94%,transparent);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+}
+.shift-details-page .shift-detail-cards{margin-top:0}
+.shift-details-page .shift-details-section{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:24px;
+  padding:15px;
+  margin-top:14px;
+}
+.shift-details-page .detail-actions{
+  display:flex;gap:8px;flex-wrap:wrap;
+}
+.shift-details-page .detail-actions button{
+  flex:1 1 150px;
+}
+.shift-page-main-actions{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+  margin:14px 0;
+}
+.shift-page-main-actions button{
+  width:100%;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+}
+.shift-danger-zone{
+  margin-top:20px;
+  padding:16px;
+  border:1px solid color-mix(in srgb,#b3261e 25%,var(--line));
+  border-radius:24px;
+  background:color-mix(in srgb,#b3261e 5%,var(--card));
+}
+.shift-danger-zone-title{
+  font-weight:780;
+  margin-bottom:4px;
+}
+.shift-danger-zone p{
+  margin:0 0 12px;
+  color:var(--muted);
+  font-size:13px;
+}
+.shift-delete-button{
+  width:100%;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+html[data-theme=dark] .shift-page-topbar{
+  background:rgba(27,27,31,.94);
+}
+html[data-theme=dark] .shift-details-page .shift-quick-actions{
+  background:rgba(36,35,40,.95);
+}
+@media(max-width:600px){
+  .shift-page-topbar{margin:-12px -14px 12px}
+  .shift-details-page .shift-quick-actions{top:68px}
+  .shift-page-main-actions{grid-template-columns:1fr 1fr}
+}
+@media(max-width:390px){
+  .shift-page-main-actions{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
@@ -1424,7 +1530,7 @@ html[data-theme=dark] .stat,html[data-theme=dark] .live-stat,html[data-theme=dar
         <summary>אודות</summary>
         <div class="settings-accordion-body">
           <div style="font-size:17px;font-weight:850">נוצר ע״י פראס נג׳אר</div>
-          <div class="note" style="margin-top:5px">גרסה <strong>78</strong></div>
+          <div class="note" style="margin-top:5px">גרסה <strong>79</strong></div>
           <div style="height:12px"></div>
           <button class="secondary" id="manualUpdateCheckBtn" type="button">בדיקת עדכונים</button>
           <div id="manualUpdateStatus" class="note" style="margin-top:8px"></div>
@@ -1700,6 +1806,19 @@ html[data-theme=dark] .stat,html[data-theme=dark] .live-stat,html[data-theme=dar
         </div>
       </details>
     </div>
+  </section>
+
+  <section id="shiftDetailsPage" class="hidden shift-details-page" aria-labelledby="shiftDetailsPageTitle">
+    <div class="shift-page-topbar">
+      <button type="button" class="shift-page-back" onclick="closeShiftDetails()" aria-label="חזרה">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <div class="shift-page-heading">
+        <div class="shift-page-eyebrow">פרטי משמרת</div>
+        <h2 id="shiftDetailsPageTitle">משמרת</h2>
+      </div>
+    </div>
+    <div id="shiftDetailsPageContent"></div>
   </section>
 </main>
 
@@ -2073,7 +2192,7 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=78;
+const APP_VERSION=79;
 const MATERIAL_ICONS={
   home:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 10.8 12 3.8l8.5 7v9.4H14.8v-5.7H9.2v5.7H3.5z"/></svg>',
   today:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5.5" width="16" height="14" rx="3"/><path d="M8 3.5v4M16 3.5v4M4 9.5h16"/><circle cx="12" cy="14.2" r="2.3"/></svg>',
@@ -3554,7 +3673,7 @@ function shiftTimelineHtml(sh){
   </div>`).join('')}</div>`;
 }
 
-function openShiftDetails(id){
+function openShiftDetails(id,{historyMode='push'}={}){
   const sh=shifts.find(x=>x.id===id);
   if(!sh) return;
   const c=calcShift(sh);
@@ -3576,8 +3695,8 @@ function openShiftDetails(id){
   if((c.ot2Pay||0)>0) payParts.push(`150% ${detailMoney(c.ot2Pay)}`);
   if((c.nightExtra||0)>0) payParts.push(`לילה ${detailMoney(c.nightExtra)}`);
 
-  $('shiftDetailsTitle').textContent=`פרטי משמרת ${formatDateHe(sh.date)}`;
-  $('shiftDetailsContent').innerHTML=`
+  $('shiftDetailsPageTitle').textContent=`${formatDateHe(sh.date)} · ${ddText}`;
+  $('shiftDetailsPageContent').innerHTML=`
     ${quickActionsHtml(sh)}
     <div class="shift-detail-cards">
       <div class="shift-detail-card">
@@ -3613,9 +3732,9 @@ function openShiftDetails(id){
         <div class="report-text">${escapeHtml(sh.notes)}</div>
       </div>`:''}
 
-    <div class="detail-actions" style="margin-top:14px">
-      <button type="button" class="secondary" onclick="editShiftFromDetails('${sh.id}')">✏️ עריכת משמרת</button>
-      <button type="button" class="secondary" onclick="exportShiftPdf('${sh.id}')">📄 PDF משמרת</button>
+    <div class="shift-page-main-actions">
+      <button type="button" class="secondary" onclick="editShiftFromDetails('${sh.id}')">עריכת משמרת</button>
+      <button type="button" class="secondary" onclick="exportShiftPdf('${sh.id}')">PDF משמרת</button>
     </div>
 
     <div class="shift-details-section">
@@ -3650,11 +3769,17 @@ function openShiftDetails(id){
         <button type="button" class="primary" onclick="openReportModal('${sh.id}')">${materialIcon("report")}<span>הוסף דוח</span></button>
       </div>
     </div>
+
+    <div class="shift-danger-zone">
+      <div class="shift-danger-zone-title">מחיקת משמרת</div>
+      <p>מחיקת המשמרת תמחק גם את הסיבובים, הדוחות והאישורים ששמורים בתוכה.</p>
+      <button type="button" class="danger shift-delete-button" onclick="deleteShiftFromDetails('${sh.id}')">מחיקת המשמרת</button>
+    </div>
   `;
 
-  $('shiftDetailsModal').classList.remove('hidden');
-  $('shiftDetailsModal').setAttribute('aria-hidden','false');
-  document.body.classList.add('modal-open');
+  currentShiftDetailsId=id;
+  showAppTab('shiftDetailsPage',{remember:false,historyMode,shiftId:id});
+  window.scrollTo({top:0,behavior:'instant'});
 }
 function exportShiftPdf(id){
   const sh=shifts.find(x=>x.id===id); if(!sh) return;
@@ -3677,16 +3802,26 @@ function exportShiftPdf(id){
 }
 window.exportShiftPdf=exportShiftPdf;
 
+
+let currentShiftDetailsId=null;
+
 function closeShiftDetails(){
-  $('shiftDetailsModal').classList.add('hidden');
-  $('shiftDetailsModal').setAttribute('aria-hidden','true');
+  if(!$('shiftDetailsPage')?.classList.contains('hidden')){
+    if(history.length>1){
+      history.back();
+    }else{
+      showAppTab('shifts',{remember:true,historyMode:'pop'});
+    }
+    return;
+  }
+  $('shiftDetailsModal')?.classList.add('hidden');
+  $('shiftDetailsModal')?.setAttribute('aria-hidden','true');
   document.body.classList.remove('modal-open');
 }
 
 window.openShiftDetails=openShiftDetails;
 
 window.editShiftFromDetails=id=>{
-  closeShiftDetails();
   window.editShift(id);
 };
 
@@ -3716,7 +3851,16 @@ window.editShift=id=>{
   openShiftModal(true);
 };
 
-window.deleteShift=id=>{
+function shiftDeleteLabel(sh){
+  const dd=(sh.ddType&&sh.ddNumber!=='')?` · ${displayDdNumber(sh.ddType,sh.ddNumber)}`:'';
+  return `${formatDateHe(sh.date)}${dd} · ${sh.start||'—'}–${sh.end||'—'}`;
+}
+
+window.deleteShift=(id,{skipConfirm=false}={})=>{
+  const sh=shifts.find(x=>x.id===id);
+  if(!sh) return false;
+  if(!skipConfirm && !confirm(`בטוח למחוק את המשמרת ${shiftDeleteLabel(sh)}?\n\nהפעולה תמחק גם סיבובים, דוחות ואישורים ששמורים במשמרת.`)) return false;
+
   selectedShiftIds.delete(id);
   shifts=shifts.filter(x=>x.id!==id);
   localStorage.setItem(KEY_SHIFTS,JSON.stringify(shifts));
@@ -3725,8 +3869,21 @@ window.deleteShift=id=>{
   }));
   renderShifts(); renderSummary(); renderTodayDashboard();
   if(typeof renderPayslipComparison==='function') renderPayslipComparison();
+  return true;
 };
 
+window.deleteShiftFromDetails=id=>{
+  const sh=shifts.find(x=>x.id===id);
+  if(!sh) return;
+  const ok=window.deleteShift(id);
+  if(!ok) return;
+  currentShiftDetailsId=null;
+  if(history.state?.salaryAppTab==='shiftDetailsPage' && history.length>1){
+    history.back();
+  }else{
+    showAppTab('shifts',{remember:true,historyMode:'pop'});
+  }
+};
 
 let payslips={};
 try{
@@ -5817,39 +5974,51 @@ $('exportPdfBtn').onclick=exportMonthlyPdf;
 
 
 const ACTIVE_TAB_SESSION_KEY='salaryApp.activeTab.v1';
-const APP_TABS=['mainDashboard','todayDashboard','shifts','summary','payslip','settings'];
+const APP_TABS=['mainDashboard','todayDashboard','shifts','summary','payslip','settings','shiftDetailsPage'];
 
-function showAppTab(tabId,{remember=true,historyMode='push'}={}){
-  if(historyMode==='push' && history.state?.salaryAppTab!==tabId){ try{ history.pushState({salaryAppTab:tabId},'',location.href); }catch(e){} }
+function showAppTab(tabId,{remember=true,historyMode='push',shiftId=null}={}){
   if(!APP_TABS.includes(tabId)) return;
-  
-function setupPwaBackNavigation(){
-  const current=(sessionStorage.getItem(ACTIVE_TAB_SESSION_KEY)||'mainDashboard');
-  try{
-    history.replaceState({salaryAppTab:'mainDashboard'},'',location.href);
-    if(current!=='mainDashboard') history.pushState({salaryAppTab:current},'',location.href);
-  }catch(e){}
-}
-window.addEventListener('popstate',e=>{
-  const tab=e.state?.salaryAppTab;
-  if(tab && APP_TABS.includes(tab)) showAppTab(tab,{remember:true,historyMode:'pop'});
-});
-setTimeout(setupPwaBackNavigation,0);
 
-document.querySelectorAll('.tab').forEach(btn=>{
+  if(historyMode==='push'){
+    const nextState={salaryAppTab:tabId};
+    if(shiftId) nextState.shiftId=shiftId;
+    const sameTab=history.state?.salaryAppTab===tabId;
+    const sameShift=!shiftId || history.state?.shiftId===shiftId;
+    if(!(sameTab&&sameShift)){
+      try{ history.pushState(nextState,'',location.href); }catch(e){}
+    }
+  }
+
+  document.querySelectorAll('.tab').forEach(btn=>{
     btn.classList.toggle('active',btn.dataset.tab===tabId);
   });
-  APP_TABS.forEach(id=>$(id).classList.add('hidden'));
-  $(tabId).classList.remove('hidden');
+  APP_TABS.forEach(id=>$(id)?.classList.add('hidden'));
+  $(tabId)?.classList.remove('hidden');
 
   if(tabId==='todayDashboard' || tabId==='mainDashboard') renderTodayDashboard();
   if(tabId==='summary') renderSummary();
   if(tabId==='payslip') renderPayslipComparison();
 
-  if(remember){
+  if(remember && tabId!=='shiftDetailsPage'){
     try{ sessionStorage.setItem(ACTIVE_TAB_SESSION_KEY,tabId); }catch(e){}
   }
 }
+
+function setupPwaBackNavigation(){
+  const current=(sessionStorage.getItem(ACTIVE_TAB_SESSION_KEY)||'mainDashboard');
+  try{
+    history.replaceState({salaryAppTab:current},'',location.href);
+  }catch(e){}
+}
+window.addEventListener('popstate',e=>{
+  const tab=e.state?.salaryAppTab;
+  if(tab==='shiftDetailsPage' && e.state?.shiftId){
+    openShiftDetails(e.state.shiftId,{historyMode:'pop'});
+    return;
+  }
+  if(tab && APP_TABS.includes(tab)) showAppTab(tab,{remember:true,historyMode:'pop'});
+});
+setTimeout(setupPwaBackNavigation,0);
 
 document.querySelectorAll('.tab').forEach(btn=>btn.onclick=()=>{
   showAppTab(btn.dataset.tab);
