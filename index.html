@@ -593,6 +593,13 @@
       font-size:11px;
     }
 
+    .split-shift-box{margin-top:12px;border:1px solid var(--line);background:var(--soft);border-radius:16px;padding:13px}
+    .split-shift-title{font-weight:900;margin-bottom:10px}
+    .split-gap-info{margin-top:9px;padding:9px 10px;border-radius:11px;font-size:12px;display:none}
+    .split-gap-info.ok{display:block;background:rgba(20,130,70,.10);border:1px solid rgba(20,130,70,.25)}
+    .split-gap-info.warn{display:block;background:rgba(210,45,45,.10);border:1px solid rgba(210,45,45,.35);color:#b42318;font-weight:800}
+    .split-detail-warning{margin-top:8px;padding:8px 10px;border-radius:10px;background:rgba(210,45,45,.10);border:1px solid rgba(210,45,45,.35);color:#b42318;font-size:12px;font-weight:800}
+
   </style>
 </head>
 <body>
@@ -861,7 +868,7 @@
         <summary>אודות</summary>
         <div class="settings-accordion-body">
           <div style="font-size:17px;font-weight:850">נוצר ע״י פראס נג׳אר</div>
-          <div class="note" style="margin-top:5px">גרסה <strong>62</strong></div>
+          <div class="note" style="margin-top:5px">גרסה <strong>63</strong></div>
           <div style="height:12px"></div>
           <button class="secondary" id="manualUpdateCheckBtn" type="button">בדיקת עדכונים</button>
           <div id="manualUpdateStatus" class="note" style="margin-top:8px"></div>
@@ -1157,8 +1164,21 @@
           <textarea id="notes" rows="3" placeholder="הערות למשמרת"></textarea>
           <input id="breakMin" type="hidden" value="0">
         </div>
-        <div><label>שעת התחלה</label><input id="start" type="time"></div>
-        <div><label>שעת סיום</label><input id="end" type="time"></div>
+        <div><label id="startLabel">שעת התחלה</label><input id="start" type="time"></div>
+        <div><label id="endLabel">שעת סיום</label><input id="end" type="time"></div>
+      </div>
+
+      <div id="splitShiftFields" class="split-shift-box hidden">
+        <div class="split-shift-title">חלק שני של משמרת הפיצול</div>
+        <div class="grid">
+          <div><label>כניסה 2</label><input id="splitStart2" type="time"></div>
+          <div><label>יציאה 2</label><input id="splitEnd2" type="time"></div>
+        </div>
+        <div id="splitGapInfo" class="split-gap-info"></div>
+        <div class="note" style="margin-top:8px">אם לא חזרת לחלק השני, השאר את כניסה 2 ויציאה 2 ריקות. במקרה כזה תחושב רק עבודת הבוקר ולא תתווסף שעת הפיצול.</div>
+      </div>
+
+      <div class="grid">
       </div>
       <div style="height:10px"></div>
       <div class="grid">
@@ -1167,6 +1187,7 @@
           <select id="dayType">
             <option value="auto">אוטומטי לפי תאריך</option>
             <option value="regular">יום רגיל</option>
+            <option value="split">פיצול</option>
             <option value="friday">שישי</option>
             <option value="saturday">שבת</option>
             <option value="holiday">חג</option>
@@ -1491,7 +1512,7 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=62;
+const APP_VERSION=63;
 const VERSION_URL='./version.json';
 const GOOGLE_CLIENT_ID='671607022405-ctegk4jl7koo9elm30odvsb1binp49cb.apps.googleusercontent.com';
 const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.appdata';
@@ -1662,7 +1683,7 @@ function saveHomeLayout(){
 function shiftSignature(sh){
   return [
     sh.date||'', sh.start||'', sh.end||'', String(sh.breakMin||0), String(sh.notes||''),
-    sh.dayType||'auto', String(sh.bonus||0),
+    sh.dayType||'auto', sh.splitEnd1||'', sh.splitStart2||'', sh.splitEnd2||'', String(sh.bonus||0),
     sh.extraLoopType||'none', sh.nightLineType||'none',
     sh.ddType||'', String(sh.ddNumber||'')
   ].join('|');
@@ -1785,7 +1806,7 @@ function openReportModal(shiftId,reportId=''){
 
   $('reportModalTitle').textContent=existing?'עריכת דוח נהג':'הוספת דוח נהג';
   const dd=(sh.ddType && sh.ddNumber!=='')?displayDdNumber(sh.ddType,sh.ddNumber):'ללא DD';
-  $('reportShiftInfo').textContent=`משמרת ${formatDateHe(sh.date)} · ${dd} · ${sh.start}–${sh.end}`;
+  $('reportShiftInfo').textContent=`משמרת ${formatDateHe(sh.date)} · ${dd} · ${sh.dayType==='split'?`${sh.start}–${sh.splitEnd1||sh.end}${sh.splitStart2&&sh.splitEnd2?` / ${sh.splitStart2}–${sh.splitEnd2}`:''}`:`${sh.start}–${sh.end}`}`;
   $('reportCreatedAtLabel').textContent=formatDateTimeHe(pendingReportCreatedAt);
   $('reportEventTime').value=existing?.eventTime || localTimeHm();
   populateReportTypeSelect(existing?.type||'');
@@ -2299,6 +2320,67 @@ function fmtMin(min){
 function currency(n){ return new Intl.NumberFormat('he-IL',{style:'currency',currency:'ILS',maximumFractionDigits:0}).format(n||0); }
 function overlap(a1,a2,b1,b2){ return Math.max(0,Math.min(a2,b2)-Math.max(a1,b1)); }
 
+
+function splitShiftInfo(sh){
+  if(sh?.dayType!=='split') return {isSplit:false,returned:false,gapMinutes:null,gapOk:true,workedMinutes:null,paidMinutes:null};
+  const start1=sh.start||'', end1=sh.splitEnd1||sh.end||'', start2=sh.splitStart2||'', end2=sh.splitEnd2||'';
+  const seg1=durationBetweenHm(start1,end1);
+  const returned=!!(start2&&end2);
+  const seg2=returned?durationBetweenHm(start2,end2):0;
+  let gapMinutes=null;
+  if(returned){
+    let e1=toMin(end1), s2=toMin(start2);
+    if(s2<e1) s2+=1440;
+    gapMinutes=Math.max(0,s2-e1);
+  }
+  const workedMinutes=Math.max(0,seg1+seg2);
+  const splitBonusMinutes=returned?60:0;
+  return {
+    isSplit:true,returned,gapMinutes,gapOk:!returned||gapMinutes>=180,
+    start1,end1,start2,end2,seg1,seg2,workedMinutes,
+    splitBonusMinutes,paidMinutes:workedMinutes+splitBonusMinutes
+  };
+}
+function splitGapText(info){
+  if(!info?.returned) return 'חלק שני לא הוזן — אין תוספת שעת פיצול.';
+  if(info.gapMinutes<180) return `⚠ הפיצול הוא ${fmtMin(info.gapMinutes)} בלבד — פחות מ־3 שעות. כדאי לדבר עם הסדרן ולסדר את זה.`;
+  return `הפסקת פיצול: ${fmtMin(info.gapMinutes)} ✓`;
+}
+function updateSplitShiftUi(){
+  const isSplit=$('dayType')?.value==='split';
+  $('splitShiftFields')?.classList.toggle('hidden',!isSplit);
+  if($('startLabel')) $('startLabel').textContent=isSplit?'כניסה 1':'שעת התחלה';
+  if($('endLabel')) $('endLabel').textContent=isSplit?'יציאה 1':'שעת סיום';
+
+  const info=$('splitGapInfo');
+  if(!info) return;
+  if(!isSplit){ info.className='split-gap-info'; info.textContent=''; return; }
+
+  const end1=$('end')?.value||'', start2=$('splitStart2')?.value||'', end2=$('splitEnd2')?.value||'';
+  if(!start2 && !end2){
+    info.className='split-gap-info';
+    info.textContent='';
+    return;
+  }
+  if(!start2 || !end2){
+    info.className='split-gap-info warn';
+    info.textContent='⚠ יש למלא גם כניסה 2 וגם יציאה 2, או להשאיר את שתיהן ריקות אם לא חוזרים.';
+    return;
+  }
+  if(!end1){
+    info.className='split-gap-info';
+    info.textContent='';
+    return;
+  }
+  let e1=toMin(end1), s2=toMin(start2);
+  if(s2<e1) s2+=1440;
+  const gap=s2-e1;
+  info.className=`split-gap-info ${gap<180?'warn':'ok'}`;
+  info.textContent=gap<180
+    ? `⚠ הפיצול הוא ${fmtMin(gap)} בלבד — פחות מ־3 שעות. דבר עם הסדרן כדי לסדר את זה.`
+    : `הפסקת פיצול: ${fmtMin(gap)} ✓`;
+}
+
 function determineDayType(dateStr, forced){
   if(forced && forced!=='auto') return forced;
   const d=new Date(dateStr+'T12:00:00');
@@ -2314,7 +2396,6 @@ function dayMultiplier(type,s){
 function calcShift(sh){
   const s=getSettings();
 
-  // Backward compatibility for shifts saved in older versions
   if(!sh.extraLoopType){
     if(sh.extraLoop) sh.extraLoopType='full';
     else sh.extraLoopType='none';
@@ -2324,12 +2405,27 @@ function calcShift(sh){
     else if(sh.nightLine3) sh.nightLineType='to3';
     else sh.nightLineType='none';
   }
+
+  const split=splitShiftInfo(sh);
   let start=toMin(sh.start), end=toMin(sh.end);
   if(end<=start) end+=1440;
   const breakMin=Number(sh.breakMin||0);
-  const grossMinutes=Math.max(0,end-start-breakMin);
+
+  let workedMinutes=0;
+  let splitBonusMinutes=0;
+  let grossMinutes=0;
+  if(split.isSplit){
+    workedMinutes=Math.max(0,split.workedMinutes-breakMin);
+    splitBonusMinutes=split.returned?60:0;
+    grossMinutes=workedMinutes+splitBonusMinutes;
+  }else{
+    workedMinutes=Math.max(0,end-start-breakMin);
+    grossMinutes=workedMinutes;
+  }
+
   const base=Number(s.baseRate);
-  const type=determineDayType(sh.date, sh.dayType);
+  // Split is a payroll pattern, but the underlying rate logic is a regular workday.
+  const type=split.isSplit?'regular':determineDayType(sh.date, sh.dayType);
 
   const regCap=Number(s.regularDailyHours)*60;
   const ot1Cap=Number(s.ot125Hours)*60;
@@ -2337,23 +2433,32 @@ function calcShift(sh){
   let regPay=0, ot1Pay=0, ot2Pay=0, nightExtra=0;
 
   let ns=toMin(s.nightStart), ne=toMin(s.nightEnd);
+  const nightOverlapFor=(a,b)=>{
+    let aa=toMin(a),bb=toMin(b);
+    if(bb<=aa)bb+=1440;
+    if(ns<ne) return overlap(aa,bb,ns,ne)+overlap(aa,bb,ns+1440,ne+1440);
+    return overlap(aa,bb,ns,1440)+overlap(aa,bb,0,ne)+overlap(aa,bb,1440,ne+1440);
+  };
   let nightMin=0;
-  if(ns<ne){
-    nightMin=overlap(start,end,ns,ne)+overlap(start,end,ns+1440,ne+1440);
+  if(split.isSplit){
+    nightMin=nightOverlapFor(split.start1,split.end1);
+    if(split.returned) nightMin+=nightOverlapFor(split.start2,split.end2);
+    nightMin=Math.min(nightMin,workedMinutes);
   }else{
-    nightMin=overlap(start,end,ns,1440)+overlap(start,end,0,ne)+overlap(start,end,1440,ne+1440);
+    if(ns<ne){
+      nightMin=overlap(start,end,ns,ne)+overlap(start,end,ns+1440,ne+1440);
+    }else{
+      nightMin=overlap(start,end,ns,1440)+overlap(start,end,0,ne)+overlap(start,end,1440,ne+1440);
+    }
+    nightMin=Math.min(nightMin,grossMinutes);
   }
-  nightMin=Math.min(nightMin,grossMinutes);
 
   if(type==='saturday'){
-    // Saturday is a final all-inclusive rate: 225%.
-    // Do not classify any Saturday minutes as night hours.
     nightMin=0;
     regMin=grossMinutes;
     regPay=grossMinutes/60*base*2.25;
     ot1Min=0; ot2Min=0; nightExtra=0;
   }else if(type==='friday'){
-    // Friday: first 2 hours 125%, all remaining hours 150%.
     ot1Min=Math.min(grossMinutes,120);
     ot2Min=Math.max(0,grossMinutes-120);
     ot1Pay=ot1Min/60*base*1.25;
@@ -2361,6 +2466,8 @@ function calcShift(sh){
     regMin=0;
     nightExtra=0;
   }else{
+    // The split bonus hour is added to the payable-hour total, so it can fall
+    // into regular, 125% or 150% exactly according to the daily thresholds.
     regMin=Math.min(grossMinutes,regCap);
     ot1Min=Math.min(Math.max(0,grossMinutes-regCap),ot1Cap);
     ot2Min=Math.max(0,grossMinutes-regCap-ot1Cap);
@@ -2385,11 +2492,12 @@ function calcShift(sh){
   if(sh.nightLineType==='over3') nightLinePay = Number(s.nightLineOver3Amount||0);
 
   const specialPay = extraLoopPay + nightLinePay;
-
   const pay=regPay+ot1Pay+ot2Pay+nightExtra+travel+perDiem+bonus+specialPay;
 
   return {
-    grossMinutes,regMin,ot1Min,ot2Min,nightMin,type,
+    grossMinutes,workedMinutes,splitBonusMinutes,splitReturned:split.returned,
+    splitGapMinutes:split.gapMinutes,splitGapOk:split.gapOk,isSplit:split.isSplit,
+    regMin,ot1Min,ot2Min,nightMin,type,
     regPay,ot1Pay,ot2Pay,nightExtra,travel,perDiem,bonus,
     extraLoopPay,nightLinePay,specialPay,pay
   };
@@ -2504,7 +2612,7 @@ function renderShifts(){
 
   $('shiftList').innerHTML=filtered.map(sh=>{
     const c=calcShift(sh);
-    const label={regular:'רגיל',friday:'שישי',saturday:'שבת',holiday:'חג'}[c.type];
+    const label=sh.dayType==='split'?'פיצול':({regular:'רגיל',friday:'שישי',saturday:'שבת',holiday:'חג'}[c.type]);
     const selected=selectedShiftIds.has(sh.id);
     return `<div class="shift" data-shift-id="${escapeHtml(sh.id)}">
       <div class="shift-head">
@@ -2520,10 +2628,13 @@ function renderShifts(){
             <button type="button" class="shift-date-link" onclick="openShiftDetails('${sh.id}')">${sh.date.slice(8,10)}/${sh.date.slice(5,7)} · ${escapeHtml(dayNameHe(sh.date))}</button>
             <div style="margin-top:3px">${sh.start}–${sh.end}</div>
             ${(sh.ddType && sh.ddNumber!=='')?`<div style="margin-top:3px;font-weight:700">${escapeHtml(displayDdNumber(sh.ddType,sh.ddNumber))}</div>`:''}
+            ${sh.dayType==='split'?`<div style="margin-top:4px;font-size:12px">${escapeHtml(sh.start||'—')}–${escapeHtml(sh.splitEnd1||sh.end||'—')}${sh.splitStart2&&sh.splitEnd2?` · ${escapeHtml(sh.splitStart2)}–${escapeHtml(sh.splitEnd2)}`:' · לא חזר לחלק שני'}</div>${c.splitReturned&&!c.splitGapOk?`<div class="split-detail-warning">⚠ פיצול קצר מ־3 שעות — לבדוק מול הסדרן</div>`:''}`:''}
             <div style="margin-top:6px">
             <span class="pill">${label}</span>
             ${c.type==='saturday'?`<span class="pill">225%</span>`:''}
-            <span class="pill">${fmtMin(c.grossMinutes)} שעות</span>
+            <span class="pill">${fmtMin(c.grossMinutes)} שעות לתשלום</span>
+            ${c.isSplit?`<span class="pill">עבודה בפועל ${fmtMin(c.workedMinutes)}</span>`:''}
+            ${c.splitBonusMinutes?`<span class="pill">+1:00 פיצול</span>`:''}
             ${c.nightMin?`<span class="pill">${fmtMin(c.nightMin)} לילה</span>`:''}
             ${sh.extraLoopType==='half'?`<span class="pill">חצי סיבוב</span>`:''}
             ${sh.extraLoopType==='full'?`<span class="pill">סיבוב</span>`:''}
@@ -2554,7 +2665,7 @@ function openShiftDetails(id){
   const sh=shifts.find(x=>x.id===id);
   if(!sh) return;
   const c=calcShift(sh);
-  const dayLabel={regular:'רגיל',friday:'שישי',saturday:'שבת',holiday:'חג'}[c.type]||'';
+  const dayLabel=sh.dayType==='split'?'פיצול':({regular:'רגיל',friday:'שישי',saturday:'שבת',holiday:'חג'}[c.type]||'');
   const isSaturday=c.type==='saturday';
   const ddText=(sh.ddType && sh.ddNumber!=='')?displayDdNumber(sh.ddType,sh.ddNumber):'ללא DD';
   const hourParts=[];
@@ -2576,8 +2687,13 @@ function openShiftDetails(id){
     <div class="shift-detail-cards">
       <div class="shift-detail-card">
         <div class="shift-detail-card-title">שעות</div>
-        <div class="shift-detail-card-main">${escapeHtml(sh.start)}–${escapeHtml(sh.end)}</div>
-        <div class="shift-detail-card-sub">${fmtMin(c.grossMinutes)} · ${escapeHtml(dayLabel)} · ${escapeHtml(ddText)}</div>
+        <div class="shift-detail-card-main">${sh.dayType==='split'
+          ? `${escapeHtml(sh.start||'—')}–${escapeHtml(sh.splitEnd1||sh.end||'—')}${sh.splitStart2&&sh.splitEnd2?` · ${escapeHtml(sh.splitStart2)}–${escapeHtml(sh.splitEnd2)}`:''}`
+          : `${escapeHtml(sh.start)}–${escapeHtml(sh.end)}`}</div>
+        <div class="shift-detail-card-sub">${c.isSplit?`עבודה בפועל ${fmtMin(c.workedMinutes)} · לתשלום ${fmtMin(c.grossMinutes)}`:`${fmtMin(c.grossMinutes)}`} · ${escapeHtml(dayLabel)} · ${escapeHtml(ddText)}</div>
+        ${c.splitBonusMinutes?`<div class="shift-detail-card-sub">כולל תוספת שעת פיצול: +1:00</div>`:''}
+        ${c.isSplit&&!c.splitReturned?`<div class="shift-detail-card-sub">לא חזר לחלק השני — ללא תוספת שעה</div>`:''}
+        ${c.isSplit&&c.splitReturned?`<div class="${c.splitGapOk?'shift-detail-card-sub':'split-detail-warning'}">הפסקת פיצול ${fmtMin(c.splitGapMinutes)}${c.splitGapOk?' ✓':' · פחות מ־3 שעות — לבדוק מול הסדרן'}</div>`:''}
         ${hourParts.length?`<div class="shift-detail-card-sub">${hourParts.map(escapeHtml).join(' · ')}</div>`:''}
       </div>
 
@@ -2655,10 +2771,13 @@ window.editShift=id=>{
   editingShiftId=id;
   $('date').value=sh.date||'';
   $('start').value=sh.start||'';
-  $('end').value=sh.end||'';
+  $('end').value=sh.dayType==='split'?(sh.splitEnd1||sh.end||''):(sh.end||'');
+  $('splitStart2').value=sh.splitStart2||'';
+  $('splitEnd2').value=sh.splitEnd2||'';
   $('breakMin').value=sh.breakMin||0;
   $('notes').value=sh.notes||'';
   $('dayType').value=sh.dayType||'auto';
+  updateSplitShiftUi();
   $('bonus').value=sh.bonus||0;
   $('extraLoopType').value=sh.extraLoopType||'none';
   $('nightLineType').value=sh.nightLineType||'none';
@@ -3523,18 +3642,38 @@ $('closeShiftDetails').onclick=closeShiftDetails;
 $('shiftDetailsBackdrop').onclick=closeShiftDetails;
 
 $('addShift').onclick=()=>{
-  if(!$('date').value || !$('start').value || !$('end').value){ alert('יש למלא תאריך, התחלה וסיום.'); return; }
+  const isSplit=$('dayType').value==='split';
+  const splitStart2=$('splitStart2').value||'';
+  const splitEnd2=$('splitEnd2').value||'';
+  const returned=!!(splitStart2&&splitEnd2);
+
+  if(!$('date').value || !$('start').value || !$('end').value){
+    alert(isSplit?'יש למלא תאריך, כניסה 1 ויציאה 1.':'יש למלא תאריך, התחלה וסיום.');
+    return;
+  }
+  if(isSplit && (!!splitStart2 !== !!splitEnd2)){
+    alert('במשמרת פיצול יש למלא גם כניסה 2 וגם יציאה 2, או להשאיר את שתיהן ריקות אם לא חוזרים לחלק השני.');
+    return;
+  }
 
   const selectedDdKey=$('ddPreset').value||'';
   const selectedDdMatch=/^(DDR|DD)(.+)$/i.exec(selectedDdKey);
   const selectedDdType=selectedDdMatch?selectedDdMatch[1].toUpperCase():'';
   const selectedDdNumber=selectedDdMatch?selectedDdMatch[2]:'';
 
+  const firstEnd=$('end').value;
+  const overallEnd=isSplit&&returned?splitEnd2:firstEnd;
+
+  const oldShift=editingShiftId?shifts.find(x=>x.id===editingShiftId):null;
   const data = {
+    ...(oldShift||{}),
     id: editingShiftId || (crypto.randomUUID?crypto.randomUUID():String(Date.now())),
     date:$('date').value,
     start:$('start').value,
-    end:$('end').value,
+    end:overallEnd,
+    splitEnd1:isSplit?firstEnd:'',
+    splitStart2:isSplit?splitStart2:'',
+    splitEnd2:isSplit?splitEnd2:'',
     breakMin:$('breakMin').value,
     notes:$('notes').value.trim(),
     dayType:$('dayType').value,
@@ -3573,12 +3712,22 @@ $('addShift').onclick=()=>{
 
   $('start').value='';
   $('end').value='';
+  $('splitStart2').value='';
+  $('splitEnd2').value='';
   $('bonus').value='0';
   $('extraLoopType').value='none';
   $('nightLineType').value='none';
   $('ddPreset').value='';
+  $('dayType').value='auto';
+  updateSplitShiftUi();
   closeShiftModal();
 };
+
+
+$('dayType')?.addEventListener('change',updateSplitShiftUi);
+$('end')?.addEventListener('change',updateSplitShiftUi);
+$('splitStart2')?.addEventListener('change',updateSplitShiftUi);
+$('splitEnd2')?.addEventListener('change',updateSplitShiftUi);
 
 $('saveSettings').onclick=()=>{ saveSettings(); renderShifts(); renderSummary(); renderTodayDashboard(); alert('ההגדרות נשמרו.'); };
 
@@ -4543,11 +4692,14 @@ function renderTodayDashboard(){
         </div>
         <div class="today-shift-grid">
           <div class="today-chip"><span>DD / משמרת</span><strong>${escapeHtml(dd)}</strong></div>
-          <div class="today-chip"><span>שעות</span><strong>${escapeHtml(sh.start)}–${escapeHtml(sh.end)}</strong></div>
-          <div class="today-chip"><span>משך</span><strong>${fmtMin(c.grossMinutes)}</strong></div>
+          <div class="today-chip"><span>שעות</span><strong>${sh.dayType==='split'
+            ? `${escapeHtml(sh.start||'—')}–${escapeHtml(sh.splitEnd1||sh.end||'—')}${sh.splitStart2&&sh.splitEnd2?` / ${escapeHtml(sh.splitStart2)}–${escapeHtml(sh.splitEnd2)}`:''}`
+            : `${escapeHtml(sh.start)}–${escapeHtml(sh.end)}`}</strong></div>
+          <div class="today-chip"><span>${c.isSplit?'עבודה / לתשלום':'משך'}</span><strong>${c.isSplit?`${fmtMin(c.workedMinutes)} / ${fmtMin(c.grossMinutes)}`:fmtMin(c.grossMinutes)}</strong></div>
           <div class="today-chip"><span>שכר צפוי</span><strong>${currency(c.pay)}</strong></div>
         </div>
         <div class="today-status">${escapeHtml(shiftStatusText(sh))}${todays.length>1?` · קיימות ${todays.length} משמרות היום`:''}</div>
+        ${c.isSplit&&c.splitReturned&&!c.splitGapOk?`<div class="split-detail-warning">⚠ הפיצול קצר מ־3 שעות — דבר עם הסדרן כדי לסדר את זה.</div>`:''}
       </div>
 
       <div class="today-sections-stack">
@@ -4633,7 +4785,8 @@ function openDashboardCalendarDate(date){
   $('shiftModalTitle').textContent='הוספת משמרת';
   $('date').value=date;
   $('start').value=''; $('end').value='';
-  $('breakMin').value='0'; $('notes').value=''; $('dayType').value='auto'; $('bonus').value='0';
+  $('splitStart2').value=''; $('splitEnd2').value='';
+  $('breakMin').value='0'; $('notes').value=''; $('dayType').value='auto'; updateSplitShiftUi(); $('bonus').value='0';
   $('extraLoopType').value='none'; $('nightLineType').value='none';
   $('ddPreset').value='';
   refreshDdPresetOptions();
