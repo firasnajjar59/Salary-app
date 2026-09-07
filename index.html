@@ -516,6 +516,19 @@
     .today-reports-header strong{font-size:14px}
     .today-report-preview{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
     .today-report-pill{font-size:11px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);padding:5px 8px;border-radius:999px}
+
+    .shift-timeline{position:relative;margin-top:10px;padding-right:28px}
+    .shift-timeline:before{content:"";position:absolute;right:9px;top:13px;bottom:13px;width:2px;background:var(--line)}
+    .timeline-item{position:relative;display:grid;grid-template-columns:52px minmax(0,1fr);gap:9px;align-items:start;padding:7px 0}
+    .timeline-dot{position:absolute;right:-24px;top:14px;width:12px;height:12px;border-radius:50%;background:var(--card);border:3px solid var(--accent);z-index:1}
+    .timeline-time{font-weight:900;font-size:13px;direction:ltr;text-align:right;padding-top:2px}
+    .timeline-card{min-width:0;border:1px solid var(--line);border-radius:13px;padding:9px 11px;background:var(--card)}
+    .timeline-card.clickable{cursor:pointer}
+    .timeline-title{font-weight:850;font-size:13px}
+    .timeline-meta{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.45}
+    .timeline-gap .timeline-dot{border-color:var(--muted)}
+    .timeline-gap .timeline-card{background:var(--soft)}
+    .timeline-warning .timeline-card{border-color:rgba(210,45,45,.35);background:rgba(210,45,45,.08)}
     @media(max-width:460px){.shift-detail-cards{grid-template-columns:1fr 1fr}.shift-detail-card{padding:12px}.shift-detail-card-main{font-size:19px}}
 
     .approval-list{display:flex;flex-direction:column;gap:9px;margin-top:10px}
@@ -868,7 +881,7 @@
         <summary>אודות</summary>
         <div class="settings-accordion-body">
           <div style="font-size:17px;font-weight:850">נוצר ע״י פראס נג׳אר</div>
-          <div class="note" style="margin-top:5px">גרסה <strong>66</strong></div>
+          <div class="note" style="margin-top:5px">גרסה <strong>67</strong></div>
           <div style="height:12px"></div>
           <button class="secondary" id="manualUpdateCheckBtn" type="button">בדיקת עדכונים</button>
           <div id="manualUpdateStatus" class="note" style="margin-top:8px"></div>
@@ -1517,7 +1530,7 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=66;
+const APP_VERSION=67;
 const VERSION_URL='./version.json';
 const GOOGLE_CLIENT_ID='671607022405-ctegk4jl7koo9elm30odvsb1binp49cb.apps.googleusercontent.com';
 const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.appdata';
@@ -2688,6 +2701,67 @@ window.deleteSelectedShifts=deleteSelectedShifts;
 
 function detailMoney(n){ return currency(Number(n||0)); }
 
+function timelineClockFromIso(iso){
+  if(!iso) return '';
+  const d=new Date(iso); if(Number.isNaN(d.getTime())) return '';
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+function timelineSortMinute(hm,shiftStart){
+  const m=hmToMinutes(hm), s=hmToMinutes(shiftStart);
+  if(m===null) return 99999;
+  if(s===null) return m;
+  return m<s ? m+1440 : m;
+}
+function shiftTimelineHtml(sh){
+  const c=calcShift(sh), items=[];
+  const push=(time,title,meta='',kind='event',onclick='')=>{
+    if(!time) return;
+    items.push({time,title,meta,kind,onclick,sort:timelineSortMinute(time,sh.start)});
+  };
+
+  if(sh.dayType==='split' && !c.provisional){
+    push(sh.start,'כניסה 1','תחילת החלק הראשון','start');
+    push(sh.splitEnd1||sh.end,'יציאה 1','סיום החלק הראשון','end');
+    if(c.splitReturned){
+      const gapMeta=`הפסקת פיצול ${fmtMin(c.splitGapMinutes)}${c.splitGapOk?'':' · פחות מ־3 שעות — לבדוק מול הסדרן'}`;
+      push(sh.splitEnd1||sh.end,'הפסקת פיצול',gapMeta,c.splitGapOk?'gap':'warning');
+      push(sh.splitStart2,'כניסה 2','חזרה לחלק השני','start');
+      push(sh.splitEnd2,'יציאה 2',`סיום המשמרת · +1:00 שעת פיצול לתשלום`,'end');
+    }else if(c.didNotReturn){
+      push(sh.splitEnd1||sh.end,'סיום בפועל','לא חזר לחלק השני · ללא תוספת שעת פיצול','end');
+    }
+  }else{
+    push(sh.start,sh.dayType==='split'?'תחילת DD':'תחילת משמרת',c.provisional?'שעות הפיצול טרם עודכנו — חישוב זמני לפי DD':'','start');
+    push(sh.end,sh.dayType==='split'?'סוף DD מתוכנן':'סיום משמרת',c.provisional?'יש לעדכן את שעות הפיצול ביום המשמרת':'','end');
+  }
+
+  normalizedTrips(sh).forEach((t,i)=>{
+    const meta=[t.startPoint,t.rb||'',t.trainNumber?`רכבת ${t.trainNumber}`:'',t.endTime?`עד ${t.endTime}`:'',tripTimingText(t)].filter(Boolean).join(' · ');
+    push(t.startTime,`חצי סיבוב ${i+1}`,meta,'trip',`openTripModal('${sh.id}','${t.id}')`);
+  });
+  normalizedReports(sh).forEach(r=>{
+    const trip=r.tripId&&tripById(sh,r.tripId);
+    const meta=[r.type||'דוח נהג',trip?tripLabel(trip):'',r.description||''].filter(Boolean).join(' · ');
+    push(r.eventTime,'דוח נהג',meta,'report',`openReportModal('${sh.id}','${r.id}')`);
+  });
+  normalizedApprovals(sh).forEach(a=>{
+    const time=timelineClockFromIso(a.createdAt);
+    const meta=[a.what||'',a.approvedBy?`באישור ${a.approvedBy}`:'',a.note||''].filter(Boolean).join(' · ');
+    push(time,'אישור / שינוי',meta,'approval',`openApprovalModal('${sh.id}','${a.id}')`);
+  });
+
+  items.sort((a,b)=>a.sort-b.sort || a.title.localeCompare(b.title,'he'));
+  if(!items.length) return `<p class="note" style="margin:8px 0 0">אין עדיין אירועים להצגה בציר הזמן.</p>`;
+  return `<div class="shift-timeline">${items.map(x=>`<div class="timeline-item ${x.kind==='gap'?'timeline-gap':''} ${x.kind==='warning'?'timeline-warning':''}">
+    <span class="timeline-dot"></span>
+    <div class="timeline-time">${escapeHtml(x.time)}</div>
+    <div class="timeline-card ${x.onclick?'clickable':''}" ${x.onclick?`onclick="${x.onclick}" role="button" tabindex="0"`:''}>
+      <div class="timeline-title">${escapeHtml(x.title)}</div>
+      ${x.meta?`<div class="timeline-meta">${escapeHtml(x.meta)}</div>`:''}
+    </div>
+  </div>`).join('')}</div>`;
+}
+
 function openShiftDetails(id){
   const sh=shifts.find(x=>x.id===id);
   if(!sh) return;
@@ -2745,6 +2819,11 @@ function openShiftDetails(id){
 
     <div class="detail-actions" style="margin-top:14px">
       <button type="button" class="secondary" onclick="editShiftFromDetails('${sh.id}')">✏️ עריכת משמרת</button>
+    </div>
+
+    <div class="shift-details-section">
+      <div class="shift-head" style="margin-bottom:8px"><h3 style="margin:0">ציר זמן המשמרת</h3><span class="filter-count">לפי שעה</span></div>
+      ${shiftTimelineHtml(sh)}
     </div>
 
     <div class="shift-details-section">
