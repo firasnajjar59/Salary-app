@@ -519,15 +519,15 @@
 
     .shift-quick-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:0 0 12px;position:relative;z-index:2}
     .shift-quick-actions button{min-width:0;padding:9px 6px;font-size:12px;white-space:normal}
-    .live-shift-panel{margin:10px 0 12px;padding:12px;border:1px solid var(--border);border-radius:16px;background:var(--card)}
-    .live-shift-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+    .live-shift-panel{margin:10px 0 12px;padding:12px;border:1px solid var(--border);border-radius:16px;background:var(--card);color:var(--text)}
+    .live-shift-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;color:var(--text)}
     .live-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#20a45b;margin-left:6px;vertical-align:middle}
     .live-shift-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
     .live-stat{border:1px solid var(--border);border-radius:12px;padding:9px;min-width:0}
     .live-stat span{display:block;font-size:11px;color:var(--muted);margin-bottom:3px}
-    .live-stat strong{font-size:15px}
+    .live-stat strong{font-size:15px;color:var(--text)}
     .active-trip-card{margin-top:10px;border:1px solid var(--border);border-radius:13px;padding:10px;background:var(--bg)}
-    .active-trip-title{font-weight:800;margin-bottom:4px}
+    .active-trip-title{font-weight:800;margin-bottom:4px;color:var(--text)}
     .active-trip-meta{font-size:12px;color:var(--muted);margin-bottom:8px}
     .active-trip-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}
     .ops-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
@@ -903,7 +903,7 @@
         <summary>אודות</summary>
         <div class="settings-accordion-body">
           <div style="font-size:17px;font-weight:850">נוצר ע״י פראס נג׳אר</div>
-          <div class="note" style="margin-top:5px">גרסה <strong>70</strong></div>
+          <div class="note" style="margin-top:5px">גרסה <strong>72</strong></div>
           <div style="height:12px"></div>
           <button class="secondary" id="manualUpdateCheckBtn" type="button">בדיקת עדכונים</button>
           <div id="manualUpdateStatus" class="note" style="margin-top:8px"></div>
@@ -1552,7 +1552,7 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=70;
+const APP_VERSION=72;
 const VERSION_URL='./version.json';
 const GOOGLE_CLIENT_ID='671607022405-ctegk4jl7koo9elm30odvsb1binp49cb.apps.googleusercontent.com';
 const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.appdata';
@@ -2872,11 +2872,52 @@ function operationalMetricsHtml(sh,{live=false}={}){
     <div class="ops-metric"><span>זמן לא מתועד</span><strong>${m.undocumented===null?'לא ידוע':fmtMin(m.undocumented)}</strong></div>
   </div>`;
 }
+function shiftLiveState(sh,now=new Date()){
+  if(!sh?.date||!sh?.start) return {visible:false,state:'none'};
+  const [y,m,d]=String(sh.date).split('-').map(Number);
+  if(!y||!m||!d) return {visible:false,state:'none'};
+  const mk=(hm)=>{
+    if(!hm) return null;
+    const [hh,mm]=String(hm).split(':').map(Number);
+    if(Number.isNaN(hh)||Number.isNaN(mm)) return null;
+    return new Date(y,m-1,d,hh,mm,0,0);
+  };
+  const inInterval=(aHm,bHm)=>{
+    const a=mk(aHm), b=mk(bHm); if(!a||!b) return false;
+    if(b<=a) b.setDate(b.getDate()+1);
+    return now>=a && now<=b;
+  };
+
+  if(sh.dayType==='split'){
+    const s=splitShiftInfo(sh);
+    if(s.returned){
+      const first=inInterval(s.start1,s.end1);
+      const second=inInterval(s.start2,s.end2);
+      if(first||second) return {visible:true,state:'working'};
+      const e1=mk(s.end1), s2=mk(s.start2);
+      if(e1&&s2){
+        if(s2<=e1) s2.setDate(s2.getDate()+1);
+        if(now>e1 && now<s2) return {visible:true,state:'split_break'};
+      }
+      return {visible:false,state:'outside'};
+    }
+    // Provisional DD split or actual no-return: use currently known outer times.
+    return {visible:inInterval(sh.start,sh.end),state:inInterval(sh.start,sh.end)?'working':'outside'};
+  }
+
+  return {visible:inInterval(sh.start,sh.end),state:inInterval(sh.start,sh.end)?'working':'outside'};
+}
 function liveShiftPanelHtml(sh){
+  const live=shiftLiveState(sh);
+  if(!live.visible) return '';
+
   const active=activeTripForShift(sh);
   const m=shiftOperationalMetrics(sh,{live:true});
+  const statusText=live.state==='split_break'?'בהפסקת פיצול':'במשמרת';
+
   return `<div class="live-shift-panel">
     <div class="live-shift-head"><strong><span class="live-dot"></span>סטטוס משמרת חי</strong><span class="filter-count">${escapeHtml(localTimeHm())}</span></div>
+    <div class="today-status" style="margin-bottom:9px">${statusText}</div>
     <div class="live-shift-grid">
       <div class="live-stat"><span>זמן במשמרת עד עכשיו</span><strong>${fmtMin(m.baseWork)}</strong></div>
       <div class="live-stat"><span>סיבובים</span><strong>${normalizedTrips(sh).length}</strong></div>
@@ -2890,7 +2931,11 @@ function liveShiftPanelHtml(sh){
         <button type="button" class="primary" onclick="finishActiveTripNow('${sh.id}','${active.id}')">⏹ סיום סיבוב עכשיו</button>
         <button type="button" class="secondary" onclick="openTripModal('${sh.id}','${active.id}')">✏️ עריכה</button>
       </div>
-    </div>`:`<div class="today-status" style="margin-top:9px">אין כרגע סיבוב פעיל.</div>`}
+    </div>`:`<div class="active-trip-card">
+      <div class="active-trip-title">אין סיבוב פעיל כרגע</div>
+      <div class="active-trip-meta">${live.state==='split_break'?'אתה כרגע בהפסקת פיצול.':'אפשר להתחיל את החצי סיבוב הבא בלחיצה אחת.'}</div>
+      <button type="button" class="primary" style="width:100%" onclick="openTripModal('${sh.id}')">▶ התחל סיבוב</button>
+    </div>`}
   </div>`;
 }
 
