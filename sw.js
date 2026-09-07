@@ -31,7 +31,7 @@ messaging.onBackgroundMessage((payload) => {
   });
 });
 
-const CACHE_NAME = 'salary-app-v68';
+const CACHE_NAME = 'salary-app-v69';
 const APP_FILES = [
   './',
   './index.html',
