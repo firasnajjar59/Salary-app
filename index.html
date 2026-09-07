@@ -903,7 +903,7 @@
         <summary>אודות</summary>
         <div class="settings-accordion-body">
           <div style="font-size:17px;font-weight:850">נוצר ע״י פראס נג׳אר</div>
-          <div class="note" style="margin-top:5px">גרסה <strong>72</strong></div>
+          <div class="note" style="margin-top:5px">גרסה <strong>73</strong></div>
           <div style="height:12px"></div>
           <button class="secondary" id="manualUpdateCheckBtn" type="button">בדיקת עדכונים</button>
           <div id="manualUpdateStatus" class="note" style="margin-top:8px"></div>
@@ -1552,7 +1552,7 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=72;
+const APP_VERSION=73;
 const VERSION_URL='./version.json';
 const GOOGLE_CLIENT_ID='671607022405-ctegk4jl7koo9elm30odvsb1binp49cb.apps.googleusercontent.com';
 const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.appdata';
@@ -5128,7 +5128,8 @@ function renderTodayDashboard(){
   if(!todays.length){
     $('todayShiftContent').innerHTML=`<div class="today-chip" style="position:relative;z-index:1"><span>משמרת היום</span><strong>לא הוזנה משמרת</strong></div><div class="today-status">אפשר ללחוץ על ＋ ולהוסיף משמרת להיום.</div>`;
   }else{
-    const sh=todays[0], c=calcShift(sh);
+    const liveToday=todays.find(x=>shiftLiveState(x).visible);
+    const sh=liveToday||todays[0], c=calcShift(sh);
     const dd=(sh.ddType && sh.ddNumber!=='')?displayDdNumber(sh.ddType,sh.ddNumber):'ללא DD';
     const todayReports=normalizedReports(sh).slice().sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
     $('todayShiftContent').innerHTML=`
@@ -5147,7 +5148,7 @@ function renderTodayDashboard(){
           <div class="today-chip"><span>${c.isSplit?'עבודה / לתשלום':'משך'}</span><strong>${c.isSplit?`${fmtMin(c.workedMinutes)} / ${fmtMin(c.grossMinutes)}`:fmtMin(c.grossMinutes)}</strong></div>
           <div class="today-chip"><span>שכר צפוי</span><strong>${currency(c.pay)}</strong></div>
         </div>
-        <div class="today-status">${escapeHtml(shiftStatusText(sh))}${todays.length>1?` · קיימות ${todays.length} משמרות היום`:''}</div>
+        <div class="today-status">${escapeHtml(shiftStatusText(sh))}${todays.length>1?` · קיימות ${todays.length} משמרות היום${liveToday?' · מוצגת הפעילה עכשיו':''}`:''}</div>
         ${c.isSplit&&c.splitReturned&&!c.splitGapOk?`<div class="split-detail-warning">⚠ הפיצול קצר מ־3 שעות — דבר עם הסדרן כדי לסדר את זה.</div>`:''}
       </div>
 
