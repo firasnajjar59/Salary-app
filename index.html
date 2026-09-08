@@ -1856,6 +1856,20 @@ html[data-theme=dark] .line-point-remove{background:#2d2b31}
   mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M12 5v14M5 12h14'/%3E%3C/svg%3E") center/contain no-repeat;
 }
 
+
+/* v92 */
+.trip-smart-hint{margin-top:8px;padding:9px 11px;border-radius:14px;background:color-mix(in srgb,var(--app-accent) 10%,var(--surface));color:var(--muted);font-size:13px;font-weight:650}
+.live-quick-wrap{position:fixed;left:max(16px,env(safe-area-inset-left));bottom:calc(96px + env(safe-area-inset-bottom));z-index:880;display:flex;flex-direction:column;align-items:flex-start;gap:9px}
+.live-quick-wrap.hidden,.live-quick-menu.hidden{display:none!important}
+.live-quick-fab{width:54px;height:54px;border:0;border-radius:19px;background:var(--app-accent);color:#fff;display:grid;place-items:center;box-shadow:0 10px 28px rgba(0,0,0,.20)}
+.live-quick-fab svg{width:25px;height:25px;fill:currentColor}
+.live-quick-menu{min-width:190px;padding:8px;border:1px solid var(--line);border-radius:22px;background:var(--surface);box-shadow:0 14px 38px rgba(0,0,0,.18);display:grid;gap:4px}
+.live-quick-menu button{border:0;background:transparent;color:var(--text);min-height:46px;border-radius:15px;padding:8px 12px;display:flex;align-items:center;gap:10px;text-align:right;font-weight:750}
+.live-quick-menu button:active{background:color-mix(in srgb,var(--app-accent) 10%,transparent)}
+.shift-page-hero{margin-bottom:14px;padding:18px;border-radius:26px;background:color-mix(in srgb,var(--app-accent) 11%,var(--surface));border:1px solid color-mix(in srgb,var(--app-accent) 18%,var(--line));display:flex;align-items:flex-end;justify-content:space-between;gap:14px}
+.shift-page-hero-main{display:grid;gap:3px}.shift-page-hero-main>span,.shift-page-hero-main>small{color:var(--muted);font-size:12px;font-weight:700}.shift-page-hero-main>strong{font-size:22px}.shift-page-hero-time{font-size:18px;font-weight:850;direction:ltr;white-space:nowrap}
+@media(max-width:430px){.shift-page-hero{align-items:flex-start;flex-direction:column}.live-quick-wrap{left:14px}}
+
 </style>
 </head>
 <body>
@@ -2163,7 +2177,7 @@ html[data-theme=dark] .line-point-remove{background:#2d2b31}
         <summary><span class="settings-summary-label"><span class="settings-summary-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 10.5v6M12 7.5h.01"/></svg></span><span>אודות</span></span></summary>
         <div class="settings-accordion-body">
           <div style="font-size:17px;font-weight:850">נוצר ע״י פראס נג׳אר</div>
-          <div class="note" style="margin-top:5px">גרסה <strong>91</strong></div>
+          <div class="note" style="margin-top:5px">גרסה <strong>92</strong></div>
           <div style="height:12px"></div>
           <button class="secondary" id="manualUpdateCheckBtn" type="button">בדיקת עדכונים</button>
           <div id="manualUpdateStatus" class="note" style="margin-top:8px"></div>
@@ -2637,6 +2651,12 @@ html[data-theme=dark] .line-point-remove{background:#2d2b31}
   </div>
 </div>
 
+<div id="liveQuickFabWrap" class="live-quick-wrap hidden">
+  <div id="liveQuickMenu" class="live-quick-menu hidden" aria-hidden="true"></div>
+  <button id="liveQuickFab" class="live-quick-fab" type="button" aria-label="פעולות מהירות במשמרת" aria-expanded="false">
+    <svg viewBox="0 0 24 24"><path d="M13 2 5 13h6l-1 9 9-13h-6z"/></svg>
+  </button>
+</div>
 <nav class="tabs" aria-label="ניווט ראשי">
   <button class="tab active" data-tab="mainDashboard" type="button">
     <span class="tab-icon">⌂</span>
@@ -2819,7 +2839,7 @@ html[data-theme=dark] .line-point-remove{background:#2d2b31}
           <label>התחלה</label>
           <select id="tripStartPoint">
             <option value="">לא חובה — אפשר לבחור אחר כך</option>
-          </select>
+          </select><div id="tripSmartHint" class="trip-smart-hint hidden"></div>
         </div>
         <div>
           <label>שעת התחלה</label>
@@ -2929,7 +2949,7 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=91;
+const APP_VERSION=92;
 let settingsDirty=false;
 function markSettingsDirty(){
   settingsDirty=true;
@@ -3808,8 +3828,13 @@ function openTripModal(shiftId,tripId=''){
 
   $('tripModalTitle').textContent=t?'עריכת חצי סיבוב':'הוספת סיבוב';
   $('tripShiftInfo').textContent=`משמרת ${formatDateHe(sh.date)} · ${sh.start}–${sh.end}`;
-  populateTripStartPoints(sh,t?.startPoint||'');
-  $('tripStartPoint').value=t?.startPoint||'';
+  populateTripStartPoints(sh,t?.startPoint||'',!t);
+  if(t) $('tripStartPoint').value=t?.startPoint||'';
+  const smartPoint=!t?suggestedNextTripPoint(sh):'';
+  if($('tripSmartHint')){
+    $('tripSmartHint').textContent=smartPoint?`הנקודה הבאה הוצעה אוטומטית: ${smartPoint}. אפשר לשנות או להשאיר ריק.`:'';
+    $('tripSmartHint').classList.toggle('hidden',!smartPoint);
+  }
   $('tripRb').value=t?.rb||'';
   $('tripTrainNumber').value=t?.trainNumber||'';
   $('tripStartTime').value=start;
@@ -4099,14 +4124,22 @@ function renderLineOperationalSettings(){
   }).join('');
   host.querySelectorAll('[data-line-op-key]').forEach(bindLineOperationalCard);
 }
-function populateTripStartPoints(sh,selected=''){
+function suggestedNextTripPoint(sh){
+  const points=linePoints(shiftLine(sh)); if(points.length<2) return '';
+  const trips=normalizedTrips(sh).filter(t=>String(t.startPoint||'').trim());
+  if(!trips.length) return '';
+  const current=String(trips[trips.length-1].startPoint||'').trim();
+  const i=points.indexOf(current); if(i<0) return '';
+  return points[(i+1)%points.length]||'';
+}
+function populateTripStartPoints(sh,selected='',suggest=false){
   const el=$('tripStartPoint'); if(!el) return;
   const points=linePoints(shiftLine(sh));
-  const values=[...points];
-  if(selected && !values.includes(selected)) values.push(selected);
+  const chosen=selected||((suggest)?suggestedNextTripPoint(sh):'');
+  const values=[...points]; if(chosen&&!values.includes(chosen)) values.push(chosen);
   el.innerHTML=`<option value="">לא חובה — אפשר לבחור אחר כך</option>`+
     values.map(x=>`<option value="${escapeHtml(x)}">${escapeHtml(x)}</option>`).join('');
-  el.value=selected||'';
+  el.value=chosen||'';
 }
 function saveSettings(){
   const current=readStoredSettings();
@@ -4731,6 +4764,43 @@ function shiftLiveState(sh,now=new Date()){
 
   return {visible:inInterval(sh.start,sh.end),state:inInterval(sh.start,sh.end)?'working':'outside'};
 }
+
+function currentLiveShift(){
+  const today=localDateIso();
+  return shifts.filter(sh=>sh.date===today).find(sh=>shiftLiveState(sh).visible)||null;
+}
+function closeLiveQuickMenu(){
+  $('liveQuickMenu')?.classList.add('hidden');
+  $('liveQuickMenu')?.setAttribute('aria-hidden','true');
+  $('liveQuickFab')?.setAttribute('aria-expanded','false');
+}
+function liveQuickAction(kind,shiftId,tripId=''){
+  closeLiveQuickMenu();
+  if(kind==='trip') openTripModal(shiftId);
+  else if(kind==='finish') finishActiveTripNow(shiftId,tripId);
+  else if(kind==='report') openReportModal(shiftId);
+  else if(kind==='approval') openApprovalModal(shiftId);
+}
+function refreshLiveQuickActions(){
+  const wrap=$('liveQuickFabWrap'),menu=$('liveQuickMenu'); if(!wrap||!menu)return;
+  const sh=currentLiveShift();
+  if(!sh){wrap.classList.add('hidden');closeLiveQuickMenu();return;}
+  wrap.classList.remove('hidden');
+  const active=activeTripForShift(sh);
+  menu.innerHTML=`
+    <button type="button" onclick="liveQuickAction('${active?'finish':'trip'}','${sh.id}'${active?`,'${active.id}'`:''})">${materialIcon('trip')}<span>${active?'סיים סיבוב':'התחל סיבוב'}</span></button>
+    <button type="button" onclick="liveQuickAction('report','${sh.id}')">${materialIcon('report')}<span>דוח</span></button>
+    <button type="button" onclick="liveQuickAction('approval','${sh.id}')">${materialIcon('approval')}<span>אישור / שינוי</span></button>`;
+}
+function toggleLiveQuickMenu(){
+  refreshLiveQuickActions();
+  const menu=$('liveQuickMenu'),fab=$('liveQuickFab');
+  if(!menu||$('liveQuickFabWrap')?.classList.contains('hidden'))return;
+  const open=menu.classList.contains('hidden');
+  menu.classList.toggle('hidden',!open);menu.setAttribute('aria-hidden',open?'false':'true');
+  fab?.setAttribute('aria-expanded',open?'true':'false');
+}
+window.liveQuickAction=liveQuickAction;
 function liveShiftPanelHtml(sh){
   const live=shiftLiveState(sh);
   if(!live.visible) return '';
@@ -4849,7 +4919,14 @@ function openShiftDetails(id,{historyMode='push'}={}){
 
   $('shiftDetailsPageTitle').textContent=`${formatDateHe(sh.date)} · ${ddText}`;
   $('shiftDetailsPageContent').innerHTML=`
-    ${quickActionsHtml(sh)}
+    <div class="shift-page-hero">
+      <div class="shift-page-hero-main">
+        <span>${escapeHtml(lineLabel(shiftLine(sh)))} · ${escapeHtml(dayLabel)}</span>
+        <strong>${escapeHtml(ddText)}</strong>
+        <small>${escapeHtml(formatDateHe(sh.date))}</small>
+      </div>
+      <div class="shift-page-hero-time">${escapeHtml(sh.start||'—')}–${escapeHtml(sh.end||'—')}</div>
+    </div>
     <div class="shift-detail-cards">
       <div class="shift-detail-card">
         <div class="shift-detail-card-title">שעות</div>
@@ -4878,6 +4955,11 @@ function openShiftDetails(id,{historyMode='push'}={}){
       </div>
     </div>
 
+    <div class="shift-details-section">
+      <div class="shift-head" style="margin-bottom:8px"><h3 style="margin:0">מה קרה במשמרת</h3><span class="filter-count">ציר זמן</span></div>
+      ${shiftTimelineHtml(sh)}
+    </div>
+
     ${sh.notes?`
       <div class="shift-details-section">
         <div class="shift-detail-card-title">הערות משמרת</div>
@@ -4887,11 +4969,6 @@ function openShiftDetails(id,{historyMode='push'}={}){
     <div class="shift-page-main-actions">
       <button type="button" class="secondary" onclick="editShiftFromDetails('${sh.id}')">עריכת משמרת</button>
       <button type="button" class="secondary" onclick="exportShiftPdf('${sh.id}')">PDF משמרת</button>
-    </div>
-
-    <div class="shift-details-section">
-      <div class="shift-head" style="margin-bottom:8px"><h3 style="margin:0">ציר זמן המשמרת</h3><span class="filter-count">לפי שעה</span></div>
-      ${shiftTimelineHtml(sh)}
     </div>
 
     <div class="shift-details-section">
@@ -4950,6 +5027,14 @@ function exportShiftPdf(id){
   <div class="section"><h2>אישורים ושינויים (${approvals.length})</h2>${approvals.length?approvals.map(a=>`<div class="row"><b>${escapeHtml(a.what||'')}</b><div class="muted">${a.approvedBy?`באישור ${escapeHtml(a.approvedBy)}`:''}${a.note?` · ${escapeHtml(a.note)}`:''}</div></div>`).join(''):'<div class="muted">אין רישומים.</div>'}</div>
   <div class="section"><h2>דוחות נהג (${reports.length})</h2>${reports.length?reports.map(r=>`<div class="row"><b>${escapeHtml(r.eventTime||'—')} · ${escapeHtml(r.type||'דוח')}</b><div>${escapeHtml(r.description||'')}</div></div>`).join(''):'<div class="muted">אין דוחות.</div>'}</div>
   ${sh.notes?`<div class="section"><h2>הערות</h2>${escapeHtml(sh.notes)}</div>`:''}<script>window.onload=()=>setTimeout(()=>window.print(),250);<\/script>
+
+document.addEventListener('DOMContentLoaded',()=>{
+  $('liveQuickFab')?.addEventListener('click',toggleLiveQuickMenu);
+  document.addEventListener('click',e=>{const w=$('liveQuickFabWrap');if(w&&!w.contains(e.target))closeLiveQuickMenu();});
+  refreshLiveQuickActions();
+  setInterval(refreshLiveQuickActions,30000);
+});
+
 </body></html>`;
   const w=window.open('','_blank'); if(!w){alert('הדפדפן חסם את חלון ה-PDF. יש לאפשר חלונות קופצים ולנסות שוב.');return;} w.document.open();w.document.write(html);w.document.close();
 }
@@ -7137,7 +7222,6 @@ function renderTodayDashboard(){
     const dd=(sh.ddType && sh.ddNumber!=='')?displayShiftDd(sh):lineLabel(shiftLine(sh));
     const todayReports=normalizedReports(sh).slice().sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
     $('todayShiftContent').innerHTML=`
-      ${quickActionsHtml(sh)}
       ${liveShiftPanelHtml(sh)}
       <div class="today-shift-open" onclick="openShiftDetails('${sh.id}')">
         <div class="today-shift-open-head">
