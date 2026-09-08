@@ -1870,6 +1870,11 @@ html[data-theme=dark] .line-point-remove{background:#2d2b31}
 .shift-page-hero-main{display:grid;gap:3px}.shift-page-hero-main>span,.shift-page-hero-main>small{color:var(--muted);font-size:12px;font-weight:700}.shift-page-hero-main>strong{font-size:22px}.shift-page-hero-time{font-size:18px;font-weight:850;direction:ltr;white-space:nowrap}
 @media(max-width:430px){.shift-page-hero{align-items:flex-start;flex-direction:column}.live-quick-wrap{left:14px}}
 
+
+/* v93 — live action visibility */
+.live-quick-wrap{bottom:calc(112px + env(safe-area-inset-bottom))!important;z-index:1400!important}
+.live-quick-fab{box-shadow:0 12px 34px rgba(0,0,0,.24)!important}
+
 </style>
 </head>
 <body>
@@ -2177,7 +2182,7 @@ html[data-theme=dark] .line-point-remove{background:#2d2b31}
         <summary><span class="settings-summary-label"><span class="settings-summary-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 10.5v6M12 7.5h.01"/></svg></span><span>אודות</span></span></summary>
         <div class="settings-accordion-body">
           <div style="font-size:17px;font-weight:850">נוצר ע״י פראס נג׳אר</div>
-          <div class="note" style="margin-top:5px">גרסה <strong>92</strong></div>
+          <div class="note" style="margin-top:5px">גרסה <strong>93</strong></div>
           <div style="height:12px"></div>
           <button class="secondary" id="manualUpdateCheckBtn" type="button">בדיקת עדכונים</button>
           <div id="manualUpdateStatus" class="note" style="margin-top:8px"></div>
@@ -2949,7 +2954,7 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=92;
+const APP_VERSION=93;
 let settingsDirty=false;
 function markSettingsDirty(){
   settingsDirty=true;
@@ -3654,9 +3659,8 @@ function deleteDriverReport(shiftId,reportId){
   if(!confirm(`למחוק את הדוח מסוג "${report.type}"?`)) return;
   sh.reports=normalizedReports(sh).filter(r=>r.id!==reportId);
   localStorage.setItem(KEY_SHIFTS,JSON.stringify(shifts));
-  renderTodayDashboard();
-  renderShifts();
-  openShiftDetails(shiftId);
+  const returnView=currentVisibleAppView();
+  returnAfterTripAction(shiftId,returnView);
 }
 function reportsHtmlForShift(sh){
   const reports=normalizedReports(sh).slice().sort((a,b)=>{
@@ -3688,6 +3692,7 @@ window.deleteDriverReport=deleteDriverReport;
 
 
 let tripShiftId=null,editingTripId=null;
+let tripReturnView='';
 
 function normalizedTrips(sh){return Array.isArray(sh?.trips)?sh.trips:[]}
 function tripById(sh,id){return normalizedTrips(sh).find(t=>t.id===id)}
@@ -3819,8 +3824,33 @@ function finishActiveTripNow(shiftId,tripId){
 }
 window.finishActiveTripNow=finishActiveTripNow;
 
+function currentVisibleAppView(){
+  if(!$('shiftDetailsPage')?.classList.contains('hidden')) return 'shiftDetails';
+  if(!$('todayDashboard')?.classList.contains('hidden')) return 'today';
+  if(!$('dayDetailsPage')?.classList.contains('hidden')) return 'day';
+  if(!$('shifts')?.classList.contains('hidden')) return 'shifts';
+  if(!$('mainDashboard')?.classList.contains('hidden')) return 'main';
+  return '';
+}
+function returnAfterTripAction(shiftId,view){
+  renderTodayDashboard();
+  renderShifts();
+  refreshLiveQuickActions();
+  if(view==='shiftDetails'){
+    openShiftDetails(shiftId,{historyMode:'pop'});
+  }else if(view==='today'){
+    showAppTab('todayDashboard',{remember:true,historyMode:'pop'});
+  }else if(view==='day' && currentDayDetailsDate){
+    openDayDetails(currentDayDetailsDate,{historyMode:'pop'});
+  }else if(view==='shifts'){
+    showAppTab('shifts',{remember:true,historyMode:'pop'});
+  }else if(view==='main'){
+    showAppTab('mainDashboard',{remember:true,historyMode:'pop'});
+  }
+}
 function openTripModal(shiftId,tripId=''){
   const sh=shifts.find(x=>x.id===shiftId);if(!sh)return;
+  tripReturnView=currentVisibleAppView();
   tripShiftId=shiftId;editingTripId=tripId||null;
   const t=editingTripId?tripById(sh,editingTripId):null;
   const start=t?.startTime||localTimeHm();
@@ -3901,10 +3931,10 @@ function saveTrip(){
   sh.trips=a;
   localStorage.setItem(KEY_SHIFTS,JSON.stringify(shifts));
   const sid=sh.id;
+  const returnView=tripReturnView;
   closeTripModal();
-  renderTodayDashboard();
-  renderShifts();
-  openShiftDetails(sid);
+  returnAfterTripAction(sid,returnView);
+  tripReturnView='';
 }
 function deleteTrip(shiftId,tripId){
   const sh=shifts.find(x=>x.id===shiftId);if(!sh)return;
@@ -5028,12 +5058,6 @@ function exportShiftPdf(id){
   <div class="section"><h2>דוחות נהג (${reports.length})</h2>${reports.length?reports.map(r=>`<div class="row"><b>${escapeHtml(r.eventTime||'—')} · ${escapeHtml(r.type||'דוח')}</b><div>${escapeHtml(r.description||'')}</div></div>`).join(''):'<div class="muted">אין דוחות.</div>'}</div>
   ${sh.notes?`<div class="section"><h2>הערות</h2>${escapeHtml(sh.notes)}</div>`:''}<script>window.onload=()=>setTimeout(()=>window.print(),250);<\/script>
 
-document.addEventListener('DOMContentLoaded',()=>{
-  $('liveQuickFab')?.addEventListener('click',toggleLiveQuickMenu);
-  document.addEventListener('click',e=>{const w=$('liveQuickFabWrap');if(w&&!w.contains(e.target))closeLiveQuickMenu();});
-  refreshLiveQuickActions();
-  setInterval(refreshLiveQuickActions,30000);
-});
 
 </body></html>`;
   const w=window.open('','_blank'); if(!w){alert('הדפדפן חסם את חלון ה-PDF. יש לאפשר חלונות קופצים ולנסות שוב.');return;} w.document.open();w.document.write(html);w.document.close();
@@ -6309,6 +6333,14 @@ $('tripStartTime')?.addEventListener('change',()=>updateTripDurationUi({syncEnd:
 $('tripTimingStatus')?.addEventListener('change',()=>updateTripDurationUi({syncEnd:true}));
 $('tripTimingMinutes')?.addEventListener('input',()=>updateTripDurationUi({syncEnd:true}));
 $('tripEndTime')?.addEventListener('change',syncTimingFromActualEnd);
+$('liveQuickFab')?.addEventListener('click',toggleLiveQuickMenu);
+document.addEventListener('click',e=>{
+  const w=$('liveQuickFabWrap');
+  if(w && !w.contains(e.target)) closeLiveQuickMenu();
+});
+refreshLiveQuickActions();
+setInterval(refreshLiveQuickActions,30000);
+
 setInterval(()=>{
   const today=$('todayDashboard');
   if(today && !today.classList.contains('hidden')) renderTodayDashboard();
@@ -7292,6 +7324,7 @@ function renderTodayDashboard(){
   $('dashboardForecastShiftCount').textContent=`${forecastTotals.count} משמרות`;
   renderDashboardAnalytics();
   renderDashboardCalendar();
+  refreshLiveQuickActions();
 }
 function renderDashboardCalendar(){
   const ym=dashboardCalendarMonth||localDateIso().slice(0,7);
