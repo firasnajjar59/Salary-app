@@ -1875,6 +1875,47 @@ html[data-theme=dark] .line-point-remove{background:#2d2b31}
 .live-quick-wrap{bottom:calc(112px + env(safe-area-inset-bottom))!important;z-index:1400!important}
 .live-quick-fab{box-shadow:0 12px 34px rgba(0,0,0,.24)!important}
 
+
+/* v94 — consistent date display on iPhone + trip type */
+.ios-date-shell{
+  position:relative;
+  display:block;
+  width:100%;
+  min-width:0;
+}
+.ios-date-shell input[type="date"]{
+  width:100%;
+  min-width:0;
+  color:transparent!important;
+  -webkit-text-fill-color:transparent!important;
+  caret-color:transparent;
+  background:transparent;
+  position:relative;
+  z-index:2;
+}
+.ios-date-display{
+  position:absolute;
+  inset:0;
+  z-index:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:0 12px;
+  color:var(--text);
+  font:inherit;
+  font-weight:650;
+  direction:ltr;
+  pointer-events:none;
+}
+.ios-date-display.placeholder{color:var(--muted)}
+.trip-type-row{display:grid;gap:7px}
+#tripType{font-weight:700}
+@supports (-webkit-touch-callout:none){
+  input,select,textarea{font-size:16px!important}
+  .modal-sheet .grid>*{min-width:0}
+  .modal-sheet input,.modal-sheet select,.modal-sheet textarea{max-width:100%}
+}
+
 </style>
 </head>
 <body>
@@ -2182,7 +2223,7 @@ html[data-theme=dark] .line-point-remove{background:#2d2b31}
         <summary><span class="settings-summary-label"><span class="settings-summary-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 10.5v6M12 7.5h.01"/></svg></span><span>אודות</span></span></summary>
         <div class="settings-accordion-body">
           <div style="font-size:17px;font-weight:850">נוצר ע״י פראס נג׳אר</div>
-          <div class="note" style="margin-top:5px">גרסה <strong>93</strong></div>
+          <div class="note" style="margin-top:5px">גרסה <strong>94</strong></div>
           <div style="height:12px"></div>
           <button class="secondary" id="manualUpdateCheckBtn" type="button">בדיקת עדכונים</button>
           <div id="manualUpdateStatus" class="note" style="margin-top:8px"></div>
@@ -2838,6 +2879,15 @@ html[data-theme=dark] .line-point-remove{background:#2d2b31}
     </div>
     <div class="modal-body">
       <div id="tripShiftInfo" class="note" style="margin-bottom:12px"></div>
+      <div class="trip-type-row">
+        <label>סוג נסיעה</label>
+        <select id="tripType">
+          <option value="commercial">נסיעה מסחרית</option>
+          <option value="empty">ריק / חזרה לדיפו</option>
+        </select>
+        <div id="tripTypeHint" class="note">בנסיעה מסחרית מחושב בזמן / איחור / הקדמה לפי הגדרות הקו.</div>
+      </div>
+      <div style="height:10px"></div>
 
       <div class="grid">
         <div>
@@ -2863,7 +2913,7 @@ html[data-theme=dark] .line-point-remove{background:#2d2b31}
       <div id="tripPostDriveFields" class="hidden">
         <div style="height:10px"></div>
         <div class="grid">
-          <div>
+          <div id="tripPlannedEndWrap">
             <label>שעת סיום מתוכננת</label>
             <input id="tripPlannedEndTime" type="time" readonly>
           </div>
@@ -2873,6 +2923,7 @@ html[data-theme=dark] .line-point-remove{background:#2d2b31}
           </div>
         </div>
 
+        <div id="tripTimingControls">
         <div style="height:10px"></div>
         <div class="grid">
           <div>
@@ -2888,9 +2939,10 @@ html[data-theme=dark] .line-point-remove{background:#2d2b31}
             <input id="tripTimingMinutes" type="number" min="0" max="180" step="1" value="0">
           </div>
         </div>
+        </div>
 
         <div id="tripDurationSummary" class="trip-duration-summary"></div>
-        <div class="note" style="margin-top:8px">זמן מתוכנן לחצי סיבוב הוא שעה ו־8 דקות. שינוי איחור/הקדמה יעדכן אוטומטית את שעת הסיום בפועל, ועדיין אפשר לשנות אותה ידנית.</div>
+        <div id="tripTimingNote" class="note" style="margin-top:8px">בנסיעה מסחרית זמן הסיבוב והטולרנס נלקחים מהגדרות הקו. שינוי איחור/הקדמה יעדכן את שעת הסיום בפועל, ועדיין אפשר לשנות אותה ידנית.</div>
       </div>
       <div id="tripQuickHint" class="note" style="margin-top:10px">להתחלת נסיעה אפשר לשמור גם בלי נקודת התחלה ולעדכן אותה אחר כך. השעה כבר הוכנסה אוטומטית.</div>
       <div style="height:12px"></div>
@@ -2954,7 +3006,39 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=93;
+const APP_VERSION=94;
+function formatDateInputValue(value){
+  const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value||''));
+  return m?`${m[3]}/${m[2]}/${m[1]}`:'';
+}
+function refreshDateInputDisplays(){
+  document.querySelectorAll('.ios-date-shell').forEach(shell=>{
+    const input=shell.querySelector('input[type="date"]');
+    const display=shell.querySelector('.ios-date-display');
+    if(!input||!display) return;
+    display.textContent=formatDateInputValue(input.value)||'בחר תאריך';
+    display.classList.toggle('placeholder',!input.value);
+  });
+}
+function enhanceDateInputs(){
+  document.querySelectorAll('input[type="date"]').forEach(input=>{
+    if(input.closest('.ios-date-shell')) return;
+    input.setAttribute('lang','he-IL');
+    const shell=document.createElement('span');
+    shell.className='ios-date-shell';
+    input.parentNode.insertBefore(shell,input);
+    shell.appendChild(input);
+    const display=document.createElement('span');
+    display.className='ios-date-display';
+    display.setAttribute('aria-hidden','true');
+    shell.appendChild(display);
+    input.addEventListener('input',refreshDateInputDisplays);
+    input.addEventListener('change',refreshDateInputDisplays);
+  });
+  refreshDateInputDisplays();
+}
+document.addEventListener('DOMContentLoaded',enhanceDateInputs);
+
 let settingsDirty=false;
 function markSettingsDirty(){
   settingsDirty=true;
@@ -3207,6 +3291,7 @@ function dayShiftSummary(sh){
 }
 
 function openDayDetails(date,{historyMode='push'}={}){
+  setTimeout(refreshDateInputDisplays,0);
   currentDayDetailsDate=date;
   const d=new Date(date+'T12:00:00');
   const title=new Intl.DateTimeFormat('he-IL',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(d);
@@ -3640,7 +3725,8 @@ function saveDriverReport(){
       createdAt:pendingReportCreatedAt || new Date().toISOString(),
       eventTime,
       type,
-      description
+      description,
+      tripId
     });
   }
   sh.reports=reports;
@@ -3716,6 +3802,21 @@ function hmAddMinutes(hm,mins){
   if(x<0)x+=1440;
   return `${String(Math.floor(x/60)).padStart(2,'0')}:${String(x%60).padStart(2,'0')}`;
 }
+
+function tripTypeOf(t){ return t?.tripType==='empty'?'empty':'commercial'; }
+function isEmptyTrip(t){ return tripTypeOf(t)==='empty'; }
+function updateTripTypeUi(){
+  const empty=$('tripType')?.value==='empty';
+  $('tripPlannedEndWrap')?.classList.toggle('hidden',empty);
+  $('tripTimingControls')?.classList.toggle('hidden',empty);
+  $('tripTimingNote')?.classList.toggle('hidden',empty);
+  if($('tripTypeHint')){
+    $('tripTypeHint').textContent=empty
+      ? 'ריק / חזרה לדיפו: נשמרות רק שעות ההתחלה והסיום, ללא חישוב הקדמה או איחור.'
+      : 'נסיעה מסחרית: מחושב בזמן / איחור / הקדמה לפי אורך הסיבוב והטולרנס של הקו.';
+  }
+  updateTripDurationUi();
+}
 function tripTimingFromDuration(startTime,endTime,line='red'){
   const actual=durationBetweenHm(startTime,endTime);
   const cfg=lineOperationalConfig(line);
@@ -3726,13 +3827,15 @@ function tripTimingFromDuration(startTime,endTime,line='red'){
   return {status:'early',minutes:Math.abs(diff),actual,planned:cfg.plannedTripMinutes,tolerance:cfg.onTimeToleranceMinutes};
 }
 function tripTimingText(t,sh=null){
-  if(t?.active && !t?.endTime) return 'בנסיעה';
+  if(t?.active && !t?.endTime) return isEmptyTrip(t)?'ריק · בנסיעה':'בנסיעה';
+  if(isEmptyTrip(t)) return 'ריק / חזרה לדיפו';
   const x=tripTimingFromDuration(t?.startTime,t?.endTime,shiftLine(sh));
   if(x.status==='late') return `איחור ${x.minutes} דק׳`;
   if(x.status==='early') return `הקדמה ${x.minutes} דק׳`;
   return 'בזמן';
 }
 function inferTripTiming(t,sh=null){
+  if(isEmptyTrip(t)) return {status:'on_time',minutes:0};
   if(t?.endTime){
     const x=tripTimingFromDuration(t.startTime,t.endTime,shiftLine(sh));
     return {status:x.status==='active'?'on_time':x.status,minutes:x.minutes||0};
@@ -3741,16 +3844,17 @@ function inferTripTiming(t,sh=null){
   return {status:'on_time',minutes:0};
 }
 function tripLabel(t){
-  return [t.startPoint,t.rb,t.trainNumber?`רכבת ${t.trainNumber}`:'',t.startTime&&t.endTime?`${t.startTime}–${t.endTime}`:''].filter(Boolean).join(' · ')||'חצי סיבוב';
+  return [isEmptyTrip(t)?'ריק': '',t.startPoint,t.rb,t.trainNumber?`רכבת ${t.trainNumber}`:'',t.startTime&&t.endTime?`${t.startTime}–${t.endTime}`:''].filter(Boolean).join(' · ')||'חצי סיבוב';
 }
 function updateTripDurationUi({syncEnd=false}={}){
   const start=$('tripStartTime')?.value||'';
+  const empty=$('tripType')?.value==='empty';
   const status=$('tripTimingStatus')?.value||'on_time';
   let variance=Math.max(0,Number($('tripTimingMinutes')?.value||0));
   if(status==='on_time') variance=0;
 
   const cfg=lineOperationalConfig(shiftLine(shifts.find(x=>x.id===tripShiftId)));
-  const plannedEnd=hmAddMinutes(start,cfg.plannedTripMinutes);
+  const plannedEnd=empty?'':hmAddMinutes(start,cfg.plannedTripMinutes);
   if($('tripPlannedEndTime')) $('tripPlannedEndTime').value=plannedEnd;
 
   if($('tripTimingMinutes')){
@@ -3758,7 +3862,7 @@ function updateTripDurationUi({syncEnd=false}={}){
     if(status==='on_time') $('tripTimingMinutes').value='0';
   }
 
-  if(syncEnd && start){
+  if(syncEnd && start && !empty){
     const actualMinutes=cfg.plannedTripMinutes + (status==='late'?variance:status==='early'?-variance:0);
     $('tripEndTime').value=hmAddMinutes(start,Math.max(0,actualMinutes));
   }
@@ -3766,12 +3870,14 @@ function updateTripDurationUi({syncEnd=false}={}){
   const actualDuration=durationBetweenHm(start,$('tripEndTime')?.value||'');
   const summary=$('tripDurationSummary');
   if(summary){
-    summary.innerHTML=`
-      <div class="trip-duration-box"><span>זמן מתוכנן</span><strong>${fmtMin(cfg.plannedTripMinutes)}</strong></div>
-      <div class="trip-duration-box"><span>זמן נהיגה בפועל</span><strong>${actualDuration?fmtMin(actualDuration):'—'}</strong></div>`;
+    summary.innerHTML=empty
+      ? `<div class="trip-duration-box"><span>משך ריק בפועל</span><strong>${actualDuration?fmtMin(actualDuration):'—'}</strong></div>`
+      : `<div class="trip-duration-box"><span>זמן מתוכנן</span><strong>${fmtMin(cfg.plannedTripMinutes)}</strong></div>
+         <div class="trip-duration-box"><span>זמן נהיגה בפועל</span><strong>${actualDuration?fmtMin(actualDuration):'—'}</strong></div>`;
   }
 }
 function syncTimingFromActualEnd(){
+  if($('tripType')?.value==='empty'){ updateTripDurationUi(); return; }
   const start=$('tripStartTime')?.value||'';
   const end=$('tripEndTime')?.value||'';
   if(!end){ updateTripDurationUi(); return; }
@@ -3812,11 +3918,12 @@ function finishActiveTripNow(shiftId,tripId){
   const t=tripById(sh,tripId); if(!t) return;
   if(!t.active || t.endTime){ openTripModal(shiftId,tripId); return; }
   const endTime=localTimeHm();
-  const timing=tripTimingFromDuration(t.startTime,endTime,shiftLine(sh));
+  const empty=isEmptyTrip(t);
+  const timing=empty?null:tripTimingFromDuration(t.startTime,endTime,shiftLine(sh));
   t.endTime=endTime;
   t.active=false;
-  t.timingStatus=timing.status==='active'?'on_time':timing.status;
-  t.varianceMinutes=timing.minutes||0;
+  t.timingStatus=empty?'not_applicable':(timing.status==='active'?'on_time':timing.status);
+  t.varianceMinutes=empty?0:(timing.minutes||0);
   t.updatedAt=new Date().toISOString();
   localStorage.setItem(KEY_SHIFTS,JSON.stringify(shifts));
   renderTodayDashboard(); renderShifts();
@@ -3865,6 +3972,7 @@ function openTripModal(shiftId,tripId=''){
     $('tripSmartHint').textContent=smartPoint?`הנקודה הבאה הוצעה אוטומטית: ${smartPoint}. אפשר לשנות או להשאיר ריק.`:'';
     $('tripSmartHint').classList.toggle('hidden',!smartPoint);
   }
+  $('tripType').value=tripTypeOf(t);
   $('tripRb').value=t?.rb||'';
   $('tripTrainNumber').value=t?.trainNumber||'';
   $('tripStartTime').value=start;
@@ -3874,7 +3982,7 @@ function openTripModal(shiftId,tripId=''){
   $('tripPostDriveFields')?.classList.toggle('hidden',!t);
   $('tripQuickHint')?.classList.toggle('hidden',!!t);
   $('saveTripBtn').textContent=t?'שמור שינויים':'התחל סיבוב';
-  updateTripDurationUi();
+  updateTripTypeUi();
 
   $('tripModal').classList.remove('hidden');
   $('tripModal').setAttribute('aria-hidden','false');
@@ -3888,6 +3996,7 @@ function closeTripModal(){
 }
 function saveTrip(){
   const sh=shifts.find(x=>x.id===tripShiftId);if(!sh)return;
+  const tripType=$('tripType')?.value==='empty'?'empty':'commercial';
   const startPoint=$('tripStartPoint').value;
   const rb=$('tripRb').value.trim();
   const trainNumber=$('tripTrainNumber').value.trim();
@@ -3899,11 +4008,13 @@ function saveTrip(){
   const a=normalizedTrips(sh).map(t=>({...t}));
   if(editingTripId){
     const i=a.findIndex(t=>t.id===editingTripId);if(i<0)return;
-    let timingStatus='on_time',varianceMinutes=0,active=!endTime;
+    let timingStatus=tripType==='empty'?'not_applicable':'on_time',varianceMinutes=0,active=!endTime;
     if(endTime){
-      const timing=tripTimingFromDuration(startTime,endTime,shiftLine(sh));
-      timingStatus=timing.status==='active'?'on_time':timing.status;
-      varianceMinutes=timing.minutes||0;
+      if(tripType!=='empty'){
+        const timing=tripTimingFromDuration(startTime,endTime,shiftLine(sh));
+        timingStatus=timing.status==='active'?'on_time':timing.status;
+        varianceMinutes=timing.minutes||0;
+      }
       active=false;
     }else{
       const other=activeTripRecord();
@@ -3912,7 +4023,7 @@ function saveTrip(){
         return;
       }
     }
-    a[i]={...a[i],startPoint,rb,trainNumber,startTime,endTime,active,timingStatus,varianceMinutes,plannedMinutes:lineOperationalConfig(shiftLine(sh)).plannedTripMinutes,updatedAt:new Date().toISOString()};
+    a[i]={...a[i],tripType,startPoint,rb,trainNumber,startTime,endTime,active,timingStatus,varianceMinutes,plannedMinutes:tripType==='empty'?null:lineOperationalConfig(shiftLine(sh)).plannedTripMinutes,updatedAt:new Date().toISOString()};
   }else{
     const current=activeTripRecord();
     if(current){
@@ -3922,9 +4033,9 @@ function saveTrip(){
     a.push({
       id:crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`,
       createdAt:new Date().toISOString(),
-      startPoint,rb,trainNumber,startTime,endTime:'',
-      active:true,timingStatus:'on_time',varianceMinutes:0,
-      plannedMinutes:lineOperationalConfig(shiftLine(sh)).plannedTripMinutes
+      tripType,startPoint,rb,trainNumber,startTime,endTime:'',
+      active:true,timingStatus:tripType==='empty'?'not_applicable':'on_time',varianceMinutes:0,
+      plannedMinutes:tripType==='empty'?null:lineOperationalConfig(shiftLine(sh)).plannedTripMinutes
     });
   }
 
@@ -4895,7 +5006,7 @@ function shiftTimelineHtml(sh){
 
   normalizedTrips(sh).forEach((t,i)=>{
     const active=!!(t.active&&!t.endTime);
-    const meta=[t.startPoint,t.rb||'',t.trainNumber?`רכבת ${t.trainNumber}`:'',active?'בנסיעה עכשיו':(t.endTime?`עד ${t.endTime}`:''),tripTimingText(t,sh)].filter(Boolean).join(' · ');
+    const meta=[isEmptyTrip(t)?'ריק / חזרה לדיפו':'נסיעה מסחרית',t.startPoint,t.rb||'',t.trainNumber?`רכבת ${t.trainNumber}`:'',active?'בנסיעה עכשיו':(t.endTime?`עד ${t.endTime}`:''),tripTimingText(t,sh)].filter(Boolean).join(' · ');
     push(t.startTime,`חצי סיבוב ${i+1}${active?' · פעיל':''}`,meta,'trip',`openTripModal('${sh.id}','${t.id}')`);
   });
   const breakInfo=shiftBreakInfo(sh);
@@ -5986,6 +6097,7 @@ function renderMonthlyEntry(){
 }
 
 function openMonthlyEntry(){
+  setTimeout(refreshDateInputDisplays,0);
   populateLineSelects();
   const selectedMonth=$('shiftMonthFilter').value || currentMonth;
   $('monthlyEntryMonth').value=selectedMonth;
@@ -6091,6 +6203,7 @@ function saveMonthlyEntry(){
 }
 
 function openShiftModal(editing=false){
+  setTimeout(refreshDateInputDisplays,0);
   populateLineSelects({shiftLine:$('shiftLine')?.value||defaultLineKey()});
   setTimeout(refreshDdPresetOptions,0);
   $('shiftModal').classList.remove('hidden');
@@ -6330,6 +6443,7 @@ $('closeTripModal')?.addEventListener('click',closeTripModal);
 $('tripModalBackdrop')?.addEventListener('click',closeTripModal);
 $('saveTripBtn')?.addEventListener('click',saveTrip);
 $('tripStartTime')?.addEventListener('change',()=>updateTripDurationUi({syncEnd:true}));
+$('tripType')?.addEventListener('change',updateTripTypeUi);
 $('tripTimingStatus')?.addEventListener('change',()=>updateTripDurationUi({syncEnd:true}));
 $('tripTimingMinutes')?.addEventListener('input',()=>updateTripDurationUi({syncEnd:true}));
 $('tripEndTime')?.addEventListener('change',syncTimingFromActualEnd);
