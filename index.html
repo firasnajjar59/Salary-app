@@ -1916,6 +1916,10 @@ html[data-theme=dark] .line-point-remove{background:#2d2b31}
   .modal-sheet input,.modal-sheet select,.modal-sheet textarea{max-width:100%}
 }
 
+
+/* v97 — shift route endpoints */
+.shift-page-route{grid-column:1/-1;display:flex;gap:8px 18px;flex-wrap:wrap;margin-top:8px;padding-top:10px;border-top:1px solid color-mix(in srgb,var(--line) 72%,transparent);font-size:13px;color:var(--muted)}
+.shift-page-route strong{color:var(--text);font-weight:850}
 </style>
 </head>
 <body>
@@ -3010,7 +3014,7 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=96;
+const APP_VERSION=97;
 function formatDateInputValue(value){
   const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value||''));
   return m?`${m[3]}/${m[2]}/${m[1]}`:'';
@@ -5117,11 +5121,25 @@ function shiftTimelineHtml(sh){
   </div>`).join('')}</div>`;
 }
 
+function shiftRouteEndpoints(sh){
+  const trips=normalizedTrips(sh).filter(t=>t && (t.startPoint||t.endPoint));
+  if(!trips.length) return {start:'',end:''};
+  const sorted=trips.slice().sort((a,b)=>{
+    const at=a.plannedStart||a.startTime||'';
+    const bt=b.plannedStart||b.startTime||'';
+    return timelineSortMinute(at,sh.start)-timelineSortMinute(bt,sh.start);
+  });
+  const first=sorted.find(t=>t.startPoint)||sorted[0];
+  const last=[...sorted].reverse().find(t=>t.endPoint)||sorted[sorted.length-1];
+  return {start:first?.startPoint||'',end:last?.endPoint||''};
+}
+
 function openShiftDetails(id,{historyMode='push'}={}){
   const sh=shifts.find(x=>x.id===id);
   if(!sh) return;
   const c=calcShift(sh);
   const breakInfo=shiftBreakInfo(sh);
+  const routeEndpoints=shiftRouteEndpoints(sh);
   const dayLabel=sh.dayType==='split'?'פיצול':({regular:'רגיל',friday:'שישי',saturday:'שבת',holiday:'חג'}[c.type]||'');
   const isSaturday=c.type==='saturday';
   const ddText=(sh.ddType && sh.ddNumber!=='')?displayShiftDd(sh):lineLabel(shiftLine(sh));
@@ -5148,6 +5166,7 @@ function openShiftDetails(id,{historyMode='push'}={}){
         <small>${escapeHtml(formatDateHe(sh.date))}</small>
       </div>
       <div class="shift-page-hero-time">${escapeHtml(sh.start||'—')}–${escapeHtml(sh.end||'—')}</div>
+      ${(routeEndpoints.start||routeEndpoints.end)?`<div class="shift-page-route"><span>מתחיל: <strong>${escapeHtml(routeEndpoints.start||'—')}</strong></span><span>מסיים: <strong>${escapeHtml(routeEndpoints.end||'—')}</strong></span></div>`:''}
     </div>
     <div class="shift-detail-cards">
       <div class="shift-detail-card">
