@@ -17,7 +17,7 @@ const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
   const data = payload?.data || {};
-  const title = data.title || "Salary App";
+  const title = data.title || "מחברת";
   const body = data.body || "";
   const targetUrl = data.url || data.deepLink || "";
 
@@ -31,7 +31,7 @@ messaging.onBackgroundMessage((payload) => {
   });
 });
 
-const CACHE_NAME = 'notebook-v1.1';
+const CACHE_NAME = 'notebook-v1.2';
 const APP_FILES = [
   './',
   './index.html',
@@ -80,7 +80,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  if(url.pathname.endsWith('/version.json') || url.pathname.endsWith('/dd.json') || url.pathname.endsWith('/sw.js')){
+  if(url.pathname.endsWith('/version.json') || url.pathname.endsWith('/dd.json') || url.pathname.endsWith('/manifest.json') || url.pathname.endsWith('/sw.js')){
     event.respondWith(networkFirst(event.request));
     return;
   }
