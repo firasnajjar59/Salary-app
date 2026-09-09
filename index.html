@@ -2896,8 +2896,12 @@ html[data-theme=dark] .line-point-remove{background:#2d2b31}
             <option value="">לא חובה — אפשר לבחור אחר כך</option>
           </select><div id="tripSmartHint" class="trip-smart-hint hidden"></div>
         </div>
+        <div id="tripPlannedStartWrap" class="hidden">
+          <label>שעת התחלה מתוכננת</label>
+          <input id="tripPlannedStartTime" type="time">
+        </div>
         <div>
-          <label>שעת התחלה</label>
+          <label>שעת התחלה בפועל</label>
           <input id="tripStartTime" type="time">
         </div>
         <div>
@@ -2915,7 +2919,7 @@ html[data-theme=dark] .line-point-remove{background:#2d2b31}
         <div class="grid">
           <div id="tripPlannedEndWrap">
             <label>שעת סיום מתוכננת</label>
-            <input id="tripPlannedEndTime" type="time" readonly>
+            <input id="tripPlannedEndTime" type="time">
           </div>
           <div>
             <label>שעת סיום בפועל</label>
@@ -3006,7 +3010,7 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=94;
+const APP_VERSION=96;
 function formatDateInputValue(value){
   const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value||''));
   return m?`${m[3]}/${m[2]}/${m[1]}`:'';
@@ -3826,10 +3830,22 @@ function tripTimingFromDuration(startTime,endTime,line='red'){
   if(diff>cfg.onTimeToleranceMinutes) return {status:'late',minutes:diff,actual,planned:cfg.plannedTripMinutes,tolerance:cfg.onTimeToleranceMinutes};
   return {status:'early',minutes:Math.abs(diff),actual,planned:cfg.plannedTripMinutes,tolerance:cfg.onTimeToleranceMinutes};
 }
+function tripTimingAgainstPlannedEnd(t,sh=null,endTime=null){
+  const actual=endTime||t?.endTime||'';
+  if(!t?.plannedEnd || !actual) return null;
+  const base=sh?.start||t?.plannedStart||'00:00';
+  const planned=timelineSortMinute(t.plannedEnd,base);
+  let ended=timelineSortMinute(actual,base);
+  if(ended<planned-720) ended+=1440;
+  const diff=ended-planned;
+  if(diff===0) return {status:'on_time',minutes:0};
+  return diff>0?{status:'late',minutes:diff}:{status:'early',minutes:Math.abs(diff)};
+}
 function tripTimingText(t,sh=null){
   if(t?.active && !t?.endTime) return isEmptyTrip(t)?'ריק · בנסיעה':'בנסיעה';
   if(isEmptyTrip(t)) return 'ריק / חזרה לדיפו';
-  const x=tripTimingFromDuration(t?.startTime,t?.endTime,shiftLine(sh));
+  if(t?.plannedEnd && !t?.endTime) return 'מתוכנן';
+  const x=tripTimingAgainstPlannedEnd(t,sh)||tripTimingFromDuration(t?.startTime,t?.endTime,shiftLine(sh));
   if(x.status==='late') return `איחור ${x.minutes} דק׳`;
   if(x.status==='early') return `הקדמה ${x.minutes} דק׳`;
   return 'בזמן';
@@ -3837,7 +3853,7 @@ function tripTimingText(t,sh=null){
 function inferTripTiming(t,sh=null){
   if(isEmptyTrip(t)) return {status:'on_time',minutes:0};
   if(t?.endTime){
-    const x=tripTimingFromDuration(t.startTime,t.endTime,shiftLine(sh));
+    const x=tripTimingAgainstPlannedEnd(t,sh)||tripTimingFromDuration(t.startTime,t.endTime,shiftLine(sh));
     return {status:x.status==='active'?'on_time':x.status,minutes:x.minutes||0};
   }
   if(t?.timingStatus && t.timingStatus!=='active') return {status:t.timingStatus,minutes:Math.max(0,Number(t.varianceMinutes||0))};
@@ -3853,9 +3869,10 @@ function updateTripDurationUi({syncEnd=false}={}){
   let variance=Math.max(0,Number($('tripTimingMinutes')?.value||0));
   if(status==='on_time') variance=0;
 
-  const cfg=lineOperationalConfig(shiftLine(shifts.find(x=>x.id===tripShiftId)));
-  const plannedEnd=empty?'':hmAddMinutes(start,cfg.plannedTripMinutes);
-  if($('tripPlannedEndTime')) $('tripPlannedEndTime').value=plannedEnd;
+  const sh=shifts.find(x=>x.id===tripShiftId), editing=sh&&editingTripId?tripById(sh,editingTripId):null;
+  const cfg=lineOperationalConfig(shiftLine(sh));
+  const plannedEnd=empty?'':(editing?.plannedEnd||hmAddMinutes(start,cfg.plannedTripMinutes));
+  if($('tripPlannedEndTime') && !editing?.plannedEnd) $('tripPlannedEndTime').value=plannedEnd;
 
   if($('tripTimingMinutes')){
     $('tripTimingMinutes').disabled=status==='on_time';
@@ -3904,6 +3921,10 @@ function activeTripRecord(){
 function activeTripForShift(sh){
   return normalizedTrips(sh).find(t=>t?.active && !t?.endTime)||null;
 }
+function nextUnstartedPlannedTrip(sh){
+  return normalizedTrips(sh).filter(t=>t.plannedStart&&!t.startTime&&!t.endTime)
+    .sort((a,b)=>timelineSortMinute(a.plannedStart,sh.start)-timelineSortMinute(b.plannedStart,sh.start))[0]||null;
+}
 function tripElapsedMinutes(sh,t,now=new Date()){
   if(!sh||!t?.startTime) return 0;
   const [y,m,d]=String(sh.date||'').split('-').map(Number);
@@ -3913,13 +3934,25 @@ function tripElapsedMinutes(sh,t,now=new Date()){
   if(now<start) return 0;
   return Math.max(0,Math.floor((now-start)/60000));
 }
+function startPlannedTripNow(shiftId,tripId){
+  const sh=shifts.find(x=>x.id===shiftId); if(!sh) return;
+  const t=tripById(sh,tripId); if(!t) return;
+  const current=activeTripRecord();
+  if(current){alert(`כבר קיים סיבוב פעיל שהתחיל ב־${current.trip.startTime}. יש לסיים אותו קודם.`);return;}
+  if(t.endTime){openTripModal(shiftId,tripId);return;}
+  t.startTime=localTimeHm(); t.active=true; t.timingStatus='active'; t.updatedAt=new Date().toISOString();
+  localStorage.setItem(KEY_SHIFTS,JSON.stringify(shifts));
+  renderTodayDashboard();renderShifts();refreshLiveQuickActions();
+  if(!$('shiftDetailsPage')?.classList.contains('hidden')) openShiftDetails(shiftId,{historyMode:'pop'});
+}
+window.startPlannedTripNow=startPlannedTripNow;
 function finishActiveTripNow(shiftId,tripId){
   const sh=shifts.find(x=>x.id===shiftId); if(!sh) return;
   const t=tripById(sh,tripId); if(!t) return;
   if(!t.active || t.endTime){ openTripModal(shiftId,tripId); return; }
   const endTime=localTimeHm();
   const empty=isEmptyTrip(t);
-  const timing=empty?null:tripTimingFromDuration(t.startTime,endTime,shiftLine(sh));
+  const timing=empty?null:(tripTimingAgainstPlannedEnd(t,sh,endTime)||tripTimingFromDuration(t.startTime,endTime,shiftLine(sh)));
   t.endTime=endTime;
   t.active=false;
   t.timingStatus=empty?'not_applicable':(timing.status==='active'?'on_time':timing.status);
@@ -3960,7 +3993,7 @@ function openTripModal(shiftId,tripId=''){
   tripReturnView=currentVisibleAppView();
   tripShiftId=shiftId;editingTripId=tripId||null;
   const t=editingTripId?tripById(sh,editingTripId):null;
-  const start=t?.startTime||localTimeHm();
+  const start=t?.startTime||(t?.plannedStart?'':localTimeHm());
   const inferred=inferTripTiming(t,sh);
 
   $('tripModalTitle').textContent=t?'עריכת חצי סיבוב':'הוספת סיבוב';
@@ -3976,6 +4009,9 @@ function openTripModal(shiftId,tripId=''){
   $('tripRb').value=t?.rb||'';
   $('tripTrainNumber').value=t?.trainNumber||'';
   $('tripStartTime').value=start;
+  $('tripPlannedStartWrap')?.classList.toggle('hidden',!t?.plannedStart);
+  if($('tripPlannedStartTime')) $('tripPlannedStartTime').value=t?.plannedStart||'';
+  if($('tripPlannedEndTime')) $('tripPlannedEndTime').value=t?.plannedEnd||'';
   $('tripTimingStatus').value=inferred.status;
   $('tripTimingMinutes').value=String(inferred.minutes||0);
   $('tripEndTime').value=t?.endTime||'';
@@ -4002,16 +4038,23 @@ function saveTrip(){
   const trainNumber=$('tripTrainNumber').value.trim();
   const startTime=$('tripStartTime').value;
   const endTime=$('tripEndTime').value||'';
-
-  if(!startTime){alert('יש להזין שעת התחלה.');return}
+  const plannedStart=$('tripPlannedStartTime')?.value||'';
+  const plannedEnd=$('tripPlannedEndTime')?.value||'';
 
   const a=normalizedTrips(sh).map(t=>({...t}));
+  const editingExisting=editingTripId?a.find(t=>t.id===editingTripId):null;
+  if(!startTime && !editingExisting?.plannedStart){alert('יש להזין שעת התחלה.');return}
   if(editingTripId){
     const i=a.findIndex(t=>t.id===editingTripId);if(i<0)return;
+    if(a[i].plannedStart && !startTime && !endTime){
+      a[i]={...a[i],tripType,startPoint,rb,trainNumber,plannedStart:plannedStart||a[i].plannedStart,plannedEnd:plannedEnd||a[i].plannedEnd,updatedAt:new Date().toISOString()};
+      sh.trips=a; localStorage.setItem(KEY_SHIFTS,JSON.stringify(shifts));
+      const sid=sh.id,returnView=tripReturnView; closeTripModal(); returnAfterTripAction(sid,returnView); tripReturnView=''; return;
+    }
     let timingStatus=tripType==='empty'?'not_applicable':'on_time',varianceMinutes=0,active=!endTime;
     if(endTime){
       if(tripType!=='empty'){
-        const timing=tripTimingFromDuration(startTime,endTime,shiftLine(sh));
+        const timing=tripTimingAgainstPlannedEnd(a[i],sh,endTime)||tripTimingFromDuration(startTime,endTime,shiftLine(sh));
         timingStatus=timing.status==='active'?'on_time':timing.status;
         varianceMinutes=timing.minutes||0;
       }
@@ -4023,7 +4066,7 @@ function saveTrip(){
         return;
       }
     }
-    a[i]={...a[i],tripType,startPoint,rb,trainNumber,startTime,endTime,active,timingStatus,varianceMinutes,plannedMinutes:tripType==='empty'?null:lineOperationalConfig(shiftLine(sh)).plannedTripMinutes,updatedAt:new Date().toISOString()};
+    a[i]={...a[i],tripType,startPoint,rb,trainNumber,startTime,endTime,active,timingStatus,varianceMinutes,plannedStart:plannedStart||a[i].plannedStart||'',plannedEnd:plannedEnd||a[i].plannedEnd||'',plannedMinutes:tripType==='empty'?null:lineOperationalConfig(shiftLine(sh)).plannedTripMinutes,updatedAt:new Date().toISOString()};
   }else{
     const current=activeTripRecord();
     if(current){
@@ -4057,17 +4100,21 @@ function deleteTrip(shiftId,tripId){
   renderTodayDashboard();renderShifts();openShiftDetails(shiftId);
 }
 function tripsHtmlForShift(sh){
-  const a=normalizedTrips(sh).slice().sort((x,y)=>String(x.startTime||'').localeCompare(String(y.startTime||'')));
-  if(!a.length)return `<p class="note" style="margin:8px 0 0">אין חצאי סיבוב מתועדים למשמרת הזו.</p>`;
+  const a=normalizedTrips(sh).slice().sort((x,y)=>timelineSortMinute(x.plannedStart||x.startTime,sh.start)-timelineSortMinute(y.plannedStart||y.startTime,sh.start));
+  if(!a.length)return `<p class="note" style="margin:8px 0 0">אין סיבובים מתוכננים או מתועדים למשמרת הזו.</p>`;
   return `<div class="trip-list">${a.map((t,i)=>{
-    const active=!!(t.active&&!t.endTime);
-    const actual=active?tripElapsedMinutes(sh,t):durationBetweenHm(t.startTime,t.endTime);
+    const active=!!(t.active&&!t.endTime), planned=!!t.plannedStart;
+    const actual=active?tripElapsedMinutes(sh,t):(t.startTime&&t.endTime?durationBetweenHm(t.startTime,t.endTime):0);
+    const plannedDuration=planned?durationBetweenHm(t.plannedStart,t.plannedEnd):lineOperationalConfig(shiftLine(sh)).plannedTripMinutes;
+    const route=[t.startPoint,t.endPoint].filter(Boolean).join(' ← ');
     return `<div class="trip-card">
-      <div class="trip-card-title">חצי סיבוב ${i+1} · ${escapeHtml(t.startPoint||'נקודת התחלה לא הוזנה')} ${active?'<span class="trip-active-badge">● בנסיעה</span>':''}</div>
-      <div class="trip-card-meta">${escapeHtml(t.startTime||'—')}–${active?'עכשיו':escapeHtml(t.endTime||'—')}${t.rb?` · ${escapeHtml(t.rb)}`:''}${t.trainNumber?` · רכבת ${escapeHtml(t.trainNumber)}`:''}</div>
-      <div class="trip-card-meta">מתוכנן ${fmtMin(lineOperationalConfig(shiftLine(sh)).plannedTripMinutes)} · ${active?'זמן שחלף':'בפועל'} ${actual?fmtMin(actual):'—'} · ${escapeHtml(tripTimingText(t,sh))}</div>
+      <div class="trip-card-title">${isEmptyTrip(t)?'נסיעה ריקה':'סיבוב'} ${i+1} · ${escapeHtml(route||t.startPoint||'נקודת התחלה לא הוזנה')} ${active?'<span class="trip-active-badge">● בנסיעה</span>':''}</div>
+      ${planned?`<div class="trip-card-meta">תכנון: ${escapeHtml(t.plannedStart)}–${escapeHtml(t.plannedEnd)}${t.plannedRb?` · ${escapeHtml(t.plannedRb)}`:''}</div>`:''}
+      <div class="trip-card-meta">בפועל: ${escapeHtml(t.startTime||'טרם התחיל')}–${active?'עכשיו':escapeHtml(t.endTime||'—')}${t.rb?` · ${escapeHtml(t.rb)}`:''}${t.trainNumber?` · רכבת ${escapeHtml(t.trainNumber)}`:''}</div>
+      <div class="trip-card-meta">מתוכנן ${fmtMin(plannedDuration)}${(active||actual)?` · ${active?'זמן שחלף':'בפועל'} ${actual?fmtMin(actual):'—'}`:''} · ${escapeHtml(tripTimingText(t,sh))}</div>
       <div class="trip-actions">
-        ${active?`<button class="primary" onclick="finishActiveTripNow('${sh.id}','${t.id}')">⏹ סיום עכשיו</button>`:''}
+        ${planned&&!t.startTime&&!t.endTime?`<button class="primary" onclick="startPlannedTripNow('${sh.id}','${t.id}')">▶ התחל סיבוב</button>`:''}
+        ${active?`<button class="primary" onclick="finishActiveTripNow('${sh.id}','${t.id}')">⏹ סיום סיבוב</button>`:''}
         <button class="secondary" onclick="openTripModal('${sh.id}','${t.id}')">ערוך</button>
         <button class="danger" onclick="deleteTrip('${sh.id}','${t.id}')">מחק</button>
       </div>
@@ -4796,8 +4843,35 @@ function timelineSortMinute(hm,shiftStart){
   if(s===null) return m;
   return m<s ? m+1440 : m;
 }
+function normalizedPlannedEvents(sh){return Array.isArray(sh?.plannedEvents)?sh.plannedEvents:[]}
+function shiftClockByMinutes(hm,delta){return hmAddMinutes(hm,delta)}
+function effectivePlannedEvent(sh,e){
+  let delta=0;
+  const prev=normalizedTrips(sh).filter(t=>Number.isFinite(Number(t.sourceIndex))&&Number(t.sourceIndex)<Number(e.sourceIndex)&&t.plannedEnd&&t.endTime)
+    .sort((a,b)=>Number(b.sourceIndex)-Number(a.sourceIndex))[0];
+  if(prev){
+    const p=timelineSortMinute(prev.plannedEnd,sh.start), a=timelineSortMinute(prev.endTime,sh.start);
+    delta=a-p;
+  }
+  return {...e,effectiveStart:shiftClockByMinutes(e.plannedStart,delta),effectiveEnd:shiftClockByMinutes(e.plannedEnd,delta),delayMinutes:delta};
+}
 function shiftBreakInfo(sh){
-  const trips=normalizedTrips(sh).slice().sort((a,b)=>timelineSortMinute(a.startTime,sh.start)-timelineSortMinute(b.startTime,sh.start));
+  const plannedTrips=normalizedTrips(sh).filter(t=>t.plannedStart).slice().sort((a,b)=>timelineSortMinute(a.plannedStart,sh.start)-timelineSortMinute(b.plannedStart,sh.start));
+  const scans=normalizedPlannedEvents(sh).filter(e=>e.type==='סריקה ביטחונית').map(e=>effectivePlannedEvent(sh,e)).sort((a,b)=>timelineSortMinute(a.effectiveStart,sh.start)-timelineSortMinute(b.effectiveStart,sh.start));
+  if(plannedTrips.length && scans.length){
+    const gaps=[];
+    scans.forEach(scan=>{
+      const scanEnd=timelineSortMinute(scan.effectiveEnd,sh.start);
+      const next=plannedTrips.filter(t=>Number(t.sourceIndex)>Number(scan.sourceIndex)).sort((a,b)=>Number(a.sourceIndex)-Number(b.sourceIndex))[0];
+      if(!next) return;
+      let nextStart=timelineSortMinute(next.plannedStart,sh.start);
+      if(nextStart<timelineSortMinute(scan.plannedEnd,sh.start)) nextStart+=1440;
+      const minutes=Math.max(0,nextStart-scanEnd);
+      if(minutes>0) gaps.push({time:scan.effectiveEnd,endTime:next.plannedStart,minutes,afterScan:true});
+    });
+    return {known:true,minutes:gaps.reduce((n,g)=>n+g.minutes,0),gaps};
+  }
+  const trips=normalizedTrips(sh).filter(t=>t.startTime).slice().sort((a,b)=>timelineSortMinute(a.startTime,sh.start)-timelineSortMinute(b.startTime,sh.start));
   if(!trips.length) return {known:false,minutes:0,gaps:[],reason:'לא הוכנסו סיבובים'};
   if(trips.length===1) return {known:true,minutes:0,gaps:[]};
   const gaps=[];
@@ -4927,9 +5001,9 @@ function refreshLiveQuickActions(){
   const sh=currentLiveShift();
   if(!sh){wrap.classList.add('hidden');closeLiveQuickMenu();return;}
   wrap.classList.remove('hidden');
-  const active=activeTripForShift(sh);
+  const active=activeTripForShift(sh), nextPlanned=nextUnstartedPlannedTrip(sh);
   menu.innerHTML=`
-    <button type="button" onclick="liveQuickAction('${active?'finish':'trip'}','${sh.id}'${active?`,'${active.id}'`:''})">${materialIcon('trip')}<span>${active?'סיים סיבוב':'התחל סיבוב'}</span></button>
+    <button type="button" onclick="${active?`liveQuickAction('finish','${sh.id}','${active.id}')`:nextPlanned?`startPlannedTripNow('${sh.id}','${nextPlanned.id}');closeLiveQuickMenu()`:`liveQuickAction('trip','${sh.id}')`}">${materialIcon('trip')}<span>${active?'סיים סיבוב':nextPlanned?`התחל ${nextPlanned.plannedStart}`:'התחל סיבוב'}</span></button>
     <button type="button" onclick="liveQuickAction('report','${sh.id}')">${materialIcon('report')}<span>דוח</span></button>
     <button type="button" onclick="liveQuickAction('approval','${sh.id}')">${materialIcon('approval')}<span>אישור / שינוי</span></button>`;
 }
@@ -4969,7 +5043,7 @@ function liveShiftPanelHtml(sh){
     </div>`:`<div class="active-trip-card">
       <div class="active-trip-title">אין סיבוב פעיל כרגע</div>
       <div class="active-trip-meta">${live.state==='split_break'?'אתה כרגע בהפסקת פיצול.':'אפשר להתחיל את החצי סיבוב הבא בלחיצה אחת.'}</div>
-      <button type="button" class="primary" style="width:100%" onclick="openTripModal('${sh.id}')">▶ התחל סיבוב</button>
+      ${nextUnstartedPlannedTrip(sh)?`<button type="button" class="primary" style="width:100%" onclick="startPlannedTripNow('${sh.id}','${nextUnstartedPlannedTrip(sh).id}')">▶ התחל סיבוב מתוכנן ${escapeHtml(nextUnstartedPlannedTrip(sh).plannedStart)}</button>`:`<button type="button" class="primary" style="width:100%" onclick="openTripModal('${sh.id}')">▶ התחל סיבוב</button>`}
     </div>`}
   </div>`;
 }
@@ -5004,14 +5078,21 @@ function shiftTimelineHtml(sh){
     push(sh.end,sh.dayType==='split'?'סוף DD מתוכנן':'סיום משמרת',c.provisional?'יש לעדכן את שעות הפיצול ביום המשמרת':'','end');
   }
 
-  normalizedTrips(sh).forEach((t,i)=>{
-    const active=!!(t.active&&!t.endTime);
-    const meta=[isEmptyTrip(t)?'ריק / חזרה לדיפו':'נסיעה מסחרית',t.startPoint,t.rb||'',t.trainNumber?`רכבת ${t.trainNumber}`:'',active?'בנסיעה עכשיו':(t.endTime?`עד ${t.endTime}`:''),tripTimingText(t,sh)].filter(Boolean).join(' · ');
-    push(t.startTime,`חצי סיבוב ${i+1}${active?' · פעיל':''}`,meta,'trip',`openTripModal('${sh.id}','${t.id}')`);
+  normalizedTrips(sh).slice().sort((a,b)=>timelineSortMinute(a.plannedStart||a.startTime,sh.start)-timelineSortMinute(b.plannedStart||b.startTime,sh.start)).forEach((t,i)=>{
+    const active=!!(t.active&&!t.endTime), time=t.startTime||t.plannedStart;
+    const plan=t.plannedStart?`מתוכנן ${t.plannedStart}–${t.plannedEnd}`:'';
+    const actual=t.startTime?(active?`התחיל בפועל ${t.startTime}`:`בפועל ${t.startTime}–${t.endTime||'—'}`):'טרם התחיל';
+    const meta=[isEmptyTrip(t)?'ריק / חזרה לדיפו':'נסיעה מסחרית',[t.startPoint,t.endPoint].filter(Boolean).join(' ← '),plan,actual,t.rb||t.plannedRb||'',t.trainNumber?`רכבת ${t.trainNumber}`:'',tripTimingText(t,sh)].filter(Boolean).join(' · ');
+    push(time,`${isEmptyTrip(t)?'נסיעה ריקה':'סיבוב'} ${i+1}${active?' · פעיל':''}`,meta,'trip',`openTripModal('${sh.id}','${t.id}')`);
+  });
+  normalizedPlannedEvents(sh).forEach(e=>{
+    const x=effectivePlannedEvent(sh,e);
+    const moved=x.delayMinutes?` · הוזז ${x.delayMinutes>0?'+':''}${x.delayMinutes} דק׳ בעקבות סיום הנסיעה בפועל`:'';
+    push(x.effectiveStart,e.type,`${x.effectiveStart}–${x.effectiveEnd}${moved}`,'event','');
   });
   const breakInfo=shiftBreakInfo(sh);
   if(breakInfo.known){
-    breakInfo.gaps.forEach(g=>push(g.time,'הפסקה בין סיבובים',`${fmtMin(g.minutes)} · עד ${g.endTime}`,'gap'));
+    breakInfo.gaps.forEach(g=>push(g.time,g.afterScan?'הפסקה אחרי סריקה':'הפסקה בין סיבובים',`${fmtMin(g.minutes)} · עד ${g.endTime}`,'gap'));
   }
   normalizedReports(sh).forEach(r=>{
     const trip=r.tripId&&tripById(sh,r.tripId);
@@ -5687,12 +5768,39 @@ function normalizeDdList(list,forcedType=null){
     end:normalizeOperationalTime(x.end)
   })).filter(x=>x.number && isOperationalTime(x.start) && isOperationalTime(x.end));
 }
+function normalizeScheduleActivity(a={}){
+  const type=String(a.type||'').trim();
+  const start=normalizeOperationalTime(a.start), end=normalizeOperationalTime(a.end);
+  if(!type || !start || !end) return null;
+  return {type,rb:String(a.rb||''),route:String(a.route||''),start,end,from:String(a.from||''),to:String(a.to||''),duration:String(a.duration||'')};
+}
+function normalizeSchedules(raw={}){
+  const out={};
+  for(let day=0;day<=6;day++){
+    const src=raw?.[String(day)]&&typeof raw[String(day)]==='object'?raw[String(day)]:{};
+    out[String(day)]={};
+    Object.entries(src).forEach(([number,duty])=>{
+      const activities=(Array.isArray(duty?.activities)?duty.activities:[]).map(normalizeScheduleActivity).filter(Boolean);
+      out[String(day)][String(number)]={start:normalizeOperationalTime(duty?.start),end:normalizeOperationalTime(duty?.end),activities};
+    });
+  }
+  return out;
+}
 function normalizeLineTables(raw={},fallbackLabel=''){
+  const week=normalizeDdList(raw?.week,'DD');
+  const thursday=normalizeDdList(raw?.thursday,'DD');
+  const days={};
+  for(let day=0;day<=6;day++){
+    const source=raw?.days?.[String(day)];
+    days[String(day)]=normalizeDdList(Array.isArray(source)?source:(day===4?thursday:(day<=3?week:[])),'DD');
+  }
   return {
     label:String(raw?.label||fallbackLabel||'').trim(),
-    week:normalizeDdList(raw?.week,'DD'),
-    thursday:normalizeDdList(raw?.thursday,'DD'),
-    ddr:normalizeDdList(raw?.ddr,'DDR')
+    week,
+    thursday,
+    ddr:normalizeDdList(raw?.ddr,'DDR'),
+    days,
+    schedules:normalizeSchedules(raw?.schedules||{})
   };
 }
 function normalizeDdTables(data){
@@ -5742,7 +5850,7 @@ function getDdTables(){
 function getLineDdTables(line='red',tables=null){
   const t=tables||getDdTables();
   const key=(line && t.lines?.[line])?line:t.defaultLine;
-  return t.lines?.[key] || {label:key,week:[],thursday:[],ddr:[]};
+  return t.lines?.[key] || {label:key,week:[],thursday:[],ddr:[],days:{},schedules:{}};
 }
 function availableLines(tables=null){
   const t=tables||getDdTables();
@@ -5799,37 +5907,58 @@ function displayShiftDd(sh){
   return dd?`${line} · ${dd}`:line;
 }
 function ddKey(type,number){ return `${String(type||'').toUpperCase()}${String(number||'').trim()}`; }
-function isThursday(dateStr){
+function dayIndexForDate(dateStr){
   const p=String(dateStr||'').split('-').map(Number);
-  if(p.length!==3 || !p[0] || !p[1] || !p[2]) return false;
-  return new Date(Date.UTC(p[0],p[1]-1,p[2])).getUTCDay()===4;
+  if(p.length!==3 || !p[0] || !p[1] || !p[2]) return null;
+  return new Date(Date.UTC(p[0],p[1]-1,p[2])).getUTCDay();
 }
+function isThursday(dateStr){ return dayIndexForDate(dateStr)===4; }
 function resolveDdTemplate(dateStr,type,number,line='red'){
   const t=getLineDdTables(line), key=ddKey(type,number), normalizedType=String(type||'').toUpperCase();
   if(normalizedType==='DDR'){
     const r=t.ddr.find(x=>ddKey(x.type,x.number)===key);
     return r?{...r,sourceTable:'ddr',line}:null;
   }
-  if(isThursday(dateStr)){
-    const th=t.thursday.find(x=>ddKey(x.type,x.number)===key);
-    if(th) return {...th,sourceTable:'thursday',line};
-  }
-  const wk=t.week.find(x=>ddKey(x.type,x.number)===key);
-  return wk?{...wk,sourceTable:'week',line}:null;
+  const day=dayIndexForDate(dateStr);
+  const list=(day!==null && Array.isArray(t.days?.[String(day)]))?t.days[String(day)]:(isThursday(dateStr)?t.thursday:t.week);
+  const found=list.find(x=>ddKey(x.type,x.number)===key);
+  return found?{...found,sourceTable:`day${day}`,line}:null;
+}
+function resolveDdSchedule(dateStr,type,number,line='red'){
+  if(String(type||'').toUpperCase()!=='DD') return null;
+  const day=dayIndexForDate(dateStr);
+  if(day===null) return null;
+  const t=getLineDdTables(line);
+  return t.schedules?.[String(day)]?.[String(number)]||null;
 }
 function allDdForDate(dateStr,line='red'){
-  const t=getLineDdTables(line), map=new Map();
-  t.week.forEach(x=>map.set(ddKey(x.type,x.number),{...x,sourceTable:'week',line}));
-  if(isThursday(dateStr)) t.thursday.forEach(x=>map.set(ddKey(x.type,x.number),{...x,sourceTable:'thursday',line}));
+  const t=getLineDdTables(line), map=new Map(), day=dayIndexForDate(dateStr);
+  const list=(day!==null && Array.isArray(t.days?.[String(day)]))?t.days[String(day)]:[];
+  list.forEach(x=>map.set(ddKey(x.type,x.number),{...x,sourceTable:`day${day}`,line}));
   t.ddr.forEach(x=>map.set(ddKey(x.type,x.number),{...x,sourceTable:'ddr',line}));
   return [...map.values()].sort((a,b)=>ddKey(a.type,a.number).localeCompare(ddKey(b.type,b.number),'he',{numeric:true}));
+}
+function makeId(prefix='id'){return crypto.randomUUID?crypto.randomUUID():`${prefix}-${Date.now()}-${Math.random()}`}
+function snapshotDdPlan(dateStr,type,number,line='red'){
+  const duty=resolveDdSchedule(dateStr,type,number,line);
+  if(!duty) return {trips:[],plannedEvents:[],ddPlanSnapshot:null};
+  const trips=[],plannedEvents=[];
+  (duty.activities||[]).forEach((a,idx)=>{
+    const base={source:'dd',sourceIndex:idx,plannedStart:operationalToClock(a.start),plannedEnd:operationalToClock(a.end),plannedOperationalStart:a.start,plannedOperationalEnd:a.end,plannedRb:a.rb||'',startPoint:a.from||'',endPoint:a.to||'',route:a.route||''};
+    if(a.type==='נסיעה מסחרית'||a.type==='נסיעה ריקה'){
+      trips.push({id:makeId('trip'),createdAt:new Date().toISOString(),...base,tripType:a.type==='נסיעה ריקה'?'empty':'commercial',rb:'',trainNumber:'',startTime:'',endTime:'',timingStatus:'planned',varianceMinutes:0,active:false});
+    }else{
+      plannedEvents.push({id:makeId('event'),...base,type:a.type});
+    }
+  });
+  return {trips,plannedEvents,ddPlanSnapshot:{line,type,number:String(number),copiedAt:new Date().toISOString(),sourceStart:duty.start,sourceEnd:duty.end}};
 }
 function refreshDdPresetOptions(){
   const el=$('ddPreset'); if(!el) return;
   const current=el.value, items=allDdForDate($('date')?.value||'', $('shiftLine')?.value||'red');
   el.innerHTML='<option value="">בחר DD</option>'+items.map(x=>{
     const key=ddKey(x.type,x.number);
-    const src=x.sourceTable==='thursday'?'חמישי':(x.sourceTable==='ddr'?'DDR':'שבוע');
+    const day=dayIndexForDate($('date')?.value||''); const src=x.sourceTable==='ddr'?'DDR':(day===4?'חמישי':day===5?'שישי':day===6?'שבת':'א׳–ד׳');
     return `<option value="${escapeHtml(key)}">${escapeHtml(key)} · ${escapeHtml(x.start)}–${escapeHtml(x.end)} · ${src}</option>`;
   }).join('');
   if([...el.options].some(o=>o.value===current)) el.value=current;
@@ -6139,6 +6268,7 @@ function saveMonthlyEntry(){
       return;
     }
 
+    const plan=snapshotDdPlan(date,type,number,line);
     candidates.push({
       id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
       date,
@@ -6146,13 +6276,16 @@ function saveMonthlyEntry(){
       end:operationalToClock(tpl.end),
       breakMin:'0',
       notes:'',
-      dayType:'auto',
+      dayType:ddLooksLikeSplit(tpl)?'split':'auto',
       bonus:'0',
       extraLoopType:'none',
       nightLineType:'none',
       ddType:type,
       ddNumber:number,
-      line
+      line,
+      trips:plan.trips,
+      plannedEvents:plan.plannedEvents,
+      ddPlanSnapshot:plan.ddPlanSnapshot
     });
   });
 
@@ -6327,6 +6460,9 @@ $('addShift').onclick=()=>{
   const returned=!!(splitStart2&&splitEnd2) && !didNotReturn;
   const overallEnd=isSplit&&returned?splitEnd2:firstEnd;
 
+  const selectedLine=$('shiftLine')?.value||oldShift?.line||'red';
+  const ddChanged=!!selectedDdKey && (!oldShift || oldShift.ddType!==ddType || String(oldShift.ddNumber||'')!==String(ddNumber||'') || shiftLine(oldShift)!==selectedLine || oldShift.date!==$('date').value);
+  const copiedPlan=selectedDdKey && (!oldShift || ddChanged || !oldShift.ddPlanSnapshot) ? snapshotDdPlan($('date').value,ddType,ddNumber,selectedLine) : null;
   const data = {
     ...(oldShift||{}),
     id: editingShiftId || (crypto.randomUUID?crypto.randomUUID():String(Date.now())),
@@ -6345,7 +6481,8 @@ $('addShift').onclick=()=>{
     nightLineType:$('nightLineType').value,
     ddType,
     ddNumber,
-    line:$('shiftLine')?.value||oldShift?.line||'red'
+    line:selectedLine,
+    ...(copiedPlan?{trips:copiedPlan.trips,plannedEvents:copiedPlan.plannedEvents,ddPlanSnapshot:copiedPlan.ddPlanSnapshot}:{})
   };
 
   if(editingShiftId){
@@ -7106,7 +7243,7 @@ function refreshShiftValueDdOptions(){
   const items=allDdForDate(dateEl.value||localDateIso(),$('shiftValueLine')?.value||'red');
   ddEl.innerHTML='<option value="">בחר DD</option>'+items.map(x=>{
     const key=ddKey(x.type,x.number);
-    const src=x.sourceTable==='thursday'?'חמישי':(x.sourceTable==='ddr'?'DDR':'שבוע');
+    const day=dayIndexForDate($('date')?.value||''); const src=x.sourceTable==='ddr'?'DDR':(day===4?'חמישי':day===5?'שישי':day===6?'שבת':'א׳–ד׳');
     return `<option value="${escapeHtml(key)}">${escapeHtml(key)} · ${escapeHtml(x.start)}–${escapeHtml(x.end)} · ${src}</option>`;
   }).join('');
   if([...ddEl.options].some(o=>o.value===current)) ddEl.value=current;
