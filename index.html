@@ -580,9 +580,32 @@
     .timeline-card.clickable{cursor:pointer}
     .timeline-title{font-weight:850;font-size:13px}
     .timeline-meta{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.45}
-    .timeline-gap .timeline-dot{border-color:var(--muted)}
-    .timeline-gap .timeline-card{background:var(--soft)}
-    .timeline-warning .timeline-card{border-color:rgba(210,45,45,.35);background:rgba(210,45,45,.08)}
+    /* 1.1 — Pixel-style semantic timeline colors */
+    .timeline-item.timeline-commercial .timeline-dot{border-color:#4f64d9;background:#eef0ff}
+    .timeline-item.timeline-commercial .timeline-card{background:#eef0ff;border-color:#d6dafd;box-shadow:0 2px 8px rgba(79,100,217,.08)}
+    .timeline-item.timeline-commercial .timeline-title{color:#273a9a}
+    .timeline-item.timeline-empty .timeline-dot{border-color:#b56a00;background:#fff1d8}
+    .timeline-item.timeline-empty .timeline-card{background:#fff1d8;border-color:#f3d9aa;box-shadow:0 2px 8px rgba(181,106,0,.08)}
+    .timeline-item.timeline-empty .timeline-title{color:#805000}
+    .timeline-item.timeline-gap .timeline-dot{border-color:#2e7d61;background:#e6f5ee}
+    .timeline-item.timeline-gap .timeline-card{background:#e6f5ee;border-color:#c7e7d8;box-shadow:0 2px 8px rgba(46,125,97,.07)}
+    .timeline-item.timeline-gap .timeline-title{color:#1e634d}
+    .timeline-item.timeline-event .timeline-dot{border-color:#8b8c95;background:#f1f1f4}
+    .timeline-item.timeline-event .timeline-card{background:#f1f1f4;border-color:#e0e0e5}
+    .timeline-item.timeline-event .timeline-title{color:#55565e}
+    .timeline-item.timeline-warning .timeline-card{border-color:rgba(210,45,45,.35);background:rgba(210,45,45,.08)}
+    html[data-theme=dark] .timeline-item.timeline-commercial .timeline-dot{background:#303659;border-color:#aeb8ff}
+    html[data-theme=dark] .timeline-item.timeline-commercial .timeline-card{background:#303659!important;border-color:#495287!important}
+    html[data-theme=dark] .timeline-item.timeline-commercial .timeline-title{color:#d7dcff}
+    html[data-theme=dark] .timeline-item.timeline-empty .timeline-dot{background:#4a3820;border-color:#ffc66d}
+    html[data-theme=dark] .timeline-item.timeline-empty .timeline-card{background:#4a3820!important;border-color:#71562f!important}
+    html[data-theme=dark] .timeline-item.timeline-empty .timeline-title{color:#ffdaa0}
+    html[data-theme=dark] .timeline-item.timeline-gap .timeline-dot{background:#203d34;border-color:#79d5b3}
+    html[data-theme=dark] .timeline-item.timeline-gap .timeline-card{background:#203d34!important;border-color:#315c4d!important}
+    html[data-theme=dark] .timeline-item.timeline-gap .timeline-title{color:#b9ecd9}
+    html[data-theme=dark] .timeline-item.timeline-event .timeline-dot{background:#34343a;border-color:#9b9ca5}
+    html[data-theme=dark] .timeline-item.timeline-event .timeline-card{background:#34343a!important;border-color:#4a4a52!important}
+    html[data-theme=dark] .timeline-item.timeline-event .timeline-title{color:#d0d0d5}
     @media(max-width:460px){.shift-detail-cards{grid-template-columns:1fr 1fr}.shift-detail-card{padding:12px}.shift-detail-card-main{font-size:19px}}
 
     .approval-list{display:flex;flex-direction:column;gap:9px;margin-top:10px}
@@ -1970,6 +1993,7 @@ html[data-theme=dark] .line-point-remove{background:#2d2b31}
 @media(max-width:460px){.shift-detail-card.summary-tile{min-height:0;aspect-ratio:auto}.dd-preview-stats{grid-template-columns:1fr 1fr}}
 
 /* 1.0 — shift details in full-width rows + visible DD preview icon */
+/* 1.1 — semantic Pixel-style timeline colors */
 .shift-details-page .shift-detail-cards{display:grid!important;grid-template-columns:1fr!important;gap:12px!important}
 .shift-details-page .shift-detail-card,.shift-details-page .shift-detail-wide{grid-column:1!important;width:100%!important}
 header .header-dd-preview-btn{background:var(--accent-soft)!important;color:var(--accent)!important;border:0!important}
@@ -2286,7 +2310,7 @@ html[data-theme=dark] header .header-dd-preview-btn{background:#3a3d57!important
         <summary><span class="settings-summary-label"><span class="settings-summary-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 10.5v6M12 7.5h.01"/></svg></span><span>אודות</span></span></summary>
         <div class="settings-accordion-body">
           <div style="font-size:17px;font-weight:850">נוצר ע״י פראס נג׳אר</div>
-          <div class="note" style="margin-top:5px">גרסה <strong id="aboutVersionLabel">1.0</strong></div>
+          <div class="note" style="margin-top:5px">גרסה <strong id="aboutVersionLabel">1.1</strong></div>
           <div style="height:12px"></div>
           <button class="secondary" id="manualUpdateCheckBtn" type="button">בדיקת עדכונים</button>
           <div id="manualUpdateStatus" class="note" style="margin-top:8px"></div>
@@ -3083,8 +3107,8 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=100;
-const APP_VERSION_LABEL='1.0';
+const APP_VERSION=101;
+const APP_VERSION_LABEL='1.1';
 function formatDateInputValue(value){
   const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value||''));
   return m?`${m[3]}/${m[2]}/${m[1]}`:'';
@@ -5157,7 +5181,7 @@ function shiftTimelineHtml(sh){
     const plan=t.plannedStart?`מתוכנן ${t.plannedStart}–${t.plannedEnd}`:'';
     const actual=t.startTime?(active?`התחיל בפועל ${t.startTime}`:`בפועל ${t.startTime}–${t.endTime||'—'}`):'טרם התחיל';
     const meta=[isEmptyTrip(t)?'ריק / חזרה לדיפו':'נסיעה מסחרית',[t.startPoint,t.endPoint].filter(Boolean).join(' ← '),plan,actual,t.rb||t.plannedRb||'',t.trainNumber?`רכבת ${t.trainNumber}`:'',tripTimingText(t,sh)].filter(Boolean).join(' · ');
-    push(time,`${isEmptyTrip(t)?'נסיעה ריקה':'סיבוב'} ${i+1}${active?' · פעיל':''}`,meta,'trip',`openTripModal('${sh.id}','${t.id}')`);
+    push(time,`${isEmptyTrip(t)?'נסיעה ריקה':'סיבוב'} ${i+1}${active?' · פעיל':''}`,meta,isEmptyTrip(t)?'empty':'commercial',`openTripModal('${sh.id}','${t.id}')`);
   });
   normalizedPlannedEvents(sh).forEach(e=>{
     const x=effectivePlannedEvent(sh,e);
@@ -5181,7 +5205,7 @@ function shiftTimelineHtml(sh){
 
   items.sort((a,b)=>a.sort-b.sort || a.title.localeCompare(b.title,'he'));
   if(!items.length) return `<p class="note" style="margin:8px 0 0">אין עדיין אירועים להצגה בציר הזמן.</p>`;
-  return `<div class="shift-timeline">${items.map(x=>`<div class="timeline-item ${x.kind==='gap'?'timeline-gap':''} ${x.kind==='warning'?'timeline-warning':''}">
+  return `<div class="shift-timeline">${items.map(x=>`<div class="timeline-item ${x.kind==='commercial'?'timeline-commercial':''} ${x.kind==='empty'?'timeline-empty':''} ${x.kind==='event'?'timeline-event':''} ${x.kind==='gap'?'timeline-gap':''} ${x.kind==='warning'?'timeline-warning':''}">
     <span class="timeline-dot"></span>
     <div class="timeline-time">${escapeHtml(x.time)}</div>
     <div class="timeline-card ${x.onclick?'clickable':''}" ${x.onclick?`onclick="${x.onclick}" role="button" tabindex="0"`:''}>
