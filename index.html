@@ -56,17 +56,18 @@
     }
     .header-actions .header-settings-btn:active{transform:scale(.96)}
     .header-dd-preview-btn{
-      width:42px;
-      height:42px;
-      border:1px solid rgba(255,255,255,.18);
-      border-radius:13px;
-      background:rgba(255,255,255,.08);
-      color:white;
+      width:44px;
+      height:44px;
+      border:0;
+      border-radius:22px;
+      background:var(--accent-soft);
+      color:var(--accent);
       display:flex;
       align-items:center;
       justify-content:center;
       cursor:pointer;
       padding:0;
+      box-shadow:none;
     }
     .header-dd-preview-btn svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
     .header-dd-preview-btn:active{transform:scale(.96)}
@@ -1954,10 +1955,10 @@ html[data-theme=dark] .line-point-remove{background:#2d2b31}
 .shift-page-route strong{color:var(--text);font-weight:850}
 
 /* v98 — compact shift summary tiles + DD preview */
-.shift-detail-cards{align-items:start}
-.shift-detail-card.summary-tile{min-height:150px;aspect-ratio:1.15/1;display:flex;flex-direction:column;justify-content:flex-start;overflow:hidden}
+.shift-detail-cards{align-items:start;grid-template-columns:1fr!important;gap:12px}
+.shift-detail-card.summary-tile{width:100%;min-height:0;aspect-ratio:auto;display:flex;flex-direction:column;justify-content:flex-start;overflow:hidden}
 .shift-detail-card.summary-tile .shift-detail-card-main{margin-top:6px}
-.shift-detail-wide{grid-column:1/-1;border:1px solid var(--line);border-radius:18px;padding:14px;background:var(--card)}
+.shift-detail-wide{grid-column:auto;width:100%;border:1px solid var(--line);border-radius:18px;padding:14px;background:var(--card)}
 .dd-preview-hero{border:1px solid var(--line);border-radius:18px;padding:16px;background:var(--soft);margin-bottom:12px}
 .dd-preview-hero strong{display:block;font-size:22px;margin:4px 0}
 .dd-preview-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
@@ -1966,7 +1967,13 @@ html[data-theme=dark] .line-point-remove{background:#2d2b31}
 .dd-preview-list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
 .dd-preview-row{border:1px solid var(--line);border-radius:14px;padding:10px 12px;background:var(--card)}
 .dd-preview-row small{color:var(--muted)}
-@media(max-width:460px){.shift-detail-card.summary-tile{min-height:138px;aspect-ratio:auto}.dd-preview-stats{grid-template-columns:1fr 1fr}}
+@media(max-width:460px){.shift-detail-card.summary-tile{min-height:0;aspect-ratio:auto}.dd-preview-stats{grid-template-columns:1fr 1fr}}
+
+/* 1.0 — shift details in full-width rows + visible DD preview icon */
+.shift-details-page .shift-detail-cards{display:grid!important;grid-template-columns:1fr!important;gap:12px!important}
+.shift-details-page .shift-detail-card,.shift-details-page .shift-detail-wide{grid-column:1!important;width:100%!important}
+header .header-dd-preview-btn{background:var(--accent-soft)!important;color:var(--accent)!important;border:0!important}
+html[data-theme=dark] header .header-dd-preview-btn{background:#3a3d57!important;color:#e5e7ff!important}
 </style>
 </head>
 <body>
@@ -2279,7 +2286,7 @@ html[data-theme=dark] .line-point-remove{background:#2d2b31}
         <summary><span class="settings-summary-label"><span class="settings-summary-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 10.5v6M12 7.5h.01"/></svg></span><span>אודות</span></span></summary>
         <div class="settings-accordion-body">
           <div style="font-size:17px;font-weight:850">נוצר ע״י פראס נג׳אר</div>
-          <div class="note" style="margin-top:5px">גרסה <strong>94</strong></div>
+          <div class="note" style="margin-top:5px">גרסה <strong id="aboutVersionLabel">1.0</strong></div>
           <div style="height:12px"></div>
           <button class="secondary" id="manualUpdateCheckBtn" type="button">בדיקת עדכונים</button>
           <div id="manualUpdateStatus" class="note" style="margin-top:8px"></div>
@@ -3076,7 +3083,8 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=99;
+const APP_VERSION=100;
+const APP_VERSION_LABEL='1.0';
 function formatDateInputValue(value){
   const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value||''));
   return m?`${m[3]}/${m[2]}/${m[1]}`:'';
@@ -6688,9 +6696,9 @@ $('manualUpdateCheckBtn')?.addEventListener('click',async()=>{
         location.reload();
       }
     }else if(latest===APP_VERSION){
-      status.textContent=`האפליקציה מעודכנת לגרסה ${APP_VERSION}.`;
+      status.textContent=`האפליקציה מעודכנת לגרסה ${APP_VERSION_LABEL}.`;
     }else{
-      status.textContent=`הגרסה המותקנת היא ${APP_VERSION}.`;
+      status.textContent=`הגרסה המותקנת היא ${APP_VERSION_LABEL}.`;
     }
   }catch(e){
     status.textContent='לא ניתן לבדוק עדכונים כרגע. נסה שוב כשיש חיבור לאינטרנט.';
