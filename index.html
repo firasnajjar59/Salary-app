@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#111827"/>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="שעות ושכר">
-  <title>נהג+ — שעות, שכר ותיעוד</title>
+  <meta name="apple-mobile-web-app-title" content="מחברת">
+  <title>מחברת — שעות, שכר ותיעוד</title>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-192.png">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -38,6 +38,38 @@
       cursor:pointer;
     }
     .header-settings-btn:active{transform:translateY(-50%) scale(.96)}
+    .header-actions{
+      position:absolute;
+      left:14px;
+      top:50%;
+      transform:translateY(-50%);
+      display:flex;
+      align-items:center;
+      gap:8px;
+      z-index:2;
+    }
+    .header-actions .header-settings-btn{
+      position:static;
+      left:auto;
+      top:auto;
+      transform:none;
+    }
+    .header-actions .header-settings-btn:active{transform:scale(.96)}
+    .header-dd-preview-btn{
+      width:42px;
+      height:42px;
+      border:1px solid rgba(255,255,255,.18);
+      border-radius:13px;
+      background:rgba(255,255,255,.08);
+      color:white;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      cursor:pointer;
+      padding:0;
+    }
+    .header-dd-preview-btn svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+    .header-dd-preview-btn:active{transform:scale(.96)}
 
     main{max-width:780px;margin:auto;padding:14px 14px calc(96px + env(safe-area-inset-bottom))}
     .tabs{
@@ -1920,12 +1952,32 @@ html[data-theme=dark] .line-point-remove{background:#2d2b31}
 /* v97 — shift route endpoints */
 .shift-page-route{grid-column:1/-1;display:flex;gap:8px 18px;flex-wrap:wrap;margin-top:8px;padding-top:10px;border-top:1px solid color-mix(in srgb,var(--line) 72%,transparent);font-size:13px;color:var(--muted)}
 .shift-page-route strong{color:var(--text);font-weight:850}
+
+/* v98 — compact shift summary tiles + DD preview */
+.shift-detail-cards{align-items:start}
+.shift-detail-card.summary-tile{min-height:150px;aspect-ratio:1.15/1;display:flex;flex-direction:column;justify-content:flex-start;overflow:hidden}
+.shift-detail-card.summary-tile .shift-detail-card-main{margin-top:6px}
+.shift-detail-wide{grid-column:1/-1;border:1px solid var(--line);border-radius:18px;padding:14px;background:var(--card)}
+.dd-preview-hero{border:1px solid var(--line);border-radius:18px;padding:16px;background:var(--soft);margin-bottom:12px}
+.dd-preview-hero strong{display:block;font-size:22px;margin:4px 0}
+.dd-preview-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
+.dd-preview-stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px}
+.dd-preview-stat span{display:block;color:var(--muted);font-size:12px}.dd-preview-stat b{font-size:18px}
+.dd-preview-list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.dd-preview-row{border:1px solid var(--line);border-radius:14px;padding:10px 12px;background:var(--card)}
+.dd-preview-row small{color:var(--muted)}
+@media(max-width:460px){.shift-detail-card.summary-tile{min-height:138px;aspect-ratio:auto}.dd-preview-stats{grid-template-columns:1fr 1fr}}
 </style>
 </head>
 <body>
 <header>
-  <button id="openSettingsGear" class="header-settings-btn" type="button" aria-label="הגדרות" title="הגדרות" onclick="showAppTab('settings')">⚙</button>
-  <h1>נהג+ — שעות, שכר ותיעוד</h1>
+  <div class="header-actions">
+    <button id="openSettingsGear" class="header-settings-btn" type="button" aria-label="הגדרות" title="הגדרות" onclick="showAppTab('settings')">⚙</button>
+    <button id="previewDdHeaderBtn" class="header-dd-preview-btn" type="button" aria-label="הצגת DD" title="הצגת DD">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="2.6"/></svg>
+    </button>
+  </div>
+  <h1>מחברת — שעות, שכר ותיעוד</h1>
   <p>שעות, שכר ותיעוד משמרות — נשמר מקומית במכשיר</p>
 </header>
 <div id="updateBanner" class="card hidden" style="margin:10px auto;max-width:780px">
@@ -2252,15 +2304,6 @@ html[data-theme=dark] .line-point-remove{background:#2d2b31}
       </details>
     </div>
 
-    <div class="card settings-accordion">
-      <details>
-        <summary><span class="settings-summary-label"><span class="settings-summary-icon"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="13" rx="3"/><path d="M8 8h8M8 12h8M7 17l-2 3M17 17l2 3"/><circle cx="9" cy="15" r=".8"/><circle cx="15" cy="15" r=".8"/></svg></span><span>הגדרות קווים</span></span></summary>
-        <div class="settings-accordion-body">
-          <p class="note">הגדר לכל קו משך חצי סיבוב, טווח הגעה בזמן ונקודות קצה. נקודת התחלה בסיבוב אינה חובה ואפשר לעדכן אותה לאחר תחילת הנסיעה.</p>
-          <div id="lineOperationalSettingsList"></div>
-        </div>
-      </details>
-    </div>
     <div class="settings-group-label">עבודה ושכר</div>
     <div class="card settings-accordion">
       <details>
@@ -2651,6 +2694,25 @@ html[data-theme=dark] .line-point-remove{background:#2d2b31}
   </div>
 </div>
 
+<div id="ddPreviewModal" class="modal hidden" aria-hidden="true">
+  <div class="modal-backdrop" id="ddPreviewBackdrop"></div>
+  <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="ddPreviewTitle">
+    <div class="modal-header">
+      <h2 id="ddPreviewTitle" style="margin:0">הצגת DD</h2>
+      <button type="button" class="modal-close" id="closeDdPreview" aria-label="סגור">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="note">תצוגה בלבד — בחירה כאן לא מוסיפה ולא משנה משמרת.</p>
+      <div class="grid">
+        <div><label>קו</label><select id="ddPreviewLine"></select></div>
+        <div><label>יום</label><select id="ddPreviewDay"><option value="0">ראשון</option><option value="1">שני</option><option value="2">שלישי</option><option value="3">רביעי</option><option value="4">חמישי</option><option value="5">שישי</option><option value="6">שבת</option></select></div>
+        <div><label>DD</label><select id="ddPreviewSelect"></select></div>
+      </div>
+      <div id="ddPreviewContent" style="margin-top:14px"></div>
+    </div>
+  </div>
+</div>
+
 <div id="shiftDetailsModal" class="modal hidden" aria-hidden="true">
   <div class="modal-backdrop" id="shiftDetailsBackdrop"></div>
   <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="shiftDetailsTitle">
@@ -3014,7 +3076,7 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=97;
+const APP_VERSION=99;
 function formatDateInputValue(value){
   const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value||''));
   return m?`${m[3]}/${m[2]}/${m[1]}`:'';
@@ -5169,7 +5231,7 @@ function openShiftDetails(id,{historyMode='push'}={}){
       ${(routeEndpoints.start||routeEndpoints.end)?`<div class="shift-page-route"><span>מתחיל: <strong>${escapeHtml(routeEndpoints.start||'—')}</strong></span><span>מסיים: <strong>${escapeHtml(routeEndpoints.end||'—')}</strong></span></div>`:''}
     </div>
     <div class="shift-detail-cards">
-      <div class="shift-detail-card">
+      <div class="shift-detail-card summary-tile">
         <div class="shift-detail-card-title">שעות</div>
         <div class="shift-detail-card-main">${sh.dayType==='split'
           ? `${escapeHtml(sh.start||'—')}–${escapeHtml(sh.splitEnd1||sh.end||'—')}${sh.splitStart2&&sh.splitEnd2?` · ${escapeHtml(sh.splitStart2)}–${escapeHtml(sh.splitEnd2)}`:''}`
@@ -5180,11 +5242,9 @@ function openShiftDetails(id,{historyMode='push'}={}){
         ${c.isSplit&&c.didNotReturn?`<div class="shift-detail-card-sub">לא חזר לחלק השני — ללא תוספת שעה</div>`:''}
         ${c.isSplit&&c.splitReturned?`<div class="${c.splitGapOk?'shift-detail-card-sub':'split-detail-warning'}">הפסקת פיצול ${fmtMin(c.splitGapMinutes)}${c.splitGapOk?' ✓':' · פחות מ־3 שעות — לבדוק מול הסדרן'}</div>`:''}
         ${hourParts.length?`<div class="shift-detail-card-sub">${hourParts.map(escapeHtml).join(' · ')}</div>`:''}
-        <div class="break-summary"><span>זמן הפסקות בין סיבובים</span><strong>${breakInfo.known?fmtMin(breakInfo.minutes):'לא ידוע'}</strong></div>
-        ${operationalMetricsHtml(sh)}
       </div>
 
-      <div class="shift-detail-card">
+      <div class="shift-detail-card summary-tile">
         <div class="shift-detail-card-title">שכר</div>
         <div class="shift-detail-card-main">${detailMoney(c.pay||0)}</div>
         <div class="shift-detail-card-sub">שכר צפוי למשמרת</div>
@@ -5193,6 +5253,10 @@ function openShiftDetails(id,{historyMode='push'}={}){
         ${(c.perDiem||0)>0?`<div class="shift-detail-mini"><span>אש"ל</span><strong>${detailMoney(c.perDiem)}</strong></div>`:''}
         ${(c.specialPay||0)>0?`<div class="shift-detail-mini"><span>תוספות</span><strong>${detailMoney(c.specialPay)}</strong></div>`:''}
         ${(c.bonus||0)>0?`<div class="shift-detail-mini"><span>ידני</span><strong>${detailMoney(c.bonus)}</strong></div>`:''}
+      </div>
+      <div class="shift-detail-wide">
+        <div class="break-summary"><span>זמן הפסקות בין סיבובים</span><strong>${breakInfo.known?fmtMin(breakInfo.minutes):'לא ידוע'}</strong></div>
+        ${operationalMetricsHtml(sh)}
       </div>
     </div>
 
@@ -5972,6 +6036,54 @@ function snapshotDdPlan(dateStr,type,number,line='red'){
   });
   return {trips,plannedEvents,ddPlanSnapshot:{line,type,number:String(number),copiedAt:new Date().toISOString(),sourceStart:duty.start,sourceEnd:duty.end}};
 }
+
+function ddPreviewPseudoDate(day){
+  // 2026-09-06 is Sunday; only weekday selection matters for DD resolution.
+  const d=new Date(Date.UTC(2026,8,6+Number(day||0)));
+  return d.toISOString().slice(0,10);
+}
+function openDdPreview(){
+  const modal=$('ddPreviewModal'); if(!modal) return;
+  const lineEl=$('ddPreviewLine');
+  const lines=availableLines();
+  lineEl.innerHTML=lines.map(x=>`<option value="${escapeHtml(x.key)}">${escapeHtml(x.label)}</option>`).join('');
+  lineEl.value=defaultLineKey();
+  $('ddPreviewDay').value='0';
+  refreshDdPreviewOptions();
+  modal.classList.remove('hidden'); modal.setAttribute('aria-hidden','false');
+}
+function closeDdPreview(){const m=$('ddPreviewModal');if(m){m.classList.add('hidden');m.setAttribute('aria-hidden','true')}}
+function refreshDdPreviewOptions(){
+  const line=$('ddPreviewLine')?.value||defaultLineKey(), day=Number($('ddPreviewDay')?.value||0), date=ddPreviewPseudoDate(day);
+  const el=$('ddPreviewSelect'); if(!el) return;
+  const items=allDdForDate(date,line).filter(x=>String(x.type||'').toUpperCase()==='DD');
+  el.innerHTML=items.length?items.map(x=>`<option value="${escapeHtml(String(x.number))}">DD${escapeHtml(String(x.number))} · ${escapeHtml(x.start)}–${escapeHtml(x.end)}</option>`).join(''):'<option value="">אין DD קבועים ליום זה</option>';
+  renderDdPreview();
+}
+function renderDdPreview(){
+  const box=$('ddPreviewContent'); if(!box) return;
+  const line=$('ddPreviewLine')?.value||defaultLineKey(), day=Number($('ddPreviewDay')?.value||0), number=$('ddPreviewSelect')?.value||'', date=ddPreviewPseudoDate(day);
+  if(!number){box.innerHTML='<div class="note">ביום הזה אין טבלת DD קבועה. שישי ושבת נשארים להזנה ידנית.</div>';return;}
+  const tpl=resolveDdTemplate(date,'DD',number,line);
+  const duty=resolveDdSchedule(date,'DD',number,line);
+  if(!tpl){box.innerHTML='<div class="note">ה־DD לא נמצא.</div>';return;}
+  const start=operationalToClock(tpl.start), end=operationalToClock(tpl.end);
+  const duration=operationalDurationMinutes(tpl.start,tpl.end);
+  const acts=Array.isArray(duty?.activities)?duty.activities:[];
+  const trips=acts.filter(a=>a.type==='נסיעה מסחרית'||a.type==='נסיעה ריקה');
+  const first=trips[0], last=trips[trips.length-1];
+  const driving=trips.reduce((sum,a)=>sum+Math.max(0,operationalDurationMinutes(a.start,a.end)),0);
+  const events=acts.filter(a=>a.type!=='נסיעה מסחרית'&&a.type!=='נסיעה ריקה');
+  box.innerHTML=`<div class="dd-preview-hero"><small>${escapeHtml(lineLabel(line))}</small><strong>DD${escapeHtml(number)}</strong><div>${escapeHtml(start)}–${escapeHtml(end)}</div></div>
+    <div class="dd-preview-stats">
+      <div class="dd-preview-stat"><span>שעות עבודה</span><b>${fmtMin(duration)}</b></div>
+      <div class="dd-preview-stat"><span>נהיגה מתוכננת</span><b>${duty?fmtMin(driving):'—'}</b></div>
+      <div class="dd-preview-stat"><span>מתחיל</span><b>${escapeHtml(first?.from||'—')}</b></div>
+      <div class="dd-preview-stat"><span>מסיים</span><b>${escapeHtml(last?.to||'—')}</b></div>
+    </div>
+    ${duty?`<div class="dd-preview-list">${acts.map(a=>`<div class="dd-preview-row"><b>${escapeHtml(a.type)}</b><div>${escapeHtml(operationalToClock(a.start))}–${escapeHtml(operationalToClock(a.end))}${a.from||a.to?` · ${escapeHtml(a.from||'')} → ${escapeHtml(a.to||'')}`:''}</div>${a.rb?`<small>${escapeHtml(a.rb)}</small>`:''}</div>`).join('')}</div>`:`<div class="note" style="margin-top:12px">ליום זה נשמרות כרגע שעות ה־DD בלבד, ללא סיבובים.</div>`}`;
+}
+
 function refreshDdPresetOptions(){
   const el=$('ddPreset'); if(!el) return;
   const current=el.value, items=allDdForDate($('date')?.value||'', $('shiftLine')?.value||'red');
@@ -6378,6 +6490,12 @@ $('closeDdUpdate').onclick=closeDdUpdatePrompt;
 $('ddUpdateBackdrop').onclick=closeDdUpdatePrompt;
 $('updateDdFromServer').onclick=updateDdFromServer;
 $('downloadDdCopy')?.addEventListener('click',downloadDdLocalCopy);
+$('previewDdHeaderBtn')?.addEventListener('click',openDdPreview);
+$('closeDdPreview')?.addEventListener('click',closeDdPreview);
+$('ddPreviewBackdrop')?.addEventListener('click',closeDdPreview);
+$('ddPreviewLine')?.addEventListener('change',refreshDdPreviewOptions);
+$('ddPreviewDay')?.addEventListener('change',refreshDdPreviewOptions);
+$('ddPreviewSelect')?.addEventListener('change',renderDdPreview);
 $('editLocalDd').onclick=openDdEditor;
 $('closeDdEditor').onclick=closeDdEditor;
 $('ddEditorBackdrop').onclick=closeDdEditor;
