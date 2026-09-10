@@ -3110,8 +3110,8 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=102;
-const APP_VERSION_LABEL='1.2';
+const APP_VERSION=103;
+const APP_VERSION_LABEL='1.3';
 function formatDateInputValue(value){
   const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value||''));
   return m?`${m[3]}/${m[2]}/${m[1]}`:'';
@@ -6271,7 +6271,7 @@ async function updateDdFromServer(){
     populateLineSelects();
     refreshDdStatus();
     refreshDdPresetOptions();
-    if(typeof refreshShiftValueDd==='function') refreshShiftValueDd();
+    if(typeof refreshShiftValueDdOptions==='function') refreshShiftValueDdOptions();
     closeDdUpdatePrompt();
 
     const rows=availableLines(t).map(x=>{
@@ -7504,27 +7504,44 @@ function renderDashboardAnalytics(){
   renderMiniBarChart('nightHistoryChart',rows,'night',v=>`${v.toFixed(1)}ש׳`,currentYm);
   applyAnalyticsChartLayout(analyticsChartLayoutDraft.length?analyticsChartLayoutDraft:getSavedAnalyticsChartLayout());
 }
+function shiftValueWeekdayLabel(day){
+  return ['יום ראשון','יום שני','יום שלישי','יום רביעי','יום חמישי','יום שישי','יום שבת'][day] || '';
+}
 function refreshShiftValueDdOptions(){
   const dateEl=$('shiftValueDate'), ddEl=$('shiftValueDd');
   if(!dateEl||!ddEl) return;
+  const selectedDate=dateEl.value||localDateIso();
+  const selectedLine=$('shiftValueLine')?.value||'red';
+  const day=dayIndexForDate(selectedDate);
   const current=ddEl.value;
-  const items=allDdForDate(dateEl.value||localDateIso(),$('shiftValueLine')?.value||'red');
+  const items=allDdForDate(selectedDate,selectedLine);
+
   ddEl.innerHTML='<option value="">בחר DD</option>'+items.map(x=>{
     const key=ddKey(x.type,x.number);
-    const day=dayIndexForDate($('date')?.value||''); const src=x.sourceTable==='ddr'?'DDR':(day===4?'חמישי':day===5?'שישי':day===6?'שבת':'א׳–ד׳');
-    return `<option value="${escapeHtml(key)}">${escapeHtml(key)} · ${escapeHtml(x.start)}–${escapeHtml(x.end)} · ${src}</option>`;
+    const src=x.sourceTable==='ddr'?'DDR':shiftValueWeekdayLabel(day);
+    return `<option value="${escapeHtml(key)}">${escapeHtml(key)} · ${escapeHtml(x.start)}–${escapeHtml(x.end)}${src?` · ${escapeHtml(src)}`:''}</option>`;
   }).join('');
+
   if([...ddEl.options].some(o=>o.value===current)) ddEl.value=current;
+  else ddEl.value='';
+
+  // Changing date/line invalidates a previous simulated result until recalculated.
+  const result=$('shiftValueResult');
+  if(result && !result.classList.contains('hidden')) clearShiftValue();
 }
 function calculateShiftValue(){
   const date=$('shiftValueDate').value, key=$('shiftValueDd').value;
+  const selectedLine=$('shiftValueLine')?.value||'red';
   if(!date || !key){ alert('בחר תאריך ו-DD / DDR.'); return; }
   const m=/^(DDR|DD)(.+)$/i.exec(key); if(!m) return;
-  const tpl=resolveDdTemplate(date,m[1].toUpperCase(),m[2],$('shiftValueLine')?.value||'red');
-  if(!tpl){ alert('ה-DD לא נמצא בטבלה המקומית.'); return; }
+
+  // Resolve again from the selected date, so the same DD number can have
+  // different times on different weekdays without leaking another day's table.
+  const tpl=resolveDdTemplate(date,m[1].toUpperCase(),m[2],selectedLine);
+  if(!tpl){ alert('ה-DD לא קיים בתאריך שנבחר.'); refreshShiftValueDdOptions(); return; }
   const candidate={
     id:'sim-'+Date.now(),date,start:operationalToClock(tpl.start),end:operationalToClock(tpl.end),breakMin:0,notes:'',
-    dayType:'auto',bonus:0,extraLoopType:'none',nightLineType:'none',ddType:m[1].toUpperCase(),ddNumber:m[2],line:$('shiftValueLine')?.value||'red'
+    dayType:'auto',bonus:0,extraLoopType:'none',nightLineType:'none',ddType:m[1].toUpperCase(),ddNumber:m[2],line:selectedLine
   };
   const ym=date.slice(0,7);
   const beforeList=shifts.filter(sh=>sh.date.startsWith(ym));
@@ -7909,8 +7926,9 @@ if($('disableBiometricLock')) $('disableBiometricLock').onclick=disableBiometric
 if($('shiftValueDate')){
   $('shiftValueDate').value=localDateIso();
   $('shiftValueDate').onchange=refreshShiftValueDdOptions;
-  refreshShiftValueDdOptions();
 }
+if($('shiftValueLine')) $('shiftValueLine').onchange=refreshShiftValueDdOptions;
+refreshShiftValueDdOptions();
 if($('calculateShiftValue')) $('calculateShiftValue').onclick=calculateShiftValue;
 if($('clearShiftValue')) $('clearShiftValue').onclick=clearShiftValue;
 $('calendarPrev').onclick=()=>{dashboardCalendarMonth=addMonthsToYm(dashboardCalendarMonth||localDateIso().slice(0,7),-1);renderDashboardCalendar();};
