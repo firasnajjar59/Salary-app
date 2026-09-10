@@ -2311,7 +2311,7 @@ html[data-theme=dark] header .header-dd-preview-btn{background:#3a3d57!important
         <summary><span class="settings-summary-label"><span class="settings-summary-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 10.5v6M12 7.5h.01"/></svg></span><span>אודות</span></span></summary>
         <div class="settings-accordion-body">
           <div style="font-size:17px;font-weight:850">נוצר ע״י פראס נג׳אר</div>
-          <div class="note" style="margin-top:5px">גרסה <strong id="aboutVersionLabel">1.1</strong></div>
+          <div class="note" style="margin-top:5px">גרסה <strong id="aboutVersionLabel">1.4</strong></div>
           <div style="height:12px"></div>
           <button class="secondary" id="manualUpdateCheckBtn" type="button">בדיקת עדכונים</button>
           <div id="manualUpdateStatus" class="note" style="margin-top:8px"></div>
@@ -3110,8 +3110,9 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=103;
-const APP_VERSION_LABEL='1.3';
+const APP_VERSION=104;
+const APP_VERSION_LABEL='1.4';
+if($('aboutVersionLabel')) $('aboutVersionLabel').textContent=APP_VERSION_LABEL;
 function formatDateInputValue(value){
   const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value||''));
   return m?`${m[3]}/${m[2]}/${m[1]}`:'';
@@ -6810,10 +6811,10 @@ $('manualUpdateCheckBtn')?.addEventListener('click',async()=>{
   try{
     const res=await fetch(`version.json?t=${Date.now()}`,{cache:'no-store'});
     if(!res.ok) throw new Error('version');
-    const data=await res.json(), latest=Number(data.version||0);
+    const data=await res.json(), latest=Number(data.version||0), latestLabel=String(data.displayVersion||latest);
     if(latest>APP_VERSION){
-      status.innerHTML=`קיים עדכון חדש: גרסה <strong>${latest}</strong>.`;
-      if(confirm(`קיים עדכון חדש לגרסה ${latest}. לעדכן עכשיו?`)){
+      status.innerHTML=`קיים עדכון חדש: גרסה <strong>${latestLabel}</strong>.`;
+      if(confirm(`קיים עדכון חדש לגרסה ${latestLabel}. לעדכן עכשיו?`)){
         const reg=await navigator.serviceWorker?.getRegistration?.();
         if(reg) await reg.update().catch(()=>{});
         location.reload();
@@ -7507,6 +7508,12 @@ function renderDashboardAnalytics(){
 function shiftValueWeekdayLabel(day){
   return ['יום ראשון','יום שני','יום שלישי','יום רביעי','יום חמישי','יום שישי','יום שבת'][day] || '';
 }
+function hideShiftValueResult(){
+  const result=$('shiftValueResult'), clearBtn=$('clearShiftValue');
+  if(result){ result.innerHTML=''; result.classList.add('hidden'); }
+  if(clearBtn) clearBtn.classList.add('hidden');
+  $('shiftValueActions')?.classList.add('clean');
+}
 function refreshShiftValueDdOptions(){
   const dateEl=$('shiftValueDate'), ddEl=$('shiftValueDd');
   if(!dateEl||!ddEl) return;
@@ -7525,9 +7532,10 @@ function refreshShiftValueDdOptions(){
   if([...ddEl.options].some(o=>o.value===current)) ddEl.value=current;
   else ddEl.value='';
 
-  // Changing date/line invalidates a previous simulated result until recalculated.
-  const result=$('shiftValueResult');
-  if(result && !result.classList.contains('hidden')) clearShiftValue();
+  // A new date/line means the old simulation is no longer valid.
+  // Only hide the old result here. Do NOT reset the date or call clearShiftValue(),
+  // otherwise date-change -> refresh -> clear -> refresh can recurse and freeze the app.
+  hideShiftValueResult();
 }
 function calculateShiftValue(){
   const date=$('shiftValueDate').value, key=$('shiftValueDd').value;
@@ -7582,13 +7590,12 @@ function calculateShiftValue(){
     <p class="note">הנטו הוא ההפרש בין הנטו החודשי המשוער אחרי הוספת המשמרת לבין הנטו לפני הוספתה. נסיעות מתחשבות גם בתקרה החודשית.</p>`;
 }
 function clearShiftValue(){
-  const dateEl=$('shiftValueDate'), ddEl=$('shiftValueDd'), result=$('shiftValueResult'), clearBtn=$('clearShiftValue');
+  const dateEl=$('shiftValueDate'), ddEl=$('shiftValueDd');
   if(dateEl) dateEl.value=localDateIso();
+  if(ddEl) ddEl.value='';
+  hideShiftValueResult();
   refreshShiftValueDdOptions();
   if(ddEl) ddEl.value='';
-  if(result){ result.innerHTML=''; result.classList.add('hidden'); }
-  if(clearBtn) clearBtn.classList.add('hidden');
-  $('shiftValueActions')?.classList.add('clean');
 }
 
 const BIOMETRIC_LOCK_KEY='salaryApp.biometricLock.v1';
@@ -8043,23 +8050,41 @@ let pendingServiceWorker=null;
 let remoteVersion=null;
 let reloadingForUpdate=false;
 
-function showUpdateBanner(worker,version=null){
+function showUpdateBanner(worker,version=null,displayVersion=null){
   if(worker) pendingServiceWorker=worker;
   if(version) remoteVersion=version;
+  const label=displayVersion || (version ? String(version) : null);
   const title=$('updateBannerTitle');
-  if(title) title.textContent=version ? `גרסה ${version} זמינה` : 'גרסה חדשה זמינה';
+  if(title) title.textContent=label ? `גרסה ${label} זמינה` : 'גרסה חדשה זמינה';
   $('updateBanner').classList.remove('hidden');
 }
 function hideUpdateBanner(){ $('updateBanner').classList.add('hidden'); }
 
-async function checkRemoteVersion(){
+async function fetchRemoteVersionInfo(){
   try{
     const r=await fetch(`${VERSION_URL}?t=${Date.now()}`,{cache:'no-store'});
-    if(!r.ok) return;
-    const data=await r.json();
-    const v=Number(data.version||0);
-    if(Number.isFinite(v) && v>APP_VERSION) showUpdateBanner(null,v);
-  }catch(e){}
+    if(!r.ok) return null;
+    const info=await r.json();
+    const version=Number(info.version||0);
+    if(!Number.isFinite(version)) return null;
+    return {version,displayVersion:String(info.displayVersion||version)};
+  }catch(e){ return null; }
+}
+async function checkRemoteVersion(){
+  const info=await fetchRemoteVersionInfo();
+  if(info && info.version>APP_VERSION) showUpdateBanner(null,info.version,info.displayVersion);
+  return info;
+}
+async function handleWaitingWorker(worker){
+  if(!worker) return;
+  const info=await fetchRemoteVersionInfo();
+  if(info && info.version>APP_VERSION){
+    showUpdateBanner(worker,info.version,info.displayVersion);
+    return;
+  }
+  // A waiting worker for the same/older app version is not a user-visible update.
+  // Activate it silently so the same update banner does not reappear on every launch.
+  try{ worker.postMessage({type:'SKIP_WAITING'}); }catch(e){}
 }
 
 $('applyUpdate').onclick=async()=>{
@@ -8096,13 +8121,13 @@ if('serviceWorker' in navigator){
   });
 
   navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(reg=>{
-    if(reg.waiting) showUpdateBanner(reg.waiting);
+    if(reg.waiting) handleWaitingWorker(reg.waiting);
     reg.addEventListener('updatefound',()=>{
       const worker=reg.installing;
       if(!worker) return;
       worker.addEventListener('statechange',()=>{
         if(worker.state==='installed' && navigator.serviceWorker.controller){
-          showUpdateBanner(worker);
+          handleWaitingWorker(worker);
         }
       });
     });
