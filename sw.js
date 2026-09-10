@@ -31,7 +31,7 @@ messaging.onBackgroundMessage((payload) => {
   });
 });
 
-const CACHE_NAME = 'notebook-v1.5-stage2';
+const CACHE_NAME = 'notebook-v1.5-rollback-safe';
 const APP_FILES = [
   './',
   './index.html',
@@ -42,22 +42,6 @@ const APP_FILES = [
   './icon-192.png',
   './icon-512.png',
   './css/app.css',
-  './js/core.js',
-  './js/calendar.js',
-  './js/preferences.js',
-  './js/reports.js',
-  './js/trips.js',
-  './js/settings.js',
-  './js/salary.js',
-  './js/shifts.js',
-  './js/summary.js',
-  './js/dd.js',
-  './js/shift-editor.js',
-  './js/backup.js',
-  './js/exports.js',
-  './js/dashboard.js',
-  './js/lock.js',
-  './js/today.js',
   './js/app.js',
   './js/push.js'
 ];
