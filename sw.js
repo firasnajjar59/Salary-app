@@ -31,7 +31,7 @@ messaging.onBackgroundMessage((payload) => {
   });
 });
 
-const CACHE_NAME = 'notebook-v1.4';
+const CACHE_NAME = 'notebook-v1.5';
 const APP_FILES = [
   './',
   './index.html',
@@ -40,7 +40,10 @@ const APP_FILES = [
   './version.json',
   './privacy.html',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
+  './css/app.css',
+  './js/app.js',
+  './js/push.js'
 ];
 
 self.addEventListener('install', event => {
