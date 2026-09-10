@@ -3,7 +3,7 @@ const KEY_SHIFTS='salaryApp.shifts.v1', KEY_SETTINGS='salaryApp.settings.v1', KE
 const KEY_DD_TABLES='salaryApp.ddTables.v1';
 const KEY_DD_SERVER_VERSION='salaryApp.ddServerVersion.v1';
 const DD_SERVER_URL='./dd.json';
-const APP_VERSION=1052;
+const APP_VERSION=105;
 const APP_VERSION_LABEL='1.5';
 if($('aboutVersionLabel')) $('aboutVersionLabel').textContent=APP_VERSION_LABEL;
 function formatDateInputValue(value){
