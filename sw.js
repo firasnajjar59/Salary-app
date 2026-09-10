@@ -31,7 +31,7 @@ messaging.onBackgroundMessage((payload) => {
   });
 });
 
-const CACHE_NAME = 'notebook-v1.5-rollback-safe';
+const CACHE_NAME = 'notebook-v1.5';
 const APP_FILES = [
   './',
   './index.html',
